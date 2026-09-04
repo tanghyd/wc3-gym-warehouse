@@ -41,14 +41,14 @@ fn env_or(key: &str, default: &str) -> String {
 async fn main() {
     let once = std::env::args().any(|a| a == "--once");
 
-    // Endpoint is "host:port" (the minio-py convention the api/worker share).
+    // Endpoint is "host:port"; the scheme comes from W3WAREHOUSE_S3_SECURE.
     let endpoint = env_or("W3WAREHOUSE_S3_ENDPOINT", "minio:9000");
     let secure = env_or("W3WAREHOUSE_S3_SECURE", "false") == "true";
     let scheme = if secure { "https" } else { "http" };
     let access = env_or("W3WAREHOUSE_S3_ACCESS_KEY", "minioadmin");
     let secret = env_or("W3WAREHOUSE_S3_SECRET_KEY", "minioadmin");
     let cfg = Cfg {
-        bucket: env_or("W3WAREHOUSE_S3_BUCKET", "landing"),
+        bucket: env_or("W3WAREHOUSE_S3_BUCKET", "warehouse"),
         poll: Duration::from_millis(env_or("WORKER_POLL_MS", "3000").parse().unwrap_or(3000)),
         concurrency: env_or("DRAIN_CONCURRENCY", "16").parse().unwrap_or(16),
     };
