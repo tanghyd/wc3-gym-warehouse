@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Foreground launcher (and stop helper) for the host-native clickhouse-server.
+# Foreground launcher (and stop helper) for a host-native clickhouse-server —
+# the no-Docker way to run the warehouse locally.
 #
-# Usage (or `just ch` / `just ch-stop`):
+# Usage:
 #   bash infrastructure/local/server.sh            # launch, foreground; Ctrl-C to stop
 #   bash infrastructure/local/server.sh stop       # signal a running server to shut down
 #
@@ -20,7 +21,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Engine state lives outside the repo tree so the tracked folder stays pure
 # source. Override with W3WAREHOUSE_CH_STATE; defaults to the XDG state dir.
-STATE_DIR="${W3WAREHOUSE_CH_STATE:-${XDG_STATE_HOME:-${HOME}/.local/state}/w3warehouse/clickhouse-local}"
+STATE_DIR="${W3WAREHOUSE_CH_STATE:-${XDG_STATE_HOME:-${HOME}/.local/state}/wc3-gym-warehouse/clickhouse-local}"
 
 cmd="${1-start}"
 
@@ -57,6 +58,9 @@ case "${cmd}" in
         # XML untouched. config.xml is gitignored (per-machine); the template is
         # the source of truth.
         WAREHOUSE_ROOT="$(cd "${HERE}/../.." && pwd)"   # infrastructure/local/ -> repo root
+        # Share the box's memory, merge and log-TTL limits with the container path.
+        mkdir -p "${HERE}/config/config.d"
+        cp "${HERE}/../docker/clickhouse/tuning.xml" "${HERE}/config/config.d/tuning.xml"
         W3W_WAREHOUSE_ROOT="${WAREHOUSE_ROOT}" W3W_STATE_DIR="${STATE_DIR}" \
             envsubst '${W3W_WAREHOUSE_ROOT} ${W3W_STATE_DIR}' \
             < "${HERE}/config/config.xml.template" > "${HERE}/config/config.xml"

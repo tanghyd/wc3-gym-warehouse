@@ -1,16 +1,16 @@
 -- db/w3g/tables.sql — all CREATE TABLE statements for the w3g database.
 --
--- Applied before views.sql on each pipeline run. scripts/pipeline.sh DROPs the
--- database first; this file is the source of truth for the shape.
+-- Applied before views.sql on every run. This file is the source of truth for
+-- the shape.
 --
 -- Contents:
---   - Raw landing:        replays_raw, replay_listings_raw
+--   - Raw landing:        replays_raw
 --   - Header/per-player:  replays, replay_players, player_heroes,
 --                         player_group_hotkeys
 --   - Event source:       player_order_events, hero_ability_events,
 --                         chat, resource_transfers
 --   - Mart fact:          replay_events
---   - Dim:                mappings, replay_listings
+--   - Dim:                mappings
 --   - Rollup target:      opener_rollup
 
 CREATE DATABASE IF NOT EXISTS w3g;
@@ -26,21 +26,14 @@ CREATE TABLE IF NOT EXISTS w3g.replays_raw
 ENGINE = ReplacingMergeTree(ingested_at)
 ORDER BY replay_id;
 
--- Raw landing for warcraft3.info listing-row sidecars (one per replay we
--- downloaded from there). Keyed on the warcraft3.info api_id.
-CREATE TABLE IF NOT EXISTS w3g.replay_listings_raw
-(
-    api_id      Int32,
-    doc         String,
-    ingested_at DateTime DEFAULT now()
-)
-ENGINE = ReplacingMergeTree(ingested_at)
-ORDER BY api_id;
-
 -- Header + global settings transcribed from the .w3g.
 CREATE TABLE IF NOT EXISTS w3g.replays
 (
     replay_id        String,
+    -- The GNL series and game number the object key carried, written into the
+    -- parsed document by the drain. 0 for a replay from any other source.
+    gnl_series_id    UInt32,
+    gnl_game_no      UInt8,
     map_json         String,
     gamename         String,
     creator          String,
@@ -211,7 +204,7 @@ CREATE TABLE IF NOT EXISTS w3g.replay_events
     time_ms       UInt32,
     event_type    LowCardinality(String),
     subject_code  LowCardinality(String),
-    subject_name  LowCardinality(String),  -- bounded by the mappings set; W4.3
+    subject_name  LowCardinality(String),  -- bounded by the mappings set
     detail        LowCardinality(String),
     seq           UInt32,
     ingested_at   DateTime DEFAULT now()
@@ -227,67 +220,19 @@ CREATE TABLE IF NOT EXISTS w3g.mappings
     code                String,
     name                String,
     kind                LowCardinality(String),
-    -- Reference facet only: no API/view reads it (per-event race comes from
-    -- the replay doc, denormalized into the event tables). Kept for ad-hoc
-    -- "which race owns this code" queries at /play.
+    -- Reference facet only: per-event race comes from the replay doc.
     race                LowCardinality(String),
     hero                LowCardinality(String),
     -- Marks supply structures (Farm / Moon Well / Ziggurat base tier) so
-    -- opener_rollup can exclude them from build-order prefixes. Burrow
-    -- (otrb) is intentionally NOT flagged — see PROPOSAL.md openers.
+    -- opener_rollup excludes them from build-order prefixes. Burrow (otrb) is
+    -- deliberately not flagged: it fights.
     is_supply_building  UInt8 DEFAULT 0,
-    -- Custom-map facet (kind='unknown' rows only, from the seed extractor —
-    -- scripts/extract_custom_objects.py): ui-menu / builder / tower /
-    -- upgrade / item / other. 'ui-menu' rows (Legion TD's clickable menu
-    -- pseudo-units) are excluded from the /stats builds dataset; the search
-    -- UI groups subjects by it. '' for melee kinds and backstop rows.
+    -- Custom-map facet, set by the seed rows only: ui-menu / builder / tower /
+    -- upgrade / item / other. Empty for melee kinds.
     category            LowCardinality(String) DEFAULT ''
 )
 ENGINE = MergeTree
 ORDER BY code;
-
--- Sparse dim: one row per replay sourced from warcraft3.info (an api_id
--- exists). Replays from other origins (local copies, BNet client saves,
--- FLO-direct, future tournaments) have no row — readers LEFT JOIN.
--- Populated by load_listings.sql from sidecar JSONs.
-CREATE TABLE IF NOT EXISTS w3g.replay_listings
-(
-    replay_id     String,
-    api_id        Int32,
-    map_id        Int32,
-    map_alias_id  Int32,
-    map_name      String,
-    map_short     LowCardinality(String),
-    ingested_at   DateTime DEFAULT now()
-)
-ENGINE = ReplacingMergeTree(ingested_at)
-ORDER BY replay_id;
-
--- Minimap assets: one row per distinct .w3x file ever seen by
--- services/api/scripts/build_minimaps.py, keyed by the sha1 of the file
--- bytes — the exact value replay headers carry as map.checksumSha1, so
--- replays join sha1-exact. Historical seasons whose file bytes are gone
--- resolve by canonical_name fallback at read time (api/minimaps.py).
--- Loaded by scripts/pipeline.sh from data/json/maps/*.json via client-side
--- stdin (same pattern as annotations seeds — no file() chroot coupling);
--- re-runs re-insert, ReplacingMergeTree + maps_dedup collapse them.
-CREATE TABLE IF NOT EXISTS w3g.maps
-(
-    checksum_sha1   String,
-    file            String,
-    -- noise-stripped bare map name ("tidehunters") for the fuzzy fallback;
-    -- '' when nothing survives stripping (such rows never match by name)
-    canonical_name  LowCardinality(String),
-    width           UInt16,
-    height          UInt16,
-    -- playable-area world coords [left, bottom, right, top]; [] when the
-    -- letterbox crop failed validation (image still usable, no overlay)
-    bounds          Array(Float32),
-    png_base64      String,
-    ingested_at     DateTime DEFAULT now()
-)
-ENGINE = ReplacingMergeTree(ingested_at)
-ORDER BY checksum_sha1;
 
 -- Opener trie rollup target. One row per (race, opponent_race, map, prefix)
 -- where prefix is an ordered Array of non-supply building subject_codes
@@ -307,31 +252,3 @@ CREATE TABLE IF NOT EXISTS w3g.opener_rollup
 )
 ENGINE = MergeTree
 ORDER BY (race, opponent_race, map, depth, prefix);
-
--- Per-player-game feature rollup for Build Order Analytics ("what share of
--- this matchup plays build X" — handoff/scope-build-order-analytics.md).
--- One row per (replay_id, player_id) over 1v1 melee replays with a known
--- winner and at least one build/train event. Scope filters (mmr/season/map/
--- w3c-linked) are NOT baked in: the prevalence endpoint gates by
--- compiler.compile_replay_cohort at query time, so this stays a pure
--- w3g-derived fact (season is stamped only for the trend grouping; 0 = no
--- corroborated w3c match doc). Populated by
--- views.sql:refresh__player_game_features.
-CREATE TABLE IF NOT EXISTS w3g.player_game_features
-(
-    race             LowCardinality(String),
-    opponent_race    LowCardinality(String),
-    replay_id        String,
-    player_id        UInt8,
-    season           UInt16,
-    duration_ms      UInt64,
-    won              UInt8,
-    first_hero       LowCardinality(String),
-    second_hero      LowCardinality(String),
-    third_hero       LowCardinality(String),
-    expansion_time_s Nullable(Float32),
-    building_first_s Map(LowCardinality(String), Float32),
-    unit_mix         Map(LowCardinality(String), UInt16)
-)
-ENGINE = MergeTree
-ORDER BY (race, opponent_race, replay_id, player_id);

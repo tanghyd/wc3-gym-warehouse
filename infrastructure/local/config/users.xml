@@ -8,6 +8,8 @@
         <default>
             <max_memory_usage>4000000000</max_memory_usage>
             <load_balancing>random</load_balancing>
+            <!-- w3g.refresh__opener_rollup is a refreshable MV, opt-in on 24.x. -->
+            <allow_experimental_refreshable_materialized_view>1</allow_experimental_refreshable_materialized_view>
         </default>
     </profiles>
 

@@ -2,19 +2,14 @@
 <!--
   Template for the local clickhouse-server config. server.sh renders the
   runtime config.xml from this file with `envsubst`, substituting two paths:
-    ${W3W_WAREHOUSE_ROOT} — the warehouse root (file() chroot for the loader).
+    ${W3W_WAREHOUSE_ROOT} — the repo root (the file() chroot).
     ${W3W_STATE_DIR}      — engine state, OUTSIDE the repo tree
                          ($XDG_STATE_HOME/w3warehouse/clickhouse-local/).
   users.xml resolves relative to the rendered config (both in config/).
   Listens on 127.0.0.1 only.
 
-  Scope: this is the batch-load + query dev engine. It deliberately omits a
-  <keeper_server>/<zookeeper> block, so the S3Queue stream path
-  (db/w3g/stream.sql) CANNOT run here — S3Queue keeps its consumed-key
-  watermark in Keeper. The stream path is a Docker `stream`-profile feature
-  (Keeper via infrastructure/docker/clickhouse/keeper.xml; its MinIO endpoint
-  resolves only inside the compose network). The host and Docker CH configs
-  are intentionally scoped to different jobs, not two copies meant to converge.
+  server.sh also copies infrastructure/docker/clickhouse/tuning.xml into
+  config/config.d/, so the host engine gets the same limits as the container.
 -->
 <clickhouse>
     <logger>
@@ -36,7 +31,7 @@
 
     <path>${W3W_STATE_DIR}/data/</path>
     <tmp_path>${W3W_STATE_DIR}/tmp/</tmp_path>
-    <!-- file() is chrooted to user_files_path. server.sh substitutes the absolute warehouse root. -->
+    <!-- file() is chrooted to user_files_path. server.sh substitutes the repo root. -->
     <user_files_path>${W3W_WAREHOUSE_ROOT}/</user_files_path>
     <format_schema_path>${W3W_STATE_DIR}/format_schemas/</format_schema_path>
 

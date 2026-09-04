@@ -2,7 +2,7 @@
 //!
 //! The old TS `parity.ts` died with the w3gjs pipeline; without this, every
 //! w3grs bump silently re-asserts an unverified claim. Each fixture .w3g in
-//! `pipeline/acquire/fixtures/1v1/` has a committed golden of its parsed doc;
+//! `pipeline/parse-rs/fixtures/` has a committed golden of its parsed doc;
 //! this test reparses and diffs as JSON *values* (w3grs serialises its summary
 //! maps in hash order, so bytes are not comparable — values are).
 //!
@@ -10,7 +10,7 @@
 //! duration, the only non-content field — is stripped from both sides.
 //!
 //! Blessing a deliberate parser change = regenerate the goldens:
-//!   pipeline/parse-rs/target/release/parse /tmp/g pipeline/acquire/fixtures/1v1/*.w3g
+//!   pipeline/parse-rs/target/release/parse /tmp/g pipeline/parse-rs/fixtures/*.w3g
 //!   then rewrite tests/goldens/*.json as sorted-key JSON (json.dump
 //!   sort_keys=True, indent=1) and review the git diff — that diff IS the
 //!   parser-change review.
@@ -29,7 +29,7 @@ fn strip_volatile(doc: &mut Value) {
 #[test]
 fn fixtures_match_goldens() {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let fixture_dir = manifest.join("../acquire/fixtures/1v1");
+    let fixture_dir = manifest.join("fixtures");
     let golden_dir = manifest.join("tests/goldens");
 
     let stems = |dir: &Path, ext: &str| -> BTreeSet<String> {

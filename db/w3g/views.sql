@@ -1,15 +1,14 @@
 -- db/w3g/views.sql — all materialized views for the w3g database.
 --
--- Applied after tables.sql on each pipeline run.
+-- Applied after tables.sql on every run.
 --
 -- Contents:
 --   - Load-time fan-out from replays_raw → projected tables (mv__replays,
 --     mv__replay_players, mv__player_heroes, mv__player_group_hotkeys).
---   - Load-time link from replay_listings_raw → replay_listings.
 --   - Event-stream MVs that populate the denormalized replay_events mart
 --     (mv_events__order, mv_events__hero, mv_events__hero_trained).
 --   - refresh__opener_rollup — refreshable MV that atomically rebuilds the
---     opener_rollup table; driven by scripts/pipeline.sh's explicit SYSTEM REFRESH.
+--     opener_rollup table.
 
 CREATE DATABASE IF NOT EXISTS w3g;
 
@@ -19,6 +18,8 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS w3g.mv__replays
 TO w3g.replays AS
 SELECT
     r.replay_id                                                              AS replay_id,
+    JSONExtractUInt(r.doc, 'gnl', 'series_id')                               AS gnl_series_id,
+    JSONExtractUInt(r.doc, 'gnl', 'game_no')                                 AS gnl_game_no,
     JSONExtractString(r.doc, 'map')                                          AS map_json,
     JSONExtractString(r.doc, 'gamename')                                     AS gamename,
     JSONExtractString(r.doc, 'creator')                                      AS creator,
@@ -104,54 +105,6 @@ SELECT
 FROM w3g.replays_raw AS r
 ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p
 ARRAY JOIN JSONExtractKeysAndValuesRaw(JSONExtractRaw(p, 'groupHotkeys')) AS kv;
-
--- replay_listings' authoritative source is the warcraft3.info sidecar
--- (api_id, map_id, the registry map_name/short) projected by explicit
--- file()-reading INSERTs in load_listings.sql. But sidecars only exist for
--- the warcraft3.info batch path — the S3Queue stream lands parsed replay docs
--- with no sidecar, so on a stream-only stack replay_listings stayed empty and
--- the Map dropdown + map filter (both read replay_listings.map_name) showed
--- nothing. This MV derives a fallback map_name from the map filename carried in
--- every replay doc, so the map filter works whenever replays exist (same
--- invariant the Players filter relies on). ReplacingMergeTree(ingested_at) lets
--- the later sidecar load (now() > the replay's ingested_at) supersede this
--- derived row with the registry name where a sidecar is present — reads see the
--- latest via replay_listings_dedup below; no OPTIMIZE … FINAL involved.
-CREATE MATERIALIZED VIEW IF NOT EXISTS w3g.mv__replay_listings
-TO w3g.replay_listings AS
-SELECT
-    replay_id                                                                AS replay_id,
-    0                                                                        AS api_id,
-    0                                                                        AS map_id,
-    0                                                                        AS map_alias_id,
-    -- "Springtime_v1.3" -> "Springtime 1.3", "AutumnLeaves" -> "Autumn Leaves":
-    -- _v<n> -> " <n>", then split camelCase, then remaining _ -> space.
-    replaceRegexpAll(
-        replaceRegexpAll(
-            replaceRegexpOne(raw_name, '_v([0-9])', ' \\1'),
-        '([a-z0-9])([A-Z])', '\\1 \\2'),
-    '_', ' ')                                                                AS map_name,
-    ''                                                                       AS map_short,
-    ingested_at                                                              AS ingested_at
-FROM (
-    SELECT
-        r.replay_id                                                          AS replay_id,
-        r.ingested_at                                                        AS ingested_at,
-        -- strip extension, then pull the map-name segment out of the w3c
-        -- filename. Two layouts seen: "[<id>_]w3c_<date>_<time>_<NAME>" and
-        -- "1v1_<NAME>_w3c_<date>_<time>_<id>"; non-w3c names pass through whole.
-        replaceRegexpOne(JSONExtractString(r.doc, 'map', 'file'), '\\.(w3x|w3m|w3g)$', '') AS stem,
-        multiIf(
-            match(stem, '_w3c_[0-9]{6}_[0-9]{4}_[0-9]+$'),
-                extract(stem, '^(?:1v1_)?(.+?)_w3c_[0-9]{6}_[0-9]{4}_[0-9]+$'),
-            match(stem, '^(?:[0-9]+_)?w3c_[0-9]{6}_[0-9]{4}_'),
-                extract(stem, '^(?:[0-9]+_)?w3c_[0-9]{6}_[0-9]{4}_(.+)$'),
-            stem
-        )                                                                    AS raw_name
-    FROM w3g.replays_raw AS r
-    WHERE JSONExtractString(r.doc, 'type') = '1on1'
-      AND JSONExtractString(r.doc, 'map', 'file') != ''
-);
 
 -- ---------- Event-source fan-out from replays_raw ----------
 --
@@ -402,62 +355,17 @@ FROM (
 LEFT JOIN w3g.mappings AS mh
     ON mh.code = f.hero_id AND mh.kind = 'hero';
 
--- ---------- Read-time dedup view (replace load-time OPTIMIZE … FINAL) ----------
--- replay_listings is genuinely versioned: the link MV writes a provisional row,
--- then load_listings.sql overwrites it with the warcraft3.info sidecar's
--- canonical map_name under a newer ingested_at. Reads go through this view so
--- they always see the latest version per replay — argMax(col, ingested_at)
--- reproduces FINAL's "latest row per key" as plain aggregation, so the base
--- table needs neither a read-time FINAL nor a load-time OPTIMIZE … FINAL. See
--- catalog/semantics/replay-events-read-skips-final.md and the matching w3c
--- dedup views in db/w3c/tables.sql. Defined BEFORE refresh__opener_rollup below,
--- which reads it.
-CREATE VIEW IF NOT EXISTS w3g.replay_listings_dedup AS
-SELECT
-    replay_id,
-    argMax(api_id,       ingested_at) AS api_id,
-    argMax(map_id,       ingested_at) AS map_id,
-    argMax(map_alias_id, ingested_at) AS map_alias_id,
-    argMax(map_name,     ingested_at) AS map_name,
-    argMax(map_short,    ingested_at) AS map_short
-FROM w3g.replay_listings
-GROUP BY replay_id;
-
--- Same pattern for the minimap-asset dim: pipeline re-runs re-insert every
--- staged map, so readers (api/minimaps.py) go through this instead of FINAL.
-CREATE VIEW IF NOT EXISTS w3g.maps_dedup AS
-SELECT
-    checksum_sha1,
-    argMax(file,           ingested_at) AS file,
-    argMax(canonical_name, ingested_at) AS canonical_name,
-    argMax(width,          ingested_at) AS width,
-    argMax(height,         ingested_at) AS height,
-    argMax(bounds,         ingested_at) AS bounds,
-    argMax(png_base64,     ingested_at) AS png_base64
-FROM w3g.maps
-GROUP BY checksum_sha1;
-
 -- ---------- Refreshable opener_rollup ----------
 --
 -- Atomically replaces opener_rollup. This trie aggregation can't be an
 -- incremental MV: it assembles a per-(replay,player) time-ordered sequence
--- (groupArray → arraySort → arrayCompact) over replay_events FINAL and 5-way-
--- joins the header tables. An insert trigger sees only the inserted block —
--- not the FINAL-collapsed state, not events arriving in a later block — so it
--- would miscount. Refreshable (re-run the whole query, swap the result) is the
--- correct tool; the only question is who triggers the refresh.
+-- (groupArray → arraySort → arrayCompact) over replay_events and joins the
+-- header tables. An insert trigger sees only the inserted block, so it would
+-- miscount. Refreshable (re-run the whole query, swap the result) is the tool.
 --
--- REFRESH EVERY 10 MINUTE makes it writer-agnostic: BOTH writers of
--- replays_raw — the batch load (scripts/pipeline.sh) and the S3Queue stream
--- (stream.sql) — cascade into replay_events, and neither needs to know this
--- rollup exists. The interval bounds staleness to ≤10 min regardless of which
--- writer landed data. scripts/pipeline.sh ALSO issues an explicit SYSTEM REFRESH … WAIT
--- at its tail, so a batch run is deterministically fresh the instant it exits
--- (the invariants test runs right after). Idle re-scans against unchanged data
--- are cheap at this corpus size (high-MMR 1v1 only) — bounded freshness wins
--- the trade. test_opener_rollup_matches_live_recount guards against drift.
---
--- After the w3info collapse, replay_listings is in w3g — no cross-DB JOIN.
+-- REFRESH EVERY 10 MINUTE bounds staleness without the backfill having to know
+-- this rollup exists. `just backfill` follows with an explicit
+-- SYSTEM REFRESH VIEW … when a run needs to be fresh the instant it exits.
 CREATE MATERIALIZED VIEW IF NOT EXISTS w3g.refresh__opener_rollup
 REFRESH EVERY 10 MINUTE
 TO w3g.opener_rollup AS
@@ -478,10 +386,28 @@ FROM (
             arrayMap(k -> arraySlice(seq, 1, k), range(1, length(seq) + 1))
         ) AS prefix
     FROM (
+        -- The map name comes out of the replay's own header: strip the
+        -- extension, then pull the map segment out of the w3c filename. Two
+        -- layouts are seen: "[<id>_]w3c_<date>_<time>_<NAME>" and
+        -- "1v1_<NAME>_w3c_<date>_<time>_<id>"; other names pass through whole.
+        WITH replaceRegexpOne(JSONExtractString(r.map_json, 'file'), '\\.(w3x|w3m|w3g)$', '') AS stem
         SELECT
             rp.race AS race,
             opp.race AS opponent_race,
-            coalesce(l.map_name, '') AS map,
+            -- "Springtime_v1.3" -> "Springtime 1.3", "AutumnLeaves" -> "Autumn
+            -- Leaves": _v<n> -> " <n>", then split camelCase, then _ -> space.
+            replaceRegexpAll(
+                replaceRegexpAll(
+                    replaceRegexpOne(
+                        multiIf(
+                            match(stem, '_w3c_[0-9]{6}_[0-9]{4}_[0-9]+$'),
+                                extract(stem, '^(?:1v1_)?(.+?)_w3c_[0-9]{6}_[0-9]{4}_[0-9]+$'),
+                            match(stem, '^(?:[0-9]+_)?w3c_[0-9]{6}_[0-9]{4}_'),
+                                extract(stem, '^(?:[0-9]+_)?w3c_[0-9]{6}_[0-9]{4}_(.+)$'),
+                            stem),
+                    '_v([0-9])', ' \\1'),
+                '([a-z0-9])([A-Z])', '\\1 \\2'),
+            '_', ' ') AS map,
             e.replay_id AS replay_id,
             e.player_id AS player_id,
             r.duration_ms AS duration_ms,
@@ -496,10 +422,8 @@ FROM (
                 ),
                 1, 6
             ) AS seq
-        -- No FINAL on replay_events: the zero-duplicate invariant is asserted
-        -- at load (load.sql) and verified by pipeline.sh — the same invariant
-        -- the API hot path relies on to read without FINAL. FINAL stays on the
-        -- dim/header joins below.
+        -- No FINAL on replay_events: the replay_id gate in backfill.sql means
+        -- a replay is inserted once. FINAL stays on the header joins below.
         FROM w3g.replay_events AS e
         INNER JOIN w3g.mappings AS m
             ON m.code = e.subject_code AND m.kind = 'building'
@@ -509,14 +433,11 @@ FROM (
             ON r.replay_id = e.replay_id
         INNER JOIN w3g.replay_players AS opp FINAL
             ON opp.replay_id = e.replay_id
-        LEFT JOIN w3g.replay_listings_dedup AS l
-            ON l.replay_id = e.replay_id
         WHERE e.event_type = 'building'
           AND m.is_supply_building = 0
           AND r.type = '1on1'
-          -- Exclude unknown-winner replays (winning_team_id = -1): no team_id is
-          -- -1, so `won` would always be 0, deflating winrate. The API search
-          -- path gates identically (compiler.py: r.winning_team_id >= 0).
+          -- Exclude unknown-winner replays (winning_team_id = -1): no team_id
+          -- is -1, so `won` would always be 0, deflating winrate.
           AND r.winning_team_id >= 0
           -- Any two DISTINCT teams count as playing — WC3 lobbies allow
           -- arbitrary team slots (real 1v1s exist on teams [3,4], [0,5]), and
@@ -530,124 +451,7 @@ FROM (
     WHERE length(seq) > 0
 )
 GROUP BY race, opponent_race, map, prefix
--- The groupArray+arrayJoin build is memory-proportional to the corpus — the
--- realistic OOM path when this refresh runs on the small VM (CH OOMs ~3 GiB at
--- full-corpus size). Spill the GROUP BY to disk past this threshold instead.
--- ponytail: 1.5 GiB literal; raise the dial (or REFRESH EVERY) if the VM grows.
+-- The groupArray+arrayJoin build is memory-proportional to the corpus, so spill
+-- the GROUP BY to disk past this threshold rather than let the box OOM.
+-- ponytail: 1.5 GiB literal; raise the dial if the box grows.
 SETTINGS max_bytes_before_external_group_by = 1500000000;
-
--- ---------------------------------------------------------------------------
--- Build Order Analytics feature rollup (handoff/scope-build-order-analytics.md).
---
--- Same shape as refresh__opener_rollup: a refreshable MV re-derived wholesale
--- on a cadence (per-player-game aggregates need the full event set, so an
--- insert-triggered MV can't maintain them incrementally).
---
--- Semantics worth naming:
---   * first/second/third hero come from player_heroes.hero_slot 0/1/2 —
---     verified training order (100% agreement with earliest hero_trained
---     event on the typed subset, 2026-07-20).
---   * expansion_time_s = the FIRST built town-hall event of the player's own
---     race (htow/ogre/unpl/etol). The pre-placed starting hall is never an
---     event, so the first build IS the expansion — the scope doc's "2nd
---     unpl" sketch predates this check. min() also makes spam re-clicks
---     harmless (they land later). NULL = never expanded (one-base). Tier
---     upgrades are distinct codes (unp1/hkee/...) and can't masquerade.
---     Cancelled-then-abandoned expansions still count — replays log intent,
---     not completion (see building-cancel trap).
---   * building_first_s holds first-seen time for EVERY building code (the
---     scope doc's "key tech" map, un-curated: which codes are "key" is a
---     query-time choice, not a schema one).
---   * unit_mix counts train intents per unit code — cumulative investment,
---     never a survived-army snapshot.
---   * event coverage: all 1v1 melee replays carry typed building/unit events
---     (the event_type='unknown' mass is custom modes), so typed filters are
---     safe here.
--- Cadence + memory budget are sized for the e2-medium VM (3.06 GiB TOTAL
--- server cap, shared with loader queries and merges — the 2026-07-20 deploy
--- OOM'd the loader's verify step when a 10-minute tick raced it). Features
--- only change when a load lands, so hourly is fresh enough; the pipeline
--- tail still forces a refresh after every batch load.
--- EMPTY: no create-time refresh — a fresh CREATE during schema-apply
--- otherwise fires the first refresh CONCURRENTLY with the loads and blows
--- the shared 3.06 GiB cap (the 2026-07-20 deploys #2/#3 both lost the
--- loader's verify step as the OvercommitTracker victim). The pipeline tail's
--- explicit SYSTEM REFRESH does the first fill, after loads, serialized.
-CREATE MATERIALIZED VIEW IF NOT EXISTS w3g.refresh__player_game_features
-REFRESH EVERY 1 HOUR
-TO w3g.player_game_features EMPTY AS
-SELECT
-    pg.race            AS race,
-    pg.opponent_race   AS opponent_race,
-    pg.replay_id       AS replay_id,
-    pg.player_id       AS player_id,
-    pg.season          AS season,
-    pg.duration_ms     AS duration_ms,
-    pg.won             AS won,
-    coalesce(h.hs[1], '') AS first_hero,
-    coalesce(h.hs[2], '') AS second_hero,
-    coalesce(h.hs[3], '') AS third_hero,
-    pg.expansion_time_s AS expansion_time_s,
-    pg.building_first_s AS building_first_s,
-    pg.unit_mix         AS unit_mix
-FROM
-(
-    SELECT
-        rp.race AS race,
-        opp.race AS opponent_race,
-        e.replay_id AS replay_id,
-        e.player_id AS player_id,
-        coalesce(mm.season, 0) AS season,
-        r.duration_ms AS duration_ms,
-        if(r.winning_team_id = rp.team_id, toUInt8(1), toUInt8(0)) AS won,
-        -- Any town-hall code works: a player only ever builds their own
-        -- race's hall, and code-matching (not race-matching) keeps Random
-        -- players covered. 0 is impossible for a real build event, so
-        -- nullIf is a safe "no town-hall built" marker.
-        nullIf(toNullable(minIf(toFloat32(e.first_s),
-            e.subject_code IN ('htow', 'ogre', 'unpl', 'etol'))), 0) AS expansion_time_s,
-        mapFromArrays(
-            groupArrayIf(e.subject_code, e.event_type = 'building'),
-            groupArrayIf(toFloat32(e.first_s), e.event_type = 'building')) AS building_first_s,
-        mapFromArrays(
-            groupArrayIf(e.subject_code, e.event_type = 'unit'),
-            groupArrayIf(toUInt16(e.n), e.event_type = 'unit')) AS unit_mix
-    FROM
-    (
-        SELECT replay_id, player_id, event_type, subject_code,
-               min(time_ms) / 1000.0 AS first_s, count() AS n
-        FROM w3g.replay_events
-        WHERE event_type IN ('building', 'unit')
-        GROUP BY replay_id, player_id, event_type, subject_code
-    ) AS e
-    INNER JOIN w3g.replay_players AS rp FINAL
-        ON rp.replay_id = e.replay_id AND rp.player_id = e.player_id
-    INNER JOIN w3g.replays AS r FINAL
-        ON r.replay_id = e.replay_id
-    INNER JOIN w3g.replay_players AS opp FINAL
-        ON opp.replay_id = e.replay_id
-    LEFT JOIN
-    (
-        SELECT l.replay_id AS replay_id, m.season AS season
-        FROM w3c.replay_links_dedup AS l
-        INNER JOIN w3c.matches_dedup AS m
-            ON m.ongoing_match_id = l.ongoing_match_id
-    ) AS mm ON mm.replay_id = e.replay_id
-    WHERE r.type = '1on1' AND r.winning_team_id >= 0
-      AND rp.team_id != opp.team_id AND opp.player_id != e.player_id
-    GROUP BY race, opponent_race, replay_id, player_id, season, duration_ms, won
-) AS pg
-LEFT JOIN
-(
-    SELECT replay_id, player_id,
-           arrayMap(t -> t.2, arraySort(groupArray((hero_slot, hero_id)))) AS hs
-    FROM
-    (
-        SELECT replay_id, player_id, hero_slot,
-               argMax(hero_id, ingested_at) AS hero_id
-        FROM w3g.player_heroes
-        GROUP BY replay_id, player_id, hero_slot
-    )
-    GROUP BY replay_id, player_id
-) AS h ON h.replay_id = pg.replay_id AND h.player_id = pg.player_id
-SETTINGS max_bytes_before_external_group_by = 500000000, max_threads = 2;
