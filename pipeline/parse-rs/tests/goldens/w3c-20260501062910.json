@@ -1,0 +1,1034 @@
+{
+ "apm": {
+  "trackingInterval": 60000
+ },
+ "buildNumber": 6117,
+ "chat": [
+  {
+   "message": "glhf",
+   "mode": "All",
+   "playerId": 1,
+   "playerName": "thanks#11187",
+   "timeMS": 9573
+  },
+  {
+   "message": "-commands",
+   "mode": "All",
+   "playerId": 1,
+   "playerName": "thanks#11187",
+   "timeMS": 14188
+  },
+  {
+   "message": "-ping",
+   "mode": "All",
+   "playerId": 1,
+   "playerName": "thanks#11187",
+   "timeMS": 34008
+  }
+ ],
+ "creator": "FLO",
+ "duration": 937219,
+ "expansion": true,
+ "gamename": "w3c-20-pVJ4T9MAbO",
+ "id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
+ "map": {
+  "checksum": "ffffffff",
+  "checksumSha1": "a1283502c4b8243895deb4dce371e4d016e5a3f5",
+  "file": "1_w3c_251104_0950_ConcealedHill.w3x",
+  "path": "maps\\W3Champions\\1_w3c_251104_0950_ConcealedHill.w3x"
+ },
+ "matchup": "NvO",
+ "observers": [
+  "FLO"
+ ],
+ "parseTime": 0,
+ "players": [
+  {
+   "actions": {
+    "ability": 62,
+    "assigngroup": 34,
+    "basic": 108,
+    "buildtrain": 133,
+    "esc": 1,
+    "item": 1,
+    "removeunit": 8,
+    "rightclick": 1175,
+    "select": 576,
+    "selecthotkey": 53,
+    "subgroup": 0,
+    "timed": [
+     110,
+     96,
+     162,
+     130,
+     149,
+     136,
+     121,
+     135,
+     152,
+     137,
+     149,
+     157,
+     160,
+     151,
+     147,
+     102
+    ]
+   },
+   "apm": 140,
+   "buildings": {
+    "order": [
+     {
+      "id": "eate",
+      "ms": 8025
+     },
+     {
+      "id": "emow",
+      "ms": 18264
+     },
+     {
+      "id": "eaom",
+      "ms": 27158
+     },
+     {
+      "id": "emow",
+      "ms": 103084
+     },
+     {
+      "id": "eden",
+      "ms": 148378
+     },
+     {
+      "id": "etoa",
+      "ms": 164487
+     },
+     {
+      "id": "etoa",
+      "ms": 164642
+     },
+     {
+      "id": "emow",
+      "ms": 189946
+     },
+     {
+      "id": "edob",
+      "ms": 271658
+     },
+     {
+      "id": "eden",
+      "ms": 325084
+     },
+     {
+      "id": "eaoe",
+      "ms": 337065
+     },
+     {
+      "id": "eaoe",
+      "ms": 339202
+     },
+     {
+      "id": "eaoe",
+      "ms": 340870
+     },
+     {
+      "id": "emow",
+      "ms": 356813
+     },
+     {
+      "id": "etoe",
+      "ms": 477578
+     },
+     {
+      "id": "emow",
+      "ms": 639315
+     },
+     {
+      "id": "emow",
+      "ms": 703022
+     },
+     {
+      "id": "emow",
+      "ms": 704846
+     }
+    ],
+    "summary": {
+     "eaoe": 3,
+     "eaom": 1,
+     "eate": 1,
+     "eden": 2,
+     "edob": 1,
+     "emow": 7,
+     "etoa": 2,
+     "etoe": 1
+    }
+   },
+   "color": "#1ce6b9",
+   "groupHotkeys": {
+    "0": {
+     "assigned": 4,
+     "used": 35
+    },
+    "1": {
+     "assigned": 12,
+     "used": 1
+    },
+    "2": {
+     "assigned": 11,
+     "used": 7
+    },
+    "3": {
+     "assigned": 3,
+     "used": 2
+    },
+    "4": {
+     "assigned": 1,
+     "used": 2
+    },
+    "5": {
+     "assigned": 0,
+     "used": 0
+    },
+    "6": {
+     "assigned": 0,
+     "used": 0
+    },
+    "7": {
+     "assigned": 0,
+     "used": 0
+    },
+    "8": {
+     "assigned": 2,
+     "used": 6
+    },
+    "9": {
+     "assigned": 1,
+     "used": 0
+    }
+   },
+   "heroes": [
+    {
+     "abilities": {
+      "AEim": 2,
+      "AEmb": 2
+     },
+     "abilityOrder": [
+      {
+       "time": 142254,
+       "type": "ability",
+       "value": "AEim"
+      },
+      {
+       "time": 246470,
+       "type": "ability",
+       "value": "AEmb"
+      },
+      {
+       "time": 400465,
+       "type": "ability",
+       "value": "AEmb"
+      },
+      {
+       "time": 714233,
+       "type": "ability",
+       "value": "AEim"
+      }
+     ],
+     "id": "Edem",
+     "level": 4,
+     "retrainingHistory": []
+    },
+    {
+     "abilities": {
+      "AEah": 2,
+      "AEer": 2
+     },
+     "abilityOrder": [
+      {
+       "time": 483708,
+       "type": "ability",
+       "value": "AEer"
+      },
+      {
+       "time": 554421,
+       "type": "ability",
+       "value": "AEah"
+      },
+      {
+       "time": 687876,
+       "type": "ability",
+       "value": "AEer"
+      },
+      {
+       "time": 815199,
+       "type": "ability",
+       "value": "AEah"
+      }
+     ],
+     "id": "Ekee",
+     "level": 4,
+     "retrainingHistory": []
+    }
+   ],
+   "id": 1,
+   "items": {
+    "order": [
+     {
+      "id": "cnob",
+      "ms": 208612
+     },
+     {
+      "id": "bspd",
+      "ms": 220572
+     },
+     {
+      "id": "bspd",
+      "ms": 220758
+     },
+     {
+      "id": "stel",
+      "ms": 378923
+     },
+     {
+      "id": "moon",
+      "ms": 463760
+     },
+     {
+      "id": "spre",
+      "ms": 485721
+     },
+     {
+      "id": "pnvl",
+      "ms": 559708
+     },
+     {
+      "id": "moon",
+      "ms": 577876
+     },
+     {
+      "id": "plcl",
+      "ms": 577907
+     },
+     {
+      "id": "oven",
+      "ms": 642873
+     },
+     {
+      "id": "moon",
+      "ms": 757294
+     },
+     {
+      "id": "plcl",
+      "ms": 758914
+     }
+    ],
+    "summary": {
+     "bspd": 2,
+     "cnob": 1,
+     "moon": 3,
+     "oven": 1,
+     "plcl": 2,
+     "pnvl": 1,
+     "spre": 1,
+     "stel": 1
+    }
+   },
+   "name": "thanks#11187",
+   "race": "N",
+   "raceDetected": "N",
+   "resourceTransfers": [],
+   "teamid": 0,
+   "units": {
+    "order": [
+     {
+      "id": "ewsp",
+      "ms": 2601
+     },
+     {
+      "id": "ewsp",
+      "ms": 8584
+     },
+     {
+      "id": "ewsp",
+      "ms": 16198
+     },
+     {
+      "id": "ewsp",
+      "ms": 35121
+     },
+     {
+      "id": "ewsp",
+      "ms": 51953
+     },
+     {
+      "id": "ewsp",
+      "ms": 71711
+     },
+     {
+      "id": "ewsp",
+      "ms": 74187
+     },
+     {
+      "id": "ewsp",
+      "ms": 91458
+     },
+     {
+      "id": "earc",
+      "ms": 95077
+     },
+     {
+      "id": "earc",
+      "ms": 105867
+     },
+     {
+      "id": "ewsp",
+      "ms": 108246
+     },
+     {
+      "id": "ewsp",
+      "ms": 110823
+     },
+     {
+      "id": "ewsp",
+      "ms": 137312
+     },
+     {
+      "id": "ewsp",
+      "ms": 163093
+     },
+     {
+      "id": "earc",
+      "ms": 203024
+     },
+     {
+      "id": "earc",
+      "ms": 262699
+     },
+     {
+      "id": "earc",
+      "ms": 293751
+     },
+     {
+      "id": "earc",
+      "ms": 320224
+     },
+     {
+      "id": "ewsp",
+      "ms": 355017
+     },
+     {
+      "id": "ewsp",
+      "ms": 355420
+     },
+     {
+      "id": "edoc",
+      "ms": 437913
+     },
+     {
+      "id": "edoc",
+      "ms": 549466
+     },
+     {
+      "id": "edoc",
+      "ms": 550177
+     },
+     {
+      "id": "edoc",
+      "ms": 593918
+     },
+     {
+      "id": "edoc",
+      "ms": 707423
+     },
+     {
+      "id": "ewsp",
+      "ms": 771843
+     },
+     {
+      "id": "ewsp",
+      "ms": 772246
+     },
+     {
+      "id": "ewsp",
+      "ms": 830164
+     },
+     {
+      "id": "edoc",
+      "ms": 830812
+     },
+     {
+      "id": "edry",
+      "ms": 832484
+     },
+     {
+      "id": "edoc",
+      "ms": 867144
+     },
+     {
+      "id": "edoc",
+      "ms": 899394
+     },
+     {
+      "id": "edoc",
+      "ms": 899518
+     }
+    ],
+    "summary": {
+     "earc": 6,
+     "edoc": 9,
+     "edry": 1,
+     "ewsp": 17
+    }
+   },
+   "unknown": {
+    "order": [
+     {
+      "id": "Edem",
+      "ms": 70844
+     },
+     {
+      "id": "Edem",
+      "ms": 71092
+     },
+     {
+      "id": "Ekee",
+      "ms": 412093
+     }
+    ],
+    "summary": {
+     "Edem": 2,
+     "Ekee": 1
+    }
+   },
+   "upgrades": {
+    "order": [
+     {
+      "id": "Reuv",
+      "ms": 409087
+     },
+     {
+      "id": "Redc",
+      "ms": 438720
+     },
+     {
+      "id": "Reuv",
+      "ms": 504456
+     },
+     {
+      "id": "Resw",
+      "ms": 566516
+     },
+     {
+      "id": "Reib",
+      "ms": 590950
+     },
+     {
+      "id": "Redc",
+      "ms": 622163
+     },
+     {
+      "id": "Rews",
+      "ms": 623803
+     },
+     {
+      "id": "Renb",
+      "ms": 705751
+     },
+     {
+      "id": "Resw",
+      "ms": 706274
+     },
+     {
+      "id": "Rerh",
+      "ms": 770360
+     },
+     {
+      "id": "Reeb",
+      "ms": 773299
+     },
+     {
+      "id": "Resi",
+      "ms": 773797
+     },
+     {
+      "id": "Resw",
+      "ms": 833596
+     },
+     {
+      "id": "Resw",
+      "ms": 833754
+     },
+     {
+      "id": "Rerh",
+      "ms": 869125
+     }
+    ],
+    "summary": {
+     "Redc": 2,
+     "Reeb": 1,
+     "Reib": 1,
+     "Renb": 1,
+     "Rerh": 2,
+     "Resi": 1,
+     "Resw": 4,
+     "Reuv": 2,
+     "Rews": 1
+    }
+   }
+  },
+  {
+   "actions": {
+    "ability": 15,
+    "assigngroup": 17,
+    "basic": 8,
+    "buildtrain": 72,
+    "esc": 0,
+    "item": 2,
+    "removeunit": 1,
+    "rightclick": 715,
+    "select": 280,
+    "selecthotkey": 256,
+    "subgroup": 0,
+    "timed": [
+     54,
+     36,
+     72,
+     84,
+     98,
+     100,
+     88,
+     74,
+     114,
+     105,
+     107,
+     100,
+     65,
+     100,
+     142,
+     55
+    ]
+   },
+   "apm": 89,
+   "buildings": {
+    "order": [
+     {
+      "id": "oalt",
+      "ms": 6722
+     },
+     {
+      "id": "otrb",
+      "ms": 22557
+     },
+     {
+      "id": "ofor",
+      "ms": 53588
+     },
+     {
+      "id": "obar",
+      "ms": 92385
+     },
+     {
+      "id": "otrb",
+      "ms": 124147
+     },
+     {
+      "id": "ostr",
+      "ms": 215492
+     },
+     {
+      "id": "ovln",
+      "ms": 293471
+     },
+     {
+      "id": "otrb",
+      "ms": 349972
+     },
+     {
+      "id": "ofrt",
+      "ms": 357898
+     },
+     {
+      "id": "obea",
+      "ms": 360468
+     },
+     {
+      "id": "osld",
+      "ms": 366193
+     },
+     {
+      "id": "otrb",
+      "ms": 384628
+     }
+    ],
+    "summary": {
+     "oalt": 1,
+     "obar": 1,
+     "obea": 1,
+     "ofor": 1,
+     "ofrt": 1,
+     "osld": 1,
+     "ostr": 1,
+     "otrb": 4,
+     "ovln": 1
+    }
+   },
+   "color": "#fe8a0e",
+   "groupHotkeys": {
+    "0": {
+     "assigned": 0,
+     "used": 0
+    },
+    "1": {
+     "assigned": 8,
+     "used": 171
+    },
+    "2": {
+     "assigned": 5,
+     "used": 55
+    },
+    "3": {
+     "assigned": 0,
+     "used": 0
+    },
+    "4": {
+     "assigned": 3,
+     "used": 30
+    },
+    "5": {
+     "assigned": 0,
+     "used": 0
+    },
+    "6": {
+     "assigned": 1,
+     "used": 0
+    },
+    "7": {
+     "assigned": 0,
+     "used": 0
+    },
+    "8": {
+     "assigned": 0,
+     "used": 0
+    },
+    "9": {
+     "assigned": 0,
+     "used": 0
+    }
+   },
+   "heroes": [
+    {
+     "abilities": {
+      "AOcl": 1,
+      "AOsf": 2
+     },
+     "abilityOrder": [
+      {
+       "time": 137034,
+       "type": "ability",
+       "value": "AOsf"
+      },
+      {
+       "time": 409429,
+       "type": "ability",
+       "value": "AOcl"
+      },
+      {
+       "time": 598781,
+       "type": "ability",
+       "value": "AOsf"
+      }
+     ],
+     "id": "Ofar",
+     "level": 3,
+     "retrainingHistory": []
+    },
+    {
+     "abilities": {
+      "AOhw": 1,
+      "AOhx": 1
+     },
+     "abilityOrder": [
+      {
+       "time": 505264,
+       "type": "ability",
+       "value": "AOhx"
+      },
+      {
+       "time": 743557,
+       "type": "ability",
+       "value": "AOhw"
+      }
+     ],
+     "id": "Oshd",
+     "level": 2,
+     "retrainingHistory": []
+    },
+    {
+     "abilities": {
+      "AOws": 1
+     },
+     "abilityOrder": [
+      {
+       "time": 647143,
+       "type": "ability",
+       "value": "AOws"
+      }
+     ],
+     "id": "Otch",
+     "level": 1,
+     "retrainingHistory": []
+    }
+   ],
+   "id": 2,
+   "items": {
+    "order": [
+     {
+      "id": "hslv",
+      "ms": 404890
+     },
+     {
+      "id": "hslv",
+      "ms": 462648
+     },
+     {
+      "id": "shas",
+      "ms": 493173
+     },
+     {
+      "id": "plcl",
+      "ms": 493980
+     }
+    ],
+    "summary": {
+     "hslv": 2,
+     "plcl": 1,
+     "shas": 1
+    }
+   },
+   "name": "Okeanos#22605",
+   "race": "O",
+   "raceDetected": "O",
+   "resourceTransfers": [],
+   "teamid": 1,
+   "units": {
+    "order": [
+     {
+      "id": "opeo",
+      "ms": 2105
+     },
+     {
+      "id": "opeo",
+      "ms": 19034
+     },
+     {
+      "id": "opeo",
+      "ms": 34996
+     },
+     {
+      "id": "opeo",
+      "ms": 58808
+     },
+     {
+      "id": "opeo",
+      "ms": 65652
+     },
+     {
+      "id": "opeo",
+      "ms": 76261
+     },
+     {
+      "id": "opeo",
+      "ms": 105219
+     },
+     {
+      "id": "opeo",
+      "ms": 120827
+     },
+     {
+      "id": "opeo",
+      "ms": 148997
+     },
+     {
+      "id": "ohun",
+      "ms": 158821
+     },
+     {
+      "id": "ohun",
+      "ms": 179442
+     },
+     {
+      "id": "opeo",
+      "ms": 186007
+     },
+     {
+      "id": "ohun",
+      "ms": 204291
+     },
+     {
+      "id": "ohun",
+      "ms": 257712
+     },
+     {
+      "id": "ohun",
+      "ms": 257960
+     },
+     {
+      "id": "ohun",
+      "ms": 327343
+     },
+     {
+      "id": "okod",
+      "ms": 451758
+     },
+     {
+      "id": "odoc",
+      "ms": 474385
+     },
+     {
+      "id": "oshm",
+      "ms": 481511
+     },
+     {
+      "id": "ohun",
+      "ms": 571446
+     },
+     {
+      "id": "okod",
+      "ms": 618877
+     },
+     {
+      "id": "oshm",
+      "ms": 621015
+     },
+     {
+      "id": "otbk",
+      "ms": 640489
+     },
+     {
+      "id": "otbk",
+      "ms": 660184
+     },
+     {
+      "id": "otbk",
+      "ms": 759750
+     },
+     {
+      "id": "oshm",
+      "ms": 765414
+     },
+     {
+      "id": "opeo",
+      "ms": 820591
+     },
+     {
+      "id": "opeo",
+      "ms": 820932
+     },
+     {
+      "id": "opeo",
+      "ms": 821148
+     },
+     {
+      "id": "opeo",
+      "ms": 856092
+     },
+     {
+      "id": "opeo",
+      "ms": 856496
+     }
+    ],
+    "summary": {
+     "odoc": 1,
+     "ohun": 7,
+     "okod": 2,
+     "opeo": 15,
+     "oshm": 3,
+     "otbk": 3
+    }
+   },
+   "unknown": {
+    "order": [
+     {
+      "id": "Ofar",
+      "ms": 74311
+     },
+     {
+      "id": "Oshd",
+      "ms": 431702
+     },
+     {
+      "id": "Otch",
+      "ms": 568684
+     }
+    ],
+    "summary": {
+     "Ofar": 1,
+     "Oshd": 1,
+     "Otch": 1
+    }
+   },
+   "upgrades": {
+    "order": [
+     {
+      "id": "Rotr",
+      "ms": 378737
+     },
+     {
+      "id": "Rorb",
+      "ms": 388065
+     },
+     {
+      "id": "Rora",
+      "ms": 388498
+     },
+     {
+      "id": "Robk",
+      "ms": 570266
+     },
+     {
+      "id": "Rwdm",
+      "ms": 619279
+     },
+     {
+      "id": "Rost",
+      "ms": 621354
+     },
+     {
+      "id": "Rowd",
+      "ms": 757170
+     },
+     {
+      "id": "Rost",
+      "ms": 757520
+     }
+    ],
+    "summary": {
+     "Robk": 1,
+     "Rora": 1,
+     "Rorb": 1,
+     "Rost": 2,
+     "Rotr": 1,
+     "Rowd": 1,
+     "Rwdm": 1
+    }
+   }
+  }
+ ],
+ "randomseed": 2729627562,
+ "settings": {
+  "alwaysVisible": false,
+  "fixedTeams": true,
+  "fullSharedUnitControl": false,
+  "hideTerrain": false,
+  "mapExplored": false,
+  "observerMode": "FULL",
+  "randomHero": false,
+  "randomRaces": false,
+  "referees": false,
+  "speed": 2,
+  "teamsTogether": true
+ },
+ "startSpots": 2,
+ "type": "1on1",
+ "version": "2.00",
+ "winningTeamId": 0
+}

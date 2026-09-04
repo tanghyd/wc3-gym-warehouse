@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<!--
+  Single-node tuning for a co-located VM: ClickHouse shares the box with the
+  api, grafana and loader containers. The image defaults assume CH owns the
+  whole machine, so they need reining in. (metric-log.xml *enables* the metric_log
+  tables; this file bounds memory, merges and the on-by-default system logs.)
+-->
+<clickhouse>
+    <!-- Default 0.9 lets CH grab 90% of HOST RAM — on a shared box that invites
+         the kernel OOM-killer to shoot CH or a sibling. 0.8 leaves headroom for
+         the other containers + the Linux page cache (where CH's real speed lives).
+         A ratio, not an absolute byte cap, so it adapts across the local machine,
+         e2-medium, and a future highmem resize without an edit.
+         ponytail: per-query cap (users.d profile) skipped — the server ratio
+         bounds the box; add it only if one fat query starts starving others. -->
+    <max_server_memory_usage_to_ram_ratio>0.8</max_server_memory_usage_to_ram_ratio>
+
+    <!-- Bulk re-ingest (pipeline.sh batches), not high-frequency streaming, so
+         raise the part thresholds: a bulk load shouldn't trip "Too many parts"
+         before merges catch up.
+         ponytail: leaving background_pool_size at its default (16) — trimming it
+         buys little (the memory ratio above is the real OOM guard) and a too-low
+         pool violates pool*ratio >= number_of_free_entries_in_pool_to_execute_mutation
+         (20), which makes CH refuse to start. Not worth the fragility. -->
+    <merge_tree>
+        <parts_to_delay_insert>750</parts_to_delay_insert>
+        <parts_to_throw_insert>1500</parts_to_throw_insert>
+    </merge_tree>
+
+    <!-- Server-side query cache (opt-in per query: the api sends
+         use_query_cache only when W3WAREHOUSE_CH_QUERY_CACHE_TTL > 0). Bound
+         it so cached results can't crowd real query memory on the shared box;
+         entries are TTL-evicted, never write-invalidated — see
+         handoff/decisions/caching-exact-query.md. -->
+    <query_cache>
+        <max_size_in_bytes>268435456</max_size_in_bytes>  <!-- 256 MiB -->
+    </query_cache>
+
+    <!-- On-by-default system logs grow with UPTIME, not data, and will quietly
+         fill the disk on a long-running box. Bound them. query_log feeds the API
+         latency panels (14d); trace/part are debug-only (7d). metric_log /
+         asynchronous_metric_log are bounded in metric-log.xml. -->
+    <query_log replace="1">
+        <database>system</database><table>query_log</table>
+        <ttl>event_date + INTERVAL 14 DAY DELETE</ttl>
+    </query_log>
+    <trace_log replace="1">
+        <database>system</database><table>trace_log</table>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </trace_log>
+    <part_log replace="1">
+        <database>system</database><table>part_log</table>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </part_log>
+</clickhouse>
