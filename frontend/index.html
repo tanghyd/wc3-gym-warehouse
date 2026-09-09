@@ -21,14 +21,85 @@
   .timing-row { padding-left: 2.5rem; }
   /* Buildings already walked past sit quieter than the one this row adds. */
   .opener-past { opacity: .45; }
+
+  /* ---- from wc3-gym-frontend src/assets/base.css, so both apps read alike ---- */
+
+  /* Show the sort icon of an unsorted sortable header at rest, not only on hover. */
+  .v-data-table .v-table__wrapper > table > thead > tr > th:not(.v-data-table__th--sorted) .v-data-table-header__sort-icon {
+    opacity: 0.22;
+  }
+  .v-data-table .v-table__wrapper > table > thead > tr > th:not(.v-data-table__th--sorted):hover .v-data-table-header__sort-icon {
+    opacity: 0.45;
+  }
+  /* A hint next to the label, not a second label. */
+  .v-data-table .v-data-table-header__sort-icon {
+    font-size: 0.875rem;
+    margin-inline-start: 2px;
+  }
+  /* The column the table is sorted by reads in the primary colour. */
+  .v-data-table .v-table__wrapper > table > thead > tr > th.v-data-table__th--sorted,
+  .v-data-table .v-table__wrapper > table > thead > tr > th.v-data-table__th--sorted:hover {
+    color: rgb(var(--v-theme-primary));
+  }
+  .v-data-table .v-table__wrapper > table > thead > tr > th.v-data-table__th--sorted .v-data-table-header__sort-icon {
+    opacity: 1;
+    color: rgb(var(--v-theme-primary));
+  }
+  /* A column title is a short label; it never wraps, so every header row is one line tall. */
+  .v-table > .v-table__wrapper > table > thead > tr > th { white-space: nowrap; }
+  /* A table wider than its card shows a shadow at the hidden edge, so the reader knows it scrolls. */
+  .v-table__wrapper {
+    background:
+      linear-gradient(to right, rgb(var(--v-theme-surface)) 30%, rgba(var(--v-theme-surface), 0)),
+      linear-gradient(to left, rgb(var(--v-theme-surface)) 30%, rgba(var(--v-theme-surface), 0)) 100% 0,
+      radial-gradient(farthest-side at 0 50%, rgba(var(--v-theme-on-surface), 0.2), transparent),
+      radial-gradient(farthest-side at 100% 50%, rgba(var(--v-theme-on-surface), 0.2), transparent) 100% 0;
+    background-repeat: no-repeat;
+    background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+  /* A scrim dims what is behind it. Vuetify paints it in on-surface, which is
+     white on the dark theme and washes the page out while it loads. */
+  .v-theme--dark .v-overlay__scrim { background: rgb(0, 0, 0); }
+  /* Phones and small tablets: tighter titles, cells and gutters. */
+  @media (max-width: 959px) {
+    .v-container { padding: 8px; }
+    .v-table > .v-table__wrapper > table > thead > tr > th,
+    .v-table > .v-table__wrapper > table > tbody > tr > td { padding: 4px 8px; }
+    .v-table > .v-table__wrapper > table > thead > tr > th { white-space: normal; }
+  }
+
+  /* ---- PlayerName, from the frontend component of that name ---- */
+  .player-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  /* 1.4em keeps the race mark in step with the text, as RaceIcon does. */
+  .race-icon { width: 1.4em; height: 1.4em; flex: none; }
+  .app-title { color: inherit; text-decoration: none; }
 </style>
 </head>
 <body>
 <div id="app">
 <v-app>
   <v-app-bar flat density="comfortable" border>
-    <v-app-bar-title>GNL replay search</v-app-bar-title>
-    <v-btn :icon="dark ? 'mdi-weather-night' : 'mdi-weather-sunny'" @click="toggleTheme"></v-btn>
+    <v-app-bar-title><span class="app-title">GNL replay search</span></v-app-bar-title>
+    <template v-slot:append>
+      <v-menu>
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" :icon="themeIcon"></v-btn>
+        </template>
+        <v-list density="compact">
+          <v-list-item v-for="t in THEMES" :key="t.value" :value="t.value"
+                       :active="themeMode === t.value" @click="setThemeMode(t.value)">
+            <template v-slot:prepend><v-icon :icon="t.icon"></v-icon></template>
+            <v-list-item-title>{{ t.title }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
+    </template>
   </v-app-bar>
 
   <v-main>
@@ -54,15 +125,13 @@
         <v-card-text>
           <v-row dense align="center">
             <v-col cols="12" sm="6" md="3">
-              <v-select v-model="scope.race" :items="raceItems" label="Race"
-                        density="comfortable" hide-details clearable></v-select>
+              <race-select v-model="scope.race" label="Race" clearable></race-select>
             </v-col>
             <v-col cols="12" sm="6" md="3">
-              <v-select v-model="scope.opponent" :items="raceItems" label="Opponent race"
-                        density="comfortable" hide-details clearable></v-select>
+              <race-select v-model="scope.opponent" label="Opponent race" clearable></race-select>
             </v-col>
             <v-col cols="12" sm="6" md="3">
-              <v-select v-model="scope.map" :items="maps" label="Map"
+              <v-select class="map-select" v-model="scope.map" :items="maps" label="Map"
                         density="comfortable" hide-details clearable></v-select>
             </v-col>
             <v-col cols="6" sm="3" md="1">
@@ -92,11 +161,10 @@
               <div class="text-subtitle-2">Player {{ si + 1 }} did this, in order</div>
             </v-col>
             <v-col cols="6" sm="4" md="3">
-              <v-select v-model="slot.race" :items="raceItems" label="Race"
-                        density="compact" hide-details clearable></v-select>
+              <race-select v-model="slot.race" label="Race" density="compact" clearable></race-select>
             </v-col>
             <v-col cols="6" sm="4" md="3">
-              <v-select v-model="slot.outcome" :items="outcomeItems" label="Outcome"
+              <v-select class="outcome-select" v-model="slot.outcome" :items="outcomeItems" label="Outcome"
                         density="compact" hide-details></v-select>
             </v-col>
             <v-col cols="12" sm="8" md="3">
@@ -120,7 +188,7 @@
             <v-row dense align="center">
               <v-col cols="auto" class="step-index text-body-2 tabular">{{ qi + 1 }}</v-col>
               <v-col cols="12" sm="4" md="3">
-                <v-select v-model="step.type" :items="typeItems" label="Did what"
+                <v-select class="steptype-select" v-model="step.type" :items="typeItems" label="Did what"
                           density="compact" hide-details
                           @update:model-value="step.code = null"></v-select>
               </v-col>
@@ -222,6 +290,14 @@
             </div>
             <v-data-table v-else :headers="headers" :items="rows" :items-per-page="25"
                           density="comfortable" item-value="replay_id">
+              <template v-slot:item.players="{ item }">
+                <span class="d-inline-flex align-center flex-wrap ga-2">
+                  <template v-for="(p, i) in item.players" :key="i">
+                    <span v-if="i" class="text-medium-emphasis">vs</span>
+                    <player-name :name="p.name" :race="p.race"></player-name>
+                  </template>
+                </span>
+              </template>
               <template v-slot:item.result="{ item }">
                 <v-chip v-if="item.result" size="small" variant="tonal"
                         :style="{ color: item.result === 'Won' ? COLOR_WIN : COLOR_LOSS }">
@@ -249,22 +325,18 @@
           <v-card-text>
             <v-row dense align="center">
               <v-col cols="12" sm="6" md="3">
-                <v-select v-model="op.race" :items="raceItems" label="Race"
-                          density="comfortable" hide-details
-                          @update:model-value="loadOpeners"></v-select>
+                <race-select v-model="op.race" label="Race" @update:model-value="loadOpeners"></race-select>
               </v-col>
               <v-col cols="12" sm="6" md="3">
-                <v-select v-model="op.opponent" :items="raceItems" label="Opponent race"
+                <race-select v-model="op.opponent" label="Opponent race" clearable @update:model-value="loadOpeners"></race-select>
+              </v-col>
+              <v-col cols="12" sm="6" md="3">
+                <v-select class="map-select" v-model="op.map" :items="maps" label="Map"
                           density="comfortable" hide-details clearable
                           @update:model-value="loadOpeners"></v-select>
               </v-col>
               <v-col cols="12" sm="6" md="3">
-                <v-select v-model="op.map" :items="maps" label="Map"
-                          density="comfortable" hide-details clearable
-                          @update:model-value="loadOpeners"></v-select>
-              </v-col>
-              <v-col cols="12" sm="6" md="3">
-                <v-select v-model="op.sort" :items="sortItems" label="Sort by"
+                <v-select class="sort-select" v-model="op.sort" :items="sortItems" label="Sort by"
                           density="comfortable" hide-details
                           @update:model-value="loadOpeners"></v-select>
               </v-col>
@@ -330,6 +402,14 @@
             </div>
             <v-data-table v-else :headers="headers" :items="openerDialogRows"
                           :items-per-page="25" density="comfortable" item-value="replay_id">
+              <template v-slot:item.players="{ item }">
+                <span class="d-inline-flex align-center flex-wrap ga-2">
+                  <template v-for="(p, i) in item.players" :key="i">
+                    <span v-if="i" class="text-medium-emphasis">vs</span>
+                    <player-name :name="p.name" :race="p.race"></player-name>
+                  </template>
+                </span>
+              </template>
               <template v-slot:item.result="{ item }">
                 <v-chip v-if="item.result" size="small" variant="tonal"
                         :style="{ color: item.result === 'Won' ? COLOR_WIN : COLOR_LOSS }">
@@ -370,11 +450,12 @@ const MAX_OPENER_DEPTH = 6;
 // A race owns a letter in the data and a letter at the head of every object
 // code, so `race` also picks which subjects a step can name.
 const RACES = [
-  { letter: 'H', name: 'Human',     codePrefix: 'h' },
-  { letter: 'O', name: 'Orc',       codePrefix: 'o' },
-  { letter: 'N', name: 'Night Elf', codePrefix: 'e' },
-  { letter: 'U', name: 'Undead',    codePrefix: 'u' },
+  { letter: 'H', name: 'Human',     codePrefix: 'h', icon: 'race-icons/HUMAN.png' },
+  { letter: 'O', name: 'Orc',       codePrefix: 'o', icon: 'race-icons/ORC.png' },
+  { letter: 'N', name: 'Night Elf', codePrefix: 'e', icon: 'race-icons/NIGHT_ELF.png' },
+  { letter: 'U', name: 'Undead',    codePrefix: 'u', icon: 'race-icons/UNDEAD.png' },
 ];
+const raceIcon = (letter) => RACES.find(r => r.letter === letter)?.icon || '';
 
 // What a step can be. `value` is the replay_events.event_type it filters on;
 // `kind` is the w3g.mappings.kind that supplies its pickable subjects.
@@ -438,9 +519,79 @@ const vuetify = Vuetify.createVuetify({
   theme: { defaultTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' },
 });
 
+// Mirrors wc3-gym-frontend RaceSelect.vue: an autocomplete drawing the race
+// mark beside the name, in the menu and in the chosen value.
+const RaceSelect = {
+  props: {
+    modelValue: { default: null },
+    label: { type: String, default: 'Race' },
+    clearable: Boolean,
+    density: { type: String, default: 'comfortable' },
+  },
+  emits: ['update:modelValue'],
+  setup() {
+    return { races: RACES.map(r => ({ title: r.name, value: r.letter, icon: r.icon })) };
+  },
+  template: `
+    <v-autocomplete class="race-select" :model-value="modelValue" :label="label"
+                    :clearable="clearable" :density="density" hide-details :items="races"
+                    :menu-props="{ scrollStrategy: 'close' }"
+                    @update:model-value="v => $emit('update:modelValue', v)">
+      <template v-slot:selection="{ item }">
+        <span class="player-name">
+          <img :src="item.raw.icon" class="race-icon" alt="">
+          {{ item.raw.title }}
+        </span>
+      </template>
+      <template v-slot:item="{ props, item }">
+        <v-list-item v-bind="props" :title="item.raw.title">
+          <template v-slot:prepend>
+            <img :src="item.raw.icon" class="race-icon" alt="">
+          </template>
+        </v-list-item>
+      </template>
+    </v-autocomplete>`,
+};
+
+// Mirrors wc3-gym-frontend PlayerName.vue. A player with no race keeps an empty
+// box the same width, so names stay in a column.
+const PlayerName = {
+  props: { name: String, race: String },
+  computed: { icon() { return raceIcon(this.race); } },
+  template: `
+    <span class="player-name">
+      <img v-if="icon" :src="icon" class="race-icon" alt="">
+      <span v-else class="race-icon"></span>
+      {{ name }}
+    </span>`,
+};
+
 createApp({
   setup() {
-    const dark = ref(window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const THEMES = [
+      { value: 'light', title: 'Light', icon: 'mdi-white-balance-sunny' },
+      { value: 'dark', title: 'Dark', icon: 'mdi-weather-night' },
+      { value: 'system', title: 'System', icon: 'mdi-theme-light-dark' },
+    ];
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+    let stored = null;
+    try { stored = localStorage.getItem('theme'); } catch { /* private window */ }
+    const themeMode = ref(stored || 'system');
+    const themeIcon = computed(
+      () => THEMES.find(t => t.value === themeMode.value)?.icon || 'mdi-theme-light-dark');
+    function applyTheme() {
+      const name = themeMode.value === 'system'
+        ? (systemDark.matches ? 'dark' : 'light')
+        : themeMode.value;
+      vuetify.theme.global.name.value = name;
+    }
+    function setThemeMode(mode) {
+      themeMode.value = mode;
+      try { localStorage.setItem('theme', mode); } catch { /* private window */ }
+      applyTheme();
+    }
+    systemDark.addEventListener('change', () => { if (themeMode.value === 'system') applyTheme(); });
+    applyTheme();
     const scope = reactive({ race: null, opponent: null, map: null, minMinutes: null, maxMinutes: null });
     const slots = ref([newSlot()]);
     const maxResults = ref(100);
@@ -472,11 +623,10 @@ createApp({
       { title: 'Game', key: 'game', align: 'end' },
       { title: 'Map', key: 'map' },
       { title: 'Matchup', key: 'matchup' },
-      { title: 'Players', key: 'playersLabel' },
+      { title: 'Players', key: 'players', sortable: false },
       { title: 'Minutes', key: 'minutes', align: 'end' },
       { title: 'Player 1', key: 'result', sortable: false },
     ];
-    const raceItems = RACES.map(r => ({ title: r.name, value: r.letter }));
     const typeItems = STEP_TYPES.map(t => ({ title: t.title, value: t.value }));
     const sortItems = [
       { title: 'most played', value: 'popular' },
@@ -662,9 +812,7 @@ createApp({
         map: d.map,
         matchup: d.matchup,
         minutes: d.minutes,
-        playersLabel: players
-          .sort((a, b) => a.id - b.id)
-          .map(p => p.name + ' (' + p.race + ')').join('  vs  '),
+        players: players.sort((a, b) => a.id - b.id),
         result: !focus || winner < 0 ? null : (winner === focus.team ? 'Won' : 'Lost'),
       };
     }
@@ -852,10 +1000,6 @@ createApp({
     function removeSlot(i) { slots.value.splice(i, 1); }
     function addStep(slot) { slot.steps.push(newStep()); }
     function removeStep(slot, i) { slot.steps.splice(i, 1); }
-    function toggleTheme() {
-      dark.value = !dark.value;
-      vuetify.theme.global.name.value = dark.value ? 'dark' : 'light';
-    }
     async function copySql() {
       await navigator.clipboard.writeText(sql.value);
       copied.value = true;
@@ -883,16 +1027,20 @@ createApp({
     });
 
     return {
-      dark, scope, slots, maxResults, maps, rows, sql, tab, loading, ran, error, fatal, headers,
-      elapsedMs, copied, raceItems, typeItems, outcomeItems, subjectsFor, ready, hasTiming,
+      THEMES, themeMode, themeIcon, setThemeMode, raceIcon,
+      scope, slots, maxResults, maps, rows, sql, tab, loading, ran, error, fatal, headers,
+      elapsedMs, copied, typeItems, outcomeItems, subjectsFor, ready, hasTiming,
       winRate, winRateColor, medianMinutes, run, addSlot, removeSlot, addStep, removeStep,
-      toggleTheme, copySql, chUrl: CH_URL, COLOR_WIN, COLOR_LOSS, WR_FLOOR,
+      copySql, chUrl: CH_URL, COLOR_WIN, COLOR_LOSS, WR_FLOOR,
       mainTab, op, sortItems, openerHeaders, openerRows, openerError, loadOpeners,
       onOpenerRow, winrateColor, showOpenerReplays, nameFor, iconFor, playerNames,
       openerDialog, openerDialogLoading, openerDialogRows,
     };
   },
-}).use(vuetify).mount('#app');
+}).use(vuetify)
+  .component('race-select', RaceSelect)
+  .component('player-name', PlayerName)
+  .mount('#app');
 </script>
 </body>
 </html>
