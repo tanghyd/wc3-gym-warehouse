@@ -1,0 +1,125 @@
+# The warehouse box: ClickHouse, the parse drain, and the tunnel that lets the
+# GNL backend reach ClickHouse. Replays live in an S3 bucket (R2 in production,
+# MinIO under the `local` profile), never on the box.
+#
+#   docker compose up -d                  # clickhouse + schema + drain
+#   docker compose --profile local up -d  # ... plus a local MinIO to point at
+#   docker compose --profile prod up -d   # ... plus the Cloudflare Tunnel
+name: wc3-gym-warehouse
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.10
+    environment:
+      CLICKHOUSE_PASSWORD: "${CLICKHOUSE_PASSWORD:-}"
+    restart: unless-stopped
+    stop_grace_period: 60s          # the 10s default SIGKILL truncates the flush
+    # Loopback only. The tunnel reaches ClickHouse over the compose network, so
+    # nothing needs to listen on a public interface.
+    ports:
+      - "127.0.0.1:8123:8123"
+    volumes:
+      - ch_store:/var/lib/clickhouse
+      - ./infrastructure/docker/clickhouse/tuning.xml:/etc/clickhouse-server/config.d/tuning.xml:ro
+      - ./infrastructure/docker/clickhouse/user-files.xml:/etc/clickhouse-server/config.d/user-files.xml:ro
+      - ./infrastructure/docker/clickhouse/metric-log.xml:/etc/clickhouse-server/config.d/metric-log.xml:ro
+      - ./infrastructure/docker/clickhouse/refreshable.xml:/etc/clickhouse-server/users.d/refreshable.xml:ro
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      # CMD-SHELL so the container's $CLICKHOUSE_PASSWORD expands; $$ escapes
+      # compose's own interpolation. An empty password drops the flag.
+      test: ["CMD-SHELL", "clickhouse-client --host 127.0.0.1 $${CLICKHOUSE_PASSWORD:+--password=$$CLICKHOUSE_PASSWORD} --query 'SELECT 1'"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  # One-shot: apply tables.sql then views.sql. Every statement is CREATE … IF NOT
+  # EXISTS, so a re-`up` is a no-op.
+  schema:
+    image: clickhouse/clickhouse-server:24.10
+    environment:
+      CLICKHOUSE_PASSWORD: "${CLICKHOUSE_PASSWORD:-}"
+    entrypoint: >
+      /bin/sh -c "
+      clickhouse-client --host clickhouse $${CLICKHOUSE_PASSWORD:+--password=$$CLICKHOUSE_PASSWORD}
+      --queries-file /work/db/w3g/tables.sql &&
+      clickhouse-client --host clickhouse $${CLICKHOUSE_PASSWORD:+--password=$$CLICKHOUSE_PASSWORD}
+      --queries-file /work/db/w3g/views.sql &&
+      echo 'schema applied'
+      "
+    volumes:
+      - ./db:/work/db:ro
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    restart: "no"
+
+  drain:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.drain
+    environment:
+      W3WAREHOUSE_S3_ENDPOINT: "${W3WAREHOUSE_S3_ENDPOINT:-minio:9000}"
+      W3WAREHOUSE_S3_SECURE: "${W3WAREHOUSE_S3_SECURE:-false}"
+      W3WAREHOUSE_S3_ACCESS_KEY: "${W3WAREHOUSE_S3_ACCESS_KEY:-minioadmin}"
+      W3WAREHOUSE_S3_SECRET_KEY: "${W3WAREHOUSE_S3_SECRET_KEY:-minioadmin}"
+      W3WAREHOUSE_S3_BUCKET: "${W3WAREHOUSE_S3_BUCKET:-warehouse}"
+      W3WAREHOUSE_S3_PREFIX: "${W3WAREHOUSE_S3_PREFIX:-}"
+      WORKER_POLL_MS: "${WORKER_POLL_MS:-60000}"
+    restart: unless-stopped
+
+  # A local stand-in for the R2 bucket.
+  minio:
+    image: minio/minio
+    profiles: ["local"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: "${W3WAREHOUSE_S3_ACCESS_KEY:-minioadmin}"
+      MINIO_ROOT_PASSWORD: "${W3WAREHOUSE_S3_SECRET_KEY:-minioadmin}"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  minio-setup:
+    image: minio/mc
+    profiles: ["local"]
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 '${W3WAREHOUSE_S3_ACCESS_KEY:-minioadmin}' '${W3WAREHOUSE_S3_SECRET_KEY:-minioadmin}' &&
+      mc mb --ignore-existing local/${W3WAREHOUSE_S3_BUCKET:-warehouse} &&
+      echo 'bucket ${W3WAREHOUSE_S3_BUCKET:-warehouse} ready'
+      "
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+
+  # Outbound-only connections to Cloudflare, forwarded to clickhouse:8123
+  # (infrastructure/cloudflared/config.yml.example). Shares the ClickHouse
+  # network namespace so `localhost:8123` in a dashboard-managed tunnel works too.
+  cloudflared:
+    image: cloudflare/cloudflared
+    profiles: ["prod"]
+    command: tunnel --no-autoupdate run
+    environment:
+      # Compose interpolates every service before it applies profiles, so a `:?`
+      # guard here would fail `up` on any machine with no tunnel. cloudflared
+      # rejects an empty token itself, and only under the prod profile.
+      TUNNEL_TOKEN: "${TUNNEL_TOKEN:-}"
+    network_mode: "service:clickhouse"
+    restart: unless-stopped
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
+volumes:
+  ch_store:
+  minio_data:

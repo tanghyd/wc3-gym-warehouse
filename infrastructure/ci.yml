@@ -1,0 +1,65 @@
+# Copy to .github/workflows/ci.yml. A gym-root hook keeps Claude from writing there.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: pipeline/parse-rs
+      - run: cargo test --manifest-path pipeline/parse-rs/Cargo.toml
+
+  # Applies the schema to an empty server, which is how a new box builds it.
+  schema:
+    runs-on: ubuntu-latest
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:24.10
+        ports:
+          - 8123:8123
+    steps:
+      - uses: actions/checkout@v4
+      - name: apply tables.sql then views.sql
+        run: |
+          set -euo pipefail
+          for i in $(seq 30); do
+            curl -s http://127.0.0.1:8123/ping | grep -q Ok && break
+            sleep 1
+          done
+          for f in db/w3g/tables.sql db/w3g/views.sql; do
+            echo "== $f"
+            docker exec -i ${{ job.services.clickhouse.id }} clickhouse-client \
+              --allow_experimental_refreshable_materialized_view=1 \
+              --multiquery < "$f"
+          done
+
+  image:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.drain
+          push: true
+          tags: |
+            ghcr.io/warcraft-gym/wc3-gym-warehouse-drain:latest
+            ghcr.io/warcraft-gym/wc3-gym-warehouse-drain:${{ github.sha }}

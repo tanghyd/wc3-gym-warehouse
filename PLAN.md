@@ -1,5 +1,7 @@
 # wc3-gym-warehouse: replay analytics on Cloudflare R2 and a Hetzner box
 
+ON ICE since 2026-09-04: Daniel paused analytics to focus on replay upload and download. The first cut is on `feature/initial-stack`, proven against a host ClickHouse and MinIO, no PR.
+
 Written 2026-09-04 by Claude Code after a design conversation with Daniel. Not yet reviewed. Daniel pays for the box. Prices are from memory unless a command is given to check them. Supersedes the phase 2 sections of `../REPLAYS-PLAN.md`.
 
 ## Goal
@@ -119,7 +121,7 @@ The design is an S3 bucket, a Compose file and ClickHouse SQL. R2, S3, GCS and M
 
 ## Open
 
-- Is the site's domain on Cloudflare? The tunnel and the R2 custom domain need the zone there, free plan.
+- The site's domain is on GoDaddy nameservers (checked 2026-09-04). The tunnel and the R2 custom domain need the full zone on Cloudflare; the partial setup that keeps GoDaddy is Business plan only. Fallback: a public IP with Caddy on the box and presigned R2 URLs for downloads.
 - Matching replay player names to GNL users by battle tag: the profile field exists from the W3C sync, the loader does the join.
 - Whether Grafana and the w3warehouse API are exposed at all, or only ClickHouse for the one route. Start with ClickHouse only.
 - Whether the checksum-zeroed replay plays in game. If yes, the raw file shrinks to a third. That is a storage question, and this plan does not depend on it.

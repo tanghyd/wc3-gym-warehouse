@@ -1,0 +1,918 @@
+{"code": "BS02", "name": "Cosmetic", "kind": "unknown", "category": "other"}
+{"code": "BS05", "name": "Val'sharah", "kind": "unknown", "category": "other"}
+{"code": "BS06", "name": "High Exarch Yrel", "kind": "unknown", "category": "other"}
+{"code": "BS11", "name": "Cosmetic", "kind": "unknown", "category": "other"}
+{"code": "BS12", "name": "Naka", "kind": "unknown", "category": "other"}
+{"code": "BS13", "name": "Ragnaros", "kind": "unknown", "category": "other"}
+{"code": "DS01", "name": "DoomGuard", "kind": "unknown", "category": "other"}
+{"code": "DS02", "name": "Whitemane", "kind": "unknown", "category": "other"}
+{"code": "DS03", "name": "Yogg", "kind": "unknown", "category": "other"}
+{"code": "H027", "name": "War Lord", "kind": "unknown", "category": "other"}
+{"code": "H058", "name": "Crypt Lord", "kind": "unknown", "category": "other"}
+{"code": "H05G", "name": "Fire Lord", "kind": "unknown", "category": "other"}
+{"code": "H05I", "name": "Draenei Chieftain", "kind": "unknown", "category": "other"}
+{"code": "H05J", "name": "Dragon Turtle", "kind": "unknown", "category": "other"}
+{"code": "H05K", "name": "Magnataur", "kind": "unknown", "category": "other"}
+{"code": "H08U", "name": "Burning Legion", "kind": "unknown", "category": "other"}
+{"code": "H0D6", "name": "Dragon Turtle", "kind": "unknown", "category": "other"}
+{"code": "I000", "name": "Sword of Pwnage", "kind": "unknown", "category": "item"}
+{"code": "I001", "name": "Unkillable", "kind": "unknown", "category": "item"}
+{"code": "I002", "name": "Tome of 400 hp", "kind": "unknown", "category": "item"}
+{"code": "I003", "name": "Tome of 4 Damage", "kind": "unknown", "category": "item"}
+{"code": "I004", "name": "Flute of Accuracy", "kind": "unknown", "category": "item"}
+{"code": "PS06", "name": "VoidWalker", "kind": "unknown", "category": "other"}
+{"code": "PS16", "name": "Villager", "kind": "unknown", "category": "other"}
+{"code": "PS18", "name": "VoidWalker", "kind": "unknown", "category": "other"}
+{"code": "PW3C", "name": "W3C Hero Icon", "kind": "unknown", "category": "other"}
+{"code": "R000", "name": "King Hit Points (1)", "kind": "unknown", "category": "upgrade"}
+{"code": "R001", "name": "King Attack (1)", "kind": "unknown", "category": "upgrade"}
+{"code": "R002", "name": "King Regeneration (1)", "kind": "unknown", "category": "upgrade"}
+{"code": "R003", "name": "Basic Lumberjack Training 1", "kind": "unknown", "category": "upgrade"}
+{"code": "R004", "name": "Creeps HP Modifier 1-12", "kind": "unknown", "category": "upgrade"}
+{"code": "R005", "name": "Creeps ATK Modifier", "kind": "unknown", "category": "upgrade"}
+{"code": "R006", "name": "King Armor (1)", "kind": "unknown", "category": "upgrade"}
+{"code": "R007", "name": "King Attack Speed (1)", "kind": "unknown", "category": "upgrade"}
+{"code": "R008", "name": "King HP Modifier", "kind": "unknown", "category": "upgrade"}
+{"code": "R009", "name": "Speed Bonus", "kind": "unknown", "category": "upgrade"}
+{"code": "R00A", "name": "ASPD Bonus", "kind": "unknown", "category": "upgrade"}
+{"code": "R00B", "name": "Mana Regen Bonus", "kind": "unknown", "category": "upgrade"}
+{"code": "R00C", "name": "HP Regen Bonus", "kind": "unknown", "category": "upgrade"}
+{"code": "R00D", "name": "Change Builder", "kind": "unknown", "category": "upgrade"}
+{"code": "R00E", "name": "Creeps HP Modifier 13-23", "kind": "unknown", "category": "upgrade"}
+{"code": "R00F", "name": "Creeps HP Modifier 24-30", "kind": "unknown", "category": "upgrade"}
+{"code": "R00G", "name": "Change Tower", "kind": "unknown", "category": "upgrade"}
+{"code": "R00H", "name": "Advanced Lumberjack Training 10", "kind": "unknown", "category": "upgrade"}
+{"code": "R00I", "name": "Change Builder to Mercenary", "kind": "unknown", "category": "upgrade"}
+{"code": "R995", "name": "Upgrade King's Purge", "kind": "unknown", "category": "upgrade"}
+{"code": "R996", "name": "Harvest reduced", "kind": "unknown", "category": "upgrade"}
+{"code": "R997", "name": "Harvest increased", "kind": "unknown", "category": "upgrade"}
+{"code": "R998", "name": "Royal Presence", "kind": "unknown", "category": "upgrade"}
+{"code": "R999", "name": "Dark Presence", "kind": "unknown", "category": "upgrade"}
+{"code": "Rdum", "name": "Level 4 Fighting Phase", "kind": "unknown", "category": "upgrade"}
+{"code": "afac", "name": "Flute of Accuracy", "kind": "unknown", "category": "item"}
+{"code": "ajen", "name": "Chalice of Endurance", "kind": "unknown", "category": "item"}
+{"code": "ankh", "name": "Cross of Rebirth", "kind": "unknown", "category": "item"}
+{"code": "belv", "name": "Kehl-Talas boots", "kind": "unknown", "category": "item"}
+{"code": "bgst", "name": "Warrior's Belt(+6)", "kind": "unknown", "category": "item"}
+{"code": "brac", "name": "Rune Bracelets", "kind": "unknown", "category": "item"}
+{"code": "bspd", "name": "Boots-walkers", "kind": "unknown", "category": "item"}
+{"code": "ciri", "name": "Mage robe(+6)", "kind": "unknown", "category": "item"}
+{"code": "ckng", "name": "Royal crown(+5)", "kind": "unknown", "category": "item"}
+{"code": "clfm", "name": "Fire cloak", "kind": "unknown", "category": "item"}
+{"code": "cnob", "name": "Crown of nobility", "kind": "unknown", "category": "item"}
+{"code": "crys", "name": "crystal ball", "kind": "unknown", "category": "item"}
+{"code": "desc", "name": "Mage's dagger", "kind": "unknown", "category": "item"}
+{"code": "e000", "name": "Race Picker", "kind": "unknown", "category": "ui-menu"}
+{"code": "e002", "name": "Next Page", "kind": "unknown", "category": "ui-menu"}
+{"code": "e003", "name": "Wisp ++", "kind": "unknown", "category": "ui-menu"}
+{"code": "e004", "name": "Previous Page", "kind": "unknown", "category": "ui-menu"}
+{"code": "e005", "name": "Race Picker", "kind": "unknown", "category": "ui-menu"}
+{"code": "e006", "name": "Race Picker", "kind": "unknown", "category": "ui-menu"}
+{"code": "e007", "name": "Race Picker", "kind": "unknown", "category": "ui-menu"}
+{"code": "e008", "name": "Wisp +++", "kind": "unknown", "category": "ui-menu"}
+{"code": "e031", "name": "Engineer", "kind": "unknown", "category": "ui-menu"}
+{"code": "edot", "name": "Druid-crow", "kind": "unknown", "category": "other"}
+{"code": "edtm", "name": "Druid-crow", "kind": "unknown", "category": "other"}
+{"code": "evtl", "name": "Talisman of Protection", "kind": "unknown", "category": "item"}
+{"code": "ewsp", "name": "Glowworm", "kind": "unknown", "category": "ui-menu"}
+{"code": "fgdg", "name": "Demon figurine", "kind": "unknown", "category": "item"}
+{"code": "fgfh", "name": "Collar with spikes", "kind": "unknown", "category": "item"}
+{"code": "fgrd", "name": "Dragon egg", "kind": "unknown", "category": "item"}
+{"code": "fgrg", "name": "Stone talisman", "kind": "unknown", "category": "item"}
+{"code": "g999", "name": "Draenei Chieftain", "kind": "unknown", "category": "other"}
+{"code": "gcel", "name": "Gloves of Speed", "kind": "unknown", "category": "item"}
+{"code": "h000", "name": "Murloc", "kind": "unknown", "category": "other"}
+{"code": "h001", "name": "Quilbeast", "kind": "unknown", "category": "other"}
+{"code": "h002", "name": "Crab", "kind": "unknown", "category": "other"}
+{"code": "h003", "name": "Rock Golem", "kind": "unknown", "category": "other"}
+{"code": "h004", "name": "Satyr", "kind": "unknown", "category": "other"}
+{"code": "h005", "name": "Scorpion", "kind": "unknown", "category": "other"}
+{"code": "h006", "name": "Frost Wyrm", "kind": "unknown", "category": "other"}
+{"code": "h007", "name": "Acolyte", "kind": "unknown", "category": "other"}
+{"code": "h008", "name": "Zombie", "kind": "unknown", "category": "other"}
+{"code": "h009", "name": "Draenei Chieftain", "kind": "unknown", "category": "other"}
+{"code": "h00A", "name": "Clockwerk Goblin", "kind": "unknown", "category": "other"}
+{"code": "h00B", "name": "Siren", "kind": "unknown", "category": "other"}
+{"code": "h00C", "name": "Couatl", "kind": "unknown", "category": "other"}
+{"code": "h00D", "name": "Tuskar Warrior", "kind": "unknown", "category": "other"}
+{"code": "h00E", "name": "Centaur", "kind": "unknown", "category": "other"}
+{"code": "h00F", "name": "Lightning Chicken", "kind": "unknown", "category": "other"}
+{"code": "h00G", "name": "Flesh Golem", "kind": "unknown", "category": "other"}
+{"code": "h00H", "name": "Sludge Flinger", "kind": "unknown", "category": "other"}
+{"code": "h00I", "name": "Hawk", "kind": "unknown", "category": "other"}
+{"code": "h00J", "name": "Giant Spider", "kind": "unknown", "category": "other"}
+{"code": "h00K", "name": "The King", "kind": "unknown", "category": "other"}
+{"code": "h00L", "name": "Peewee", "kind": "unknown", "category": "other"}
+{"code": "h00M", "name": "Peewee", "kind": "unknown", "category": "tower"}
+{"code": "h00N", "name": "Tempest", "kind": "unknown", "category": "tower"}
+{"code": "h00O", "name": "Infantry", "kind": "unknown", "category": "tower"}
+{"code": "h00P", "name": "Captain", "kind": "unknown", "category": "tower"}
+{"code": "h00Q", "name": "Cyborg", "kind": "unknown", "category": "tower"}
+{"code": "h00R", "name": "Shadow Council", "kind": "unknown", "category": "tower"}
+{"code": "h00S", "name": "Neotank", "kind": "unknown", "category": "tower"}
+{"code": "h00T", "name": "Veteran", "kind": "unknown", "category": "tower"}
+{"code": "h00U", "name": "Leviathan", "kind": "unknown", "category": "tower"}
+{"code": "h00W", "name": "Krogoth", "kind": "unknown", "category": "tower"}
+{"code": "h00X", "name": "Zeus", "kind": "unknown", "category": "tower"}
+{"code": "h00Y", "name": "Pyro", "kind": "unknown", "category": "tower"}
+{"code": "h00Z", "name": "Admiral", "kind": "unknown", "category": "tower"}
+{"code": "h010", "name": "Gnoll Warrior", "kind": "unknown", "category": "tower"}
+{"code": "h011", "name": "Gnoll Savage", "kind": "unknown", "category": "tower"}
+{"code": "h012", "name": "Ogre Basher", "kind": "unknown", "category": "tower"}
+{"code": "h013", "name": "Ogre Pulverizer", "kind": "unknown", "category": "tower"}
+{"code": "h014", "name": "Harpy", "kind": "unknown", "category": "tower"}
+{"code": "h015", "name": "Medusa", "kind": "unknown", "category": "tower"}
+{"code": "h016", "name": "Troll Fighter", "kind": "unknown", "category": "tower"}
+{"code": "h017", "name": "Troll Champion", "kind": "unknown", "category": "tower"}
+{"code": "h018", "name": "Grizzly", "kind": "unknown", "category": "tower"}
+{"code": "h019", "name": "Greymane", "kind": "unknown", "category": "tower"}
+{"code": "h01A", "name": "Spawn of Dragon", "kind": "unknown", "category": "tower"}
+{"code": "h01B", "name": "Dragon Aspect", "kind": "unknown", "category": "tower"}
+{"code": "h01C", "name": "Ent", "kind": "unknown", "category": "tower"}
+{"code": "h01D", "name": "Guardian", "kind": "unknown", "category": "tower"}
+{"code": "h01E", "name": "Ranger", "kind": "unknown", "category": "tower"}
+{"code": "h01F", "name": "Meliai", "kind": "unknown", "category": "tower"}
+{"code": "h01G", "name": "Thunderbird", "kind": "unknown", "category": "tower"}
+{"code": "h01H", "name": "Sprite", "kind": "unknown", "category": "tower"}
+{"code": "h01I", "name": "Tree of Travel", "kind": "unknown", "category": "tower"}
+{"code": "h01J", "name": "Tree of Time", "kind": "unknown", "category": "tower"}
+{"code": "h01K", "name": "Halfbreed", "kind": "unknown", "category": "tower"}
+{"code": "h01L", "name": "Goliath", "kind": "unknown", "category": "tower"}
+{"code": "h01M", "name": "Yggdrasil", "kind": "unknown", "category": "tower"}
+{"code": "h01N", "name": "Tree of Life", "kind": "unknown", "category": "tower"}
+{"code": "h01O", "name": "Tree of Knowledge", "kind": "unknown", "category": "tower"}
+{"code": "h01P", "name": "Bone Warrior", "kind": "unknown", "category": "tower"}
+{"code": "h01Q", "name": "Skeletor", "kind": "unknown", "category": "tower"}
+{"code": "h01R", "name": "Fire Archer", "kind": "unknown", "category": "tower"}
+{"code": "h01S", "name": "Dark Mage", "kind": "unknown", "category": "tower"}
+{"code": "h01T", "name": "Carrion Spitter", "kind": "unknown", "category": "tower"}
+{"code": "h01U", "name": "Nightcrawler", "kind": "unknown", "category": "tower"}
+{"code": "h01V", "name": "Gateguard", "kind": "unknown", "category": "tower"}
+{"code": "h01W", "name": "Harbinger", "kind": "unknown", "category": "tower"}
+{"code": "h01X", "name": "Overseer", "kind": "unknown", "category": "tower"}
+{"code": "h01Y", "name": "Keeper of Souls", "kind": "unknown", "category": "tower"}
+{"code": "h01Z", "name": "Nightmare", "kind": "unknown", "category": "tower"}
+{"code": "h01q", "name": "Skeletor Prime", "kind": "unknown", "category": "tower"}
+{"code": "h020", "name": "Doppelganger", "kind": "unknown", "category": "tower"}
+{"code": "h021", "name": "Lord of Death", "kind": "unknown", "category": "tower"}
+{"code": "h022", "name": "Hades", "kind": "unknown", "category": "tower"}
+{"code": "h023", "name": "Town", "kind": "unknown", "category": "other"}
+{"code": "h024", "name": "Farm Level 1", "kind": "unknown", "category": "tower"}
+{"code": "h025", "name": "Worker", "kind": "unknown", "category": "builder"}
+{"code": "h026", "name": "Militia Captain", "kind": "unknown", "category": "other"}
+{"code": "h028", "name": "Veteran", "kind": "unknown", "category": "other"}
+{"code": "h029", "name": "Captain", "kind": "unknown", "category": "other"}
+{"code": "h02A", "name": "Admiral", "kind": "unknown", "category": "other"}
+{"code": "h02B", "name": "Infantry", "kind": "unknown", "category": "other"}
+{"code": "h02C", "name": "Pyro", "kind": "unknown", "category": "other"}
+{"code": "h02D", "name": "Zeus", "kind": "unknown", "category": "other"}
+{"code": "h02E", "name": "Neotank", "kind": "unknown", "category": "other"}
+{"code": "h02G", "name": "Tempest", "kind": "unknown", "category": "other"}
+{"code": "h02H", "name": "Leviathan", "kind": "unknown", "category": "other"}
+{"code": "h02I", "name": "Cyborg", "kind": "unknown", "category": "other"}
+{"code": "h02J", "name": "Krogoth", "kind": "unknown", "category": "other"}
+{"code": "h02K", "name": "Militia Captain", "kind": "unknown", "category": "other"}
+{"code": "h02L", "name": "Gnoll Warrior", "kind": "unknown", "category": "other"}
+{"code": "h02M", "name": "Gnoll Savage", "kind": "unknown", "category": "other"}
+{"code": "h02N", "name": "Ogre Basher", "kind": "unknown", "category": "other"}
+{"code": "h02O", "name": "Ogre Pulverizer", "kind": "unknown", "category": "other"}
+{"code": "h02P", "name": "Harpy", "kind": "unknown", "category": "other"}
+{"code": "h02Q", "name": "Medusa", "kind": "unknown", "category": "other"}
+{"code": "h02R", "name": "Troll Fighter", "kind": "unknown", "category": "other"}
+{"code": "h02S", "name": "Troll Champion", "kind": "unknown", "category": "other"}
+{"code": "h02T", "name": "Grizzly", "kind": "unknown", "category": "other"}
+{"code": "h02U", "name": "Greymane", "kind": "unknown", "category": "other"}
+{"code": "h02V", "name": "Spawn of Dragon", "kind": "unknown", "category": "other"}
+{"code": "h02W", "name": "Dragon Aspect", "kind": "unknown", "category": "other"}
+{"code": "h02X", "name": "Ent", "kind": "unknown", "category": "other"}
+{"code": "h02Y", "name": "Guardian", "kind": "unknown", "category": "other"}
+{"code": "h02Z", "name": "Ranger", "kind": "unknown", "category": "other"}
+{"code": "h030", "name": "Meliai", "kind": "unknown", "category": "other"}
+{"code": "h031", "name": "Sprite", "kind": "unknown", "category": "other"}
+{"code": "h032", "name": "Thunderbird", "kind": "unknown", "category": "other"}
+{"code": "h033", "name": "Tree of Travel", "kind": "unknown", "category": "other"}
+{"code": "h034", "name": "Tree of Time", "kind": "unknown", "category": "other"}
+{"code": "h035", "name": "Halfbreed", "kind": "unknown", "category": "other"}
+{"code": "h036", "name": "Goliath", "kind": "unknown", "category": "other"}
+{"code": "h037", "name": "Yggdrasil", "kind": "unknown", "category": "other"}
+{"code": "h038", "name": "Tree of Life", "kind": "unknown", "category": "other"}
+{"code": "h039", "name": "Tree of Knowledge", "kind": "unknown", "category": "other"}
+{"code": "h03A", "name": "Bone Warrior", "kind": "unknown", "category": "other"}
+{"code": "h03B", "name": "Skeletor", "kind": "unknown", "category": "other"}
+{"code": "h03C", "name": "Fire Archer", "kind": "unknown", "category": "other"}
+{"code": "h03D", "name": "Dark Mage", "kind": "unknown", "category": "other"}
+{"code": "h03E", "name": "Carrion Spitter", "kind": "unknown", "category": "other"}
+{"code": "h03F", "name": "Nightcrawler", "kind": "unknown", "category": "other"}
+{"code": "h03G", "name": "Gateguard", "kind": "unknown", "category": "other"}
+{"code": "h03H", "name": "Harbinger", "kind": "unknown", "category": "other"}
+{"code": "h03I", "name": "Overseer", "kind": "unknown", "category": "other"}
+{"code": "h03J", "name": "Keeper of Souls", "kind": "unknown", "category": "other"}
+{"code": "h03K", "name": "Nightmare", "kind": "unknown", "category": "other"}
+{"code": "h03L", "name": "Doppelganger", "kind": "unknown", "category": "other"}
+{"code": "h03M", "name": "Lord of Death", "kind": "unknown", "category": "other"}
+{"code": "h03N", "name": "Hades", "kind": "unknown", "category": "other"}
+{"code": "h03O", "name": "Dragon Turtle", "kind": "unknown", "category": "other"}
+{"code": "h03P", "name": "Hippogryph", "kind": "unknown", "category": "other"}
+{"code": "h03Q", "name": "Mammoth", "kind": "unknown", "category": "other"}
+{"code": "h03R", "name": "Wildkin", "kind": "unknown", "category": "other"}
+{"code": "h03S", "name": "Myrmidon", "kind": "unknown", "category": "other"}
+{"code": "h03T", "name": "Revenant", "kind": "unknown", "category": "other"}
+{"code": "h03U", "name": "Succubus", "kind": "unknown", "category": "other"}
+{"code": "h03V", "name": "Doom Guard", "kind": "unknown", "category": "other"}
+{"code": "h03W", "name": "Juggernaut", "kind": "unknown", "category": "other"}
+{"code": "h03X", "name": "Druid", "kind": "unknown", "category": "other"}
+{"code": "h03Y", "name": "Magnataur", "kind": "unknown", "category": "other"}
+{"code": "h03Z", "name": "Warlock", "kind": "unknown", "category": "other"}
+{"code": "h03b", "name": "Skeletor Prime", "kind": "unknown", "category": "other"}
+{"code": "h040", "name": "Proton", "kind": "unknown", "category": "tower"}
+{"code": "h041", "name": "Adept", "kind": "unknown", "category": "tower"}
+{"code": "h042", "name": "Aqua Spirit", "kind": "unknown", "category": "tower"}
+{"code": "h043", "name": "Oceanus", "kind": "unknown", "category": "tower"}
+{"code": "h044", "name": "Watcher", "kind": "unknown", "category": "tower"}
+{"code": "h045", "name": "Violet", "kind": "unknown", "category": "tower"}
+{"code": "h046", "name": "Mudman", "kind": "unknown", "category": "tower"}
+{"code": "h047", "name": "Golem", "kind": "unknown", "category": "tower"}
+{"code": "h048", "name": "Disciple", "kind": "unknown", "category": "tower"}
+{"code": "h049", "name": "Messiah", "kind": "unknown", "category": "tower"}
+{"code": "h04A", "name": "Seer of Darkness", "kind": "unknown", "category": "tower"}
+{"code": "h04B", "name": "Fenix", "kind": "unknown", "category": "tower"}
+{"code": "h04C", "name": "Proton", "kind": "unknown", "category": "other"}
+{"code": "h04D", "name": "Adept", "kind": "unknown", "category": "other"}
+{"code": "h04E", "name": "Aqua Spirit", "kind": "unknown", "category": "other"}
+{"code": "h04F", "name": "Oceanus", "kind": "unknown", "category": "other"}
+{"code": "h04G", "name": "Watcher", "kind": "unknown", "category": "other"}
+{"code": "h04H", "name": "Violet", "kind": "unknown", "category": "other"}
+{"code": "h04I", "name": "Mudman", "kind": "unknown", "category": "other"}
+{"code": "h04J", "name": "Golem", "kind": "unknown", "category": "other"}
+{"code": "h04K", "name": "Disciple", "kind": "unknown", "category": "other"}
+{"code": "h04L", "name": "Messiah", "kind": "unknown", "category": "other"}
+{"code": "h04M", "name": "Seer of Darkness", "kind": "unknown", "category": "other"}
+{"code": "h04N", "name": "Fenix", "kind": "unknown", "category": "other"}
+{"code": "h04O", "name": "Militia", "kind": "unknown", "category": "other"}
+{"code": "h04P", "name": "Bowman", "kind": "unknown", "category": "other"}
+{"code": "h04Q", "name": "Whelp", "kind": "unknown", "category": "other"}
+{"code": "h04R", "name": "Ghoul", "kind": "unknown", "category": "other"}
+{"code": "h04S", "name": "Warrior", "kind": "unknown", "category": "other"}
+{"code": "h04T", "name": "Hermit", "kind": "unknown", "category": "other"}
+{"code": "h04U", "name": "Dino", "kind": "unknown", "category": "other"}
+{"code": "h04V", "name": "Commander", "kind": "unknown", "category": "other"}
+{"code": "h04W", "name": "Furbolg", "kind": "unknown", "category": "other"}
+{"code": "h04X", "name": "Wyvern", "kind": "unknown", "category": "other"}
+{"code": "h04Y", "name": "Chariot", "kind": "unknown", "category": "other"}
+{"code": "h04Z", "name": "Blood Orc", "kind": "unknown", "category": "other"}
+{"code": "h050", "name": "Frost Wolf", "kind": "unknown", "category": "other"}
+{"code": "h051", "name": "Ice Troll", "kind": "unknown", "category": "other"}
+{"code": "h052", "name": "Warlock", "kind": "unknown", "category": "other"}
+{"code": "h053", "name": "Pandaren", "kind": "unknown", "category": "other"}
+{"code": "h054", "name": "Dark Draenei", "kind": "unknown", "category": "other"}
+{"code": "h055", "name": "Ballista", "kind": "unknown", "category": "other"}
+{"code": "h056", "name": "Shaman", "kind": "unknown", "category": "other"}
+{"code": "h057", "name": "Pudge", "kind": "unknown", "category": "other"}
+{"code": "h058", "name": "Sergeant", "kind": "unknown", "category": "other"}
+{"code": "h059", "name": "Behemoth", "kind": "unknown", "category": "other"}
+{"code": "h05A", "name": "Infernal", "kind": "unknown", "category": "other"}
+{"code": "h05B", "name": "Kraken", "kind": "unknown", "category": "other"}
+{"code": "h05C", "name": "Barracks", "kind": "unknown", "category": "other"}
+{"code": "h05D", "name": "Advanced Barracks", "kind": "unknown", "category": "other"}
+{"code": "h05E", "name": "Barracks", "kind": "unknown", "category": "other"}
+{"code": "h05F", "name": "Advanced Barracks", "kind": "unknown", "category": "other"}
+{"code": "h05H", "name": "Summoned Phoenix Egg", "kind": "unknown", "category": "other"}
+{"code": "h05I", "name": "Summoned Phoenix Egg Slow", "kind": "unknown", "category": "other"}
+{"code": "h05K", "name": "The King", "kind": "unknown", "category": "other"}
+{"code": "h05L", "name": "Pit Lord", "kind": "unknown", "category": "other"}
+{"code": "h05M", "name": "Gargoyle", "kind": "unknown", "category": "other"}
+{"code": "h05N", "name": "Specter", "kind": "unknown", "category": "tower"}
+{"code": "h05O", "name": "Wraith", "kind": "unknown", "category": "tower"}
+{"code": "h05P", "name": "Mercurial", "kind": "unknown", "category": "tower"}
+{"code": "h05Q", "name": "Soul of Hero (O)", "kind": "unknown", "category": "other"}
+{"code": "h05R", "name": "Phantom", "kind": "unknown", "category": "tower"}
+{"code": "h05S", "name": "Wanderer", "kind": "unknown", "category": "tower"}
+{"code": "h05T", "name": "Soul of Villain", "kind": "unknown", "category": "other"}
+{"code": "h05U", "name": "Hellghost", "kind": "unknown", "category": "tower"}
+{"code": "h05V", "name": "Outcast", "kind": "unknown", "category": "tower"}
+{"code": "h05W", "name": "Forsaken One", "kind": "unknown", "category": "tower"}
+{"code": "h05X", "name": "Apparition", "kind": "unknown", "category": "tower"}
+{"code": "h05Y", "name": "Gravekeeper", "kind": "unknown", "category": "tower"}
+{"code": "h05Z", "name": "Dark Priest", "kind": "unknown", "category": "tower"}
+{"code": "h060", "name": "Meridian", "kind": "unknown", "category": "tower"}
+{"code": "h061", "name": "Specter", "kind": "unknown", "category": "other"}
+{"code": "h062", "name": "Soul of Hero (D)", "kind": "unknown", "category": "tower"}
+{"code": "h063", "name": "Wraith", "kind": "unknown", "category": "other"}
+{"code": "h064", "name": "Mercurial", "kind": "unknown", "category": "other"}
+{"code": "h065", "name": "Wanderer", "kind": "unknown", "category": "other"}
+{"code": "h066", "name": "Soul of Hero (O)", "kind": "unknown", "category": "other"}
+{"code": "h067", "name": "Soul of Hero (D)", "kind": "unknown", "category": "other"}
+{"code": "h068", "name": "Soul of Villain", "kind": "unknown", "category": "other"}
+{"code": "h069", "name": "Phantom", "kind": "unknown", "category": "other"}
+{"code": "h06A", "name": "Hellghost", "kind": "unknown", "category": "other"}
+{"code": "h06B", "name": "Outcast", "kind": "unknown", "category": "other"}
+{"code": "h06C", "name": "Forsaken One", "kind": "unknown", "category": "other"}
+{"code": "h06D", "name": "Apparition", "kind": "unknown", "category": "other"}
+{"code": "h06E", "name": "Gravekeeper", "kind": "unknown", "category": "other"}
+{"code": "h06F", "name": "Dark Priest", "kind": "unknown", "category": "other"}
+{"code": "h06G", "name": "Meridian", "kind": "unknown", "category": "other"}
+{"code": "h06H", "name": "The King", "kind": "unknown", "category": "other"}
+{"code": "h06I", "name": "Mutant", "kind": "unknown", "category": "other"}
+{"code": "h06J", "name": "Goblin Scientist", "kind": "unknown", "category": "tower"}
+{"code": "h06K", "name": "Servant", "kind": "unknown", "category": "tower"}
+{"code": "h06L", "name": "Slavemaster", "kind": "unknown", "category": "tower"}
+{"code": "h06M", "name": "Tribesman", "kind": "unknown", "category": "tower"}
+{"code": "h06N", "name": "Alpha Male", "kind": "unknown", "category": "tower"}
+{"code": "h06O", "name": "Medicine Man", "kind": "unknown", "category": "tower"}
+{"code": "h06P", "name": "Oracle", "kind": "unknown", "category": "tower"}
+{"code": "h06Q", "name": "Harlot", "kind": "unknown", "category": "tower"}
+{"code": "h06R", "name": "Mistress", "kind": "unknown", "category": "tower"}
+{"code": "h06S", "name": "Minotaur", "kind": "unknown", "category": "tower"}
+{"code": "h06T", "name": "Bigfoot", "kind": "unknown", "category": "tower"}
+{"code": "h06U", "name": "Goblin Scientist", "kind": "unknown", "category": "other"}
+{"code": "h06V", "name": "Tribesman", "kind": "unknown", "category": "other"}
+{"code": "h06W", "name": "Mutant", "kind": "unknown", "category": "other"}
+{"code": "h06X", "name": "Servant", "kind": "unknown", "category": "other"}
+{"code": "h06Y", "name": "Slavemaster", "kind": "unknown", "category": "other"}
+{"code": "h06Z", "name": "Alpha Male", "kind": "unknown", "category": "other"}
+{"code": "h070", "name": "Medicine Man", "kind": "unknown", "category": "other"}
+{"code": "h071", "name": "Oracle", "kind": "unknown", "category": "other"}
+{"code": "h072", "name": "Harlot", "kind": "unknown", "category": "other"}
+{"code": "h073", "name": "Mistress", "kind": "unknown", "category": "other"}
+{"code": "h074", "name": "Minotaur", "kind": "unknown", "category": "other"}
+{"code": "h075", "name": "Bigfoot", "kind": "unknown", "category": "other"}
+{"code": "h076", "name": "Mutant (juiced)", "kind": "unknown", "category": "other"}
+{"code": "h077", "name": "Mutant (juiced)", "kind": "unknown", "category": "other"}
+{"code": "h078", "name": "Dwarven Engineer", "kind": "unknown", "category": "tower"}
+{"code": "h079", "name": "Dwarven Engineer", "kind": "unknown", "category": "other"}
+{"code": "h07B", "name": "Flame Archer", "kind": "unknown", "category": "tower"}
+{"code": "h07C", "name": "Flame Archer", "kind": "unknown", "category": "other"}
+{"code": "h07D", "name": "Morph [Tier 1]", "kind": "unknown", "category": "tower"}
+{"code": "h07E", "name": "Morph [Tier 2]", "kind": "unknown", "category": "tower"}
+{"code": "h07F", "name": "Morph [Tier 4]", "kind": "unknown", "category": "tower"}
+{"code": "h07G", "name": "Morph [Tier 3]", "kind": "unknown", "category": "tower"}
+{"code": "h07H", "name": "Morph [Tier 5]", "kind": "unknown", "category": "tower"}
+{"code": "h07I", "name": "Morph [Tier 6]", "kind": "unknown", "category": "tower"}
+{"code": "h07J", "name": "Hatchling", "kind": "unknown", "category": "tower"}
+{"code": "h07K", "name": "Hatchling", "kind": "unknown", "category": "other"}
+{"code": "h07L", "name": "Swamprunner", "kind": "unknown", "category": "tower"}
+{"code": "h07M", "name": "Defiler", "kind": "unknown", "category": "tower"}
+{"code": "h07N", "name": "Fangtooth", "kind": "unknown", "category": "tower"}
+{"code": "h07O", "name": "Egg Sack", "kind": "unknown", "category": "tower"}
+{"code": "h07P", "name": "Sky Dragon", "kind": "unknown", "category": "tower"}
+{"code": "h07Q", "name": "Bottom Feeder", "kind": "unknown", "category": "tower"}
+{"code": "h07R", "name": "King Claw", "kind": "unknown", "category": "tower"}
+{"code": "h07S", "name": "Mermaid", "kind": "unknown", "category": "tower"}
+{"code": "h07T", "name": "Highborne", "kind": "unknown", "category": "tower"}
+{"code": "h07U", "name": "Komodo", "kind": "unknown", "category": "tower"}
+{"code": "h07V", "name": "Trident", "kind": "unknown", "category": "tower"}
+{"code": "h07W", "name": "Sea Giant", "kind": "unknown", "category": "tower"}
+{"code": "h07X", "name": "Hydra", "kind": "unknown", "category": "tower"}
+{"code": "h07Y", "name": "Mini Hydra", "kind": "unknown", "category": "other"}
+{"code": "h07Z", "name": "Swamprunner", "kind": "unknown", "category": "other"}
+{"code": "h080", "name": "Defiler", "kind": "unknown", "category": "other"}
+{"code": "h081", "name": "Fangtooth", "kind": "unknown", "category": "other"}
+{"code": "h082", "name": "Egg Sack", "kind": "unknown", "category": "other"}
+{"code": "h083", "name": "Sky Dragon", "kind": "unknown", "category": "other"}
+{"code": "h084", "name": "Bottom Feeder", "kind": "unknown", "category": "other"}
+{"code": "h085", "name": "King Claw", "kind": "unknown", "category": "other"}
+{"code": "h086", "name": "Mermaid", "kind": "unknown", "category": "other"}
+{"code": "h087", "name": "Highborne", "kind": "unknown", "category": "other"}
+{"code": "h088", "name": "Trident", "kind": "unknown", "category": "other"}
+{"code": "h089", "name": "Sea Giant", "kind": "unknown", "category": "other"}
+{"code": "h08A", "name": "Hydra", "kind": "unknown", "category": "other"}
+{"code": "h08B", "name": "Komodo", "kind": "unknown", "category": "other"}
+{"code": "h08C", "name": "Farm Level 2", "kind": "unknown", "category": "tower"}
+{"code": "h08D", "name": "Farm Level 3", "kind": "unknown", "category": "tower"}
+{"code": "h08E", "name": "Colt", "kind": "unknown", "category": "other"}
+{"code": "h08F", "name": "Colt", "kind": "unknown", "category": "tower"}
+{"code": "h08G", "name": "Novice", "kind": "unknown", "category": "other"}
+{"code": "h08H", "name": "Novice", "kind": "unknown", "category": "tower"}
+{"code": "h08I", "name": "Rider", "kind": "unknown", "category": "tower"}
+{"code": "h08J", "name": "Rider", "kind": "unknown", "category": "other"}
+{"code": "h08K", "name": "Crusader", "kind": "unknown", "category": "other"}
+{"code": "h08L", "name": "Crusader", "kind": "unknown", "category": "tower"}
+{"code": "h08M", "name": "Sentry", "kind": "unknown", "category": "other"}
+{"code": "h08N", "name": "Sentry", "kind": "unknown", "category": "tower"}
+{"code": "h08O", "name": "Nightsaber", "kind": "unknown", "category": "other"}
+{"code": "h08P", "name": "Nightsaber", "kind": "unknown", "category": "tower"}
+{"code": "h08Q", "name": "Prisoner", "kind": "unknown", "category": "tower"}
+{"code": "h08R", "name": "Prisoner", "kind": "unknown", "category": "other"}
+{"code": "h08S", "name": "Maverick", "kind": "unknown", "category": "tower"}
+{"code": "h08T", "name": "Maverick", "kind": "unknown", "category": "other"}
+{"code": "h08V", "name": "Druid", "kind": "unknown", "category": "tower"}
+{"code": "h08W", "name": "Sword Mage", "kind": "unknown", "category": "other"}
+{"code": "h08X", "name": "Ascendant", "kind": "unknown", "category": "other"}
+{"code": "h08Y", "name": "Ascendant", "kind": "unknown", "category": "tower"}
+{"code": "h08Z", "name": "Sword Mage", "kind": "unknown", "category": "tower"}
+{"code": "h090", "name": "Moon Guard", "kind": "unknown", "category": "tower"}
+{"code": "h091", "name": "Moon Guard", "kind": "unknown", "category": "other"}
+{"code": "h092", "name": "Druid", "kind": "unknown", "category": "other"}
+{"code": "h093", "name": "Warden", "kind": "unknown", "category": "tower"}
+{"code": "h094", "name": "Warden", "kind": "unknown", "category": "other"}
+{"code": "h095", "name": "Farm Level 6", "kind": "unknown", "category": "tower"}
+{"code": "h096", "name": "Farm Level 7", "kind": "unknown", "category": "tower"}
+{"code": "h097", "name": "Farm Level 8", "kind": "unknown", "category": "tower"}
+{"code": "h098", "name": "Farm Level 9", "kind": "unknown", "category": "tower"}
+{"code": "h099", "name": "Farm Level 10", "kind": "unknown", "category": "tower"}
+{"code": "h09A", "name": "High Elven Farm level 1", "kind": "unknown", "category": "tower"}
+{"code": "h09B", "name": "Farm Level 4", "kind": "unknown", "category": "tower"}
+{"code": "h09C", "name": "Farm Level 5", "kind": "unknown", "category": "tower"}
+{"code": "h09D", "name": "Knight", "kind": "unknown", "category": "other"}
+{"code": "h09E", "name": "Ice Troll", "kind": "unknown", "category": "other"}
+{"code": "h09F", "name": "Peasant", "kind": "unknown", "category": "other"}
+{"code": "h09G", "name": "Elite Archer", "kind": "unknown", "category": "other"}
+{"code": "h09H", "name": "Militia", "kind": "unknown", "category": "other"}
+{"code": "h09I", "name": "Royal Gryphon", "kind": "unknown", "category": "other"}
+{"code": "h09J", "name": "High Elven Farm level 3", "kind": "unknown", "category": "tower"}
+{"code": "h09K", "name": "Militia", "kind": "unknown", "category": "other"}
+{"code": "h09L", "name": "Peasant", "kind": "unknown", "category": "tower"}
+{"code": "h09M", "name": "Elite Archer", "kind": "unknown", "category": "tower"}
+{"code": "h09N", "name": "Footman", "kind": "unknown", "category": "tower"}
+{"code": "h09O", "name": "Highguard", "kind": "unknown", "category": "tower"}
+{"code": "h09P", "name": "Highguard", "kind": "unknown", "category": "other"}
+{"code": "h09Q", "name": "Priest", "kind": "unknown", "category": "other"}
+{"code": "h09R", "name": "Priest", "kind": "unknown", "category": "tower"}
+{"code": "h09S", "name": "High Priest", "kind": "unknown", "category": "tower"}
+{"code": "h09T", "name": "Knight", "kind": "unknown", "category": "tower"}
+{"code": "h09U", "name": "Cavalier", "kind": "unknown", "category": "tower"}
+{"code": "h09W", "name": "Archer Apprentice", "kind": "unknown", "category": "tower"}
+{"code": "h09X", "name": "Cavalier", "kind": "unknown", "category": "other"}
+{"code": "h09Y", "name": "Archer Apprentice", "kind": "unknown", "category": "other"}
+{"code": "h09Z", "name": "High Priest", "kind": "unknown", "category": "other"}
+{"code": "h09m", "name": "Militia (s)", "kind": "unknown", "category": "other"}
+{"code": "h0A0", "name": "Royal Gryphon", "kind": "unknown", "category": "tower"}
+{"code": "h0A1", "name": "High Elven Farm level 6", "kind": "unknown", "category": "tower"}
+{"code": "h0A2", "name": "Dragon Hawk", "kind": "unknown", "category": "other"}
+{"code": "h0A3", "name": "Dragon Hawk", "kind": "unknown", "category": "tower"}
+{"code": "h0A4", "name": "High Elven Farm level 5", "kind": "unknown", "category": "tower"}
+{"code": "h0A5", "name": "High Elven Farm level 4", "kind": "unknown", "category": "tower"}
+{"code": "h0A6", "name": "High Elven Farm level 2", "kind": "unknown", "category": "tower"}
+{"code": "h0A7", "name": "Small Land Mine", "kind": "unknown", "category": "other"}
+{"code": "h0A8", "name": "Small Land Mine", "kind": "unknown", "category": "tower"}
+{"code": "h0A9", "name": "Machine Robot", "kind": "unknown", "category": "other"}
+{"code": "h0AA", "name": "Machine Robot", "kind": "unknown", "category": "tower"}
+{"code": "h0AB", "name": "Machine Turret", "kind": "unknown", "category": "tower"}
+{"code": "h0AC", "name": "Machine Turret", "kind": "unknown", "category": "other"}
+{"code": "h0AD", "name": "Geomancer", "kind": "unknown", "category": "other"}
+{"code": "h0AE", "name": "Geomancer", "kind": "unknown", "category": "tower"}
+{"code": "h0AF", "name": "Clockwerk", "kind": "unknown", "category": "tower"}
+{"code": "h0AG", "name": "Clockwerk", "kind": "unknown", "category": "other"}
+{"code": "h0AH", "name": "Flying Machine", "kind": "unknown", "category": "tower"}
+{"code": "h0AI", "name": "Flying Machine", "kind": "unknown", "category": "other"}
+{"code": "h0AJ", "name": "Helicopter", "kind": "unknown", "category": "tower"}
+{"code": "h0AK", "name": "Helicopter", "kind": "unknown", "category": "other"}
+{"code": "h0AL", "name": "Goblin Brawler", "kind": "unknown", "category": "tower"}
+{"code": "h0AM", "name": "Goblin Brawler", "kind": "unknown", "category": "other"}
+{"code": "h0AN", "name": "Goblin Blaster", "kind": "unknown", "category": "other"}
+{"code": "h0AO", "name": "Goblin Blaster", "kind": "unknown", "category": "tower"}
+{"code": "h0AP", "name": "Assault Tank", "kind": "unknown", "category": "other"}
+{"code": "h0AQ", "name": "Assault Tank", "kind": "unknown", "category": "tower"}
+{"code": "h0AR", "name": "Steamroller", "kind": "unknown", "category": "tower"}
+{"code": "h0AS", "name": "Steamroller", "kind": "unknown", "category": "other"}
+{"code": "h0AT", "name": "Medium Land Mine", "kind": "unknown", "category": "tower"}
+{"code": "h0AU", "name": "Ultra Land Mine", "kind": "unknown", "category": "tower"}
+{"code": "h0AV", "name": "Medium Land Mine", "kind": "unknown", "category": "other"}
+{"code": "h0AW", "name": "Ultra Land Mine", "kind": "unknown", "category": "other"}
+{"code": "h0AX", "name": "Clockwerk", "kind": "unknown", "category": "other"}
+{"code": "h0AY", "name": "Orc Warrior", "kind": "unknown", "category": "other"}
+{"code": "h0AZ", "name": "Advanced Barracks", "kind": "unknown", "category": "other"}
+{"code": "h0B0", "name": "Advanced Barracks", "kind": "unknown", "category": "other"}
+{"code": "h0B1", "name": "Warlock", "kind": "unknown", "category": "other"}
+{"code": "h0B2", "name": "Pandaren", "kind": "unknown", "category": "other"}
+{"code": "h0B3", "name": "Dark Draenei", "kind": "unknown", "category": "other"}
+{"code": "h0B4", "name": "Ballista", "kind": "unknown", "category": "other"}
+{"code": "h0B5", "name": "Shaman", "kind": "unknown", "category": "other"}
+{"code": "h0B6", "name": "Pudge", "kind": "unknown", "category": "other"}
+{"code": "h0B7", "name": "Gargoyle", "kind": "unknown", "category": "other"}
+{"code": "h0B8", "name": "Behemoth", "kind": "unknown", "category": "other"}
+{"code": "h0B9", "name": "Infernal", "kind": "unknown", "category": "other"}
+{"code": "h0BA", "name": "Kraken", "kind": "unknown", "category": "other"}
+{"code": "h0BB", "name": "Frost Wolf", "kind": "unknown", "category": "other"}
+{"code": "h0BC", "name": "Tuskarr", "kind": "unknown", "category": "tower"}
+{"code": "h0BD", "name": "Tuskarr Spearman", "kind": "unknown", "category": "tower"}
+{"code": "h0BE", "name": "Frost Wolf", "kind": "unknown", "category": "tower"}
+{"code": "h0BF", "name": "Orc Warrior", "kind": "unknown", "category": "tower"}
+{"code": "h0BG", "name": "Pandaren", "kind": "unknown", "category": "tower"}
+{"code": "h0BH", "name": "Ice Troll", "kind": "unknown", "category": "tower"}
+{"code": "h0BI", "name": "Ice Troll Shaman", "kind": "unknown", "category": "tower"}
+{"code": "h0BJ", "name": "Polar Bear", "kind": "unknown", "category": "tower"}
+{"code": "h0BK", "name": "Magnataur", "kind": "unknown", "category": "tower"}
+{"code": "h0BL", "name": "Ancient Wandigoo", "kind": "unknown", "category": "tower"}
+{"code": "h0BM", "name": "Wandigoo", "kind": "unknown", "category": "tower"}
+{"code": "h0BN", "name": "Young Frost Dragon", "kind": "unknown", "category": "other"}
+{"code": "h0BO", "name": "Young Frost Dragon", "kind": "unknown", "category": "tower"}
+{"code": "h0BP", "name": "Azure Drake", "kind": "unknown", "category": "tower"}
+{"code": "h0BQ", "name": "Demon", "kind": "unknown", "category": "other"}
+{"code": "h0BR", "name": "Demon", "kind": "unknown", "category": "other"}
+{"code": "h0BS", "name": "Blood Orc Warrior", "kind": "unknown", "category": "tower"}
+{"code": "h0BT", "name": "Blood Orc Warrior", "kind": "unknown", "category": "other"}
+{"code": "h0BU", "name": "Wolverine", "kind": "unknown", "category": "tower"}
+{"code": "h0BV", "name": "Orc Warlock", "kind": "unknown", "category": "tower"}
+{"code": "h0BW", "name": "Blood Orc Warlock", "kind": "unknown", "category": "tower"}
+{"code": "h0BX", "name": "Raider", "kind": "unknown", "category": "tower"}
+{"code": "h0BY", "name": "Raider", "kind": "unknown", "category": "other"}
+{"code": "h0BZ", "name": "Blood Raider", "kind": "unknown", "category": "other"}
+{"code": "h0C0", "name": "Blood Raider", "kind": "unknown", "category": "tower"}
+{"code": "h0C1", "name": "Elder Witch Doctor", "kind": "unknown", "category": "other"}
+{"code": "h0C2", "name": "Elder Witch Doctor", "kind": "unknown", "category": "tower"}
+{"code": "h0C3", "name": "Young Witch Doctor", "kind": "unknown", "category": "other"}
+{"code": "h0C4", "name": "Young Witch Doctor", "kind": "unknown", "category": "tower"}
+{"code": "h0C5", "name": "Wyvern", "kind": "unknown", "category": "tower"}
+{"code": "h0C6", "name": "Wyvern", "kind": "unknown", "category": "other"}
+{"code": "h0C7", "name": "Wind Rider", "kind": "unknown", "category": "other"}
+{"code": "h0C8", "name": "Wind Rider", "kind": "unknown", "category": "tower"}
+{"code": "h0C9", "name": "Orc Warchief", "kind": "unknown", "category": "tower"}
+{"code": "h0CA", "name": "Orc Warchief", "kind": "unknown", "category": "other"}
+{"code": "h0CB", "name": "Thrall", "kind": "unknown", "category": "other"}
+{"code": "h0CC", "name": "Thrall", "kind": "unknown", "category": "tower"}
+{"code": "h0CD", "name": "Wolverine", "kind": "unknown", "category": "other"}
+{"code": "h0CE", "name": "Acolyte", "kind": "unknown", "category": "other"}
+{"code": "h0CF", "name": "Acolyte", "kind": "unknown", "category": "tower"}
+{"code": "h0CG", "name": "Revenant", "kind": "unknown", "category": "other"}
+{"code": "h0CH", "name": "Revenant", "kind": "unknown", "category": "tower"}
+{"code": "h0CI", "name": "Ghoul", "kind": "unknown", "category": "tower"}
+{"code": "h0CJ", "name": "Ghoul", "kind": "unknown", "category": "other"}
+{"code": "h0CK", "name": "Frenzy Ghoul", "kind": "unknown", "category": "tower"}
+{"code": "h0CL", "name": "Frenzy Ghoul", "kind": "unknown", "category": "other"}
+{"code": "h0CM", "name": "Meat Wagon", "kind": "unknown", "category": "other"}
+{"code": "h0CN", "name": "War Machine", "kind": "unknown", "category": "other"}
+{"code": "h0CO", "name": "Meat Wagon", "kind": "unknown", "category": "tower"}
+{"code": "h0CP", "name": "War Machine", "kind": "unknown", "category": "tower"}
+{"code": "h0CQ", "name": "Necromancer", "kind": "unknown", "category": "tower"}
+{"code": "h0CR", "name": "Necromancer", "kind": "unknown", "category": "other"}
+{"code": "h0CS", "name": "Necrolyte", "kind": "unknown", "category": "tower"}
+{"code": "h0CT", "name": "Necrolyte", "kind": "unknown", "category": "other"}
+{"code": "h0CU", "name": "Ghost", "kind": "unknown", "category": "other"}
+{"code": "h0CV", "name": "Ghost", "kind": "unknown", "category": "tower"}
+{"code": "h0CW", "name": "Zombie", "kind": "unknown", "category": "tower"}
+{"code": "h0CX", "name": "Zombie", "kind": "unknown", "category": "other"}
+{"code": "h0CY", "name": "The Butcher", "kind": "unknown", "category": "tower"}
+{"code": "h0CZ", "name": "The Butcher", "kind": "unknown", "category": "other"}
+{"code": "h0D0", "name": "Guardian of Death", "kind": "unknown", "category": "tower"}
+{"code": "h0D1", "name": "Guardian of Death", "kind": "unknown", "category": "other"}
+{"code": "h0D2", "name": "Death Dragon", "kind": "unknown", "category": "tower"}
+{"code": "h0D3", "name": "Death Dragon", "kind": "unknown", "category": "other"}
+{"code": "h0D5", "name": "Geomancer", "kind": "unknown", "category": "other"}
+{"code": "h0D7", "name": "The Burning Legion", "kind": "unknown", "category": "other"}
+{"code": "h0D9", "name": "Advanced Barracks", "kind": "unknown", "category": "other"}
+{"code": "h0DA", "name": "Death Knight - [Level 3]", "kind": "unknown", "category": "tower"}
+{"code": "h0DB", "name": "Altar of Heroes", "kind": "unknown", "category": "other"}
+{"code": "h0DC", "name": "Death Knight - [Level 3]", "kind": "unknown", "category": "other"}
+{"code": "h0DD", "name": "Death Knight - [Level 2]", "kind": "unknown", "category": "tower"}
+{"code": "h0DE", "name": "Death Knight - [Level 1]", "kind": "unknown", "category": "tower"}
+{"code": "h0DF", "name": "Death Knight - [Level 1]", "kind": "unknown", "category": "other"}
+{"code": "h0DG", "name": "Death Knight - [Level 2]", "kind": "unknown", "category": "other"}
+{"code": "h0DH", "name": "Sycophant", "kind": "unknown", "category": "tower"}
+{"code": "h0DL", "name": "Ancient Wandigoo", "kind": "unknown", "category": "other"}
+{"code": "h0DO", "name": "Death Knight - [Level 5]", "kind": "unknown", "category": "other"}
+{"code": "h0DP", "name": "Death Knight - [Level 4]", "kind": "unknown", "category": "other"}
+{"code": "h0DQ", "name": "Death Knight - [Level 8]", "kind": "unknown", "category": "other"}
+{"code": "h0DR", "name": "Death Knight - [Level 6]", "kind": "unknown", "category": "other"}
+{"code": "h0DS", "name": "Death Knight - [Level 7]", "kind": "unknown", "category": "other"}
+{"code": "h0DT", "name": "Death Knight - [Level 10]", "kind": "unknown", "category": "other"}
+{"code": "h0DU", "name": "Death Knight - [Level 9]", "kind": "unknown", "category": "other"}
+{"code": "h0DV", "name": "Death Knight - [Level 11]", "kind": "unknown", "category": "other"}
+{"code": "h0DY", "name": "Dark Ranger - [Level 1]", "kind": "unknown", "category": "tower"}
+{"code": "h0DZ", "name": "Dark Ranger - [Level 2]", "kind": "unknown", "category": "tower"}
+{"code": "h0E0", "name": "Dark Ranger - [Level 3]", "kind": "unknown", "category": "tower"}
+{"code": "h0EF", "name": "Dark Ranger - [Level 3]", "kind": "unknown", "category": "other"}
+{"code": "h0EG", "name": "Dark Ranger - [Level 2]", "kind": "unknown", "category": "other"}
+{"code": "h0EH", "name": "Dark Ranger - [Level 1]", "kind": "unknown", "category": "other"}
+{"code": "h0EJ", "name": "Keeper of the Grove - [Level 1]", "kind": "unknown", "category": "tower"}
+{"code": "h0EK", "name": "Paladin - [Level 1]", "kind": "unknown", "category": "tower"}
+{"code": "h0EL", "name": "Priestess of the Moon - [Level 2]", "kind": "unknown", "category": "tower"}
+{"code": "h0EO", "name": "Tauren Chieftain - [Level 1]", "kind": "unknown", "category": "tower"}
+{"code": "h0EP", "name": "Dread Lord - [Level 9]", "kind": "unknown", "category": "other"}
+{"code": "h0EQ", "name": "Mountain King - [Level 1]", "kind": "unknown", "category": "tower"}
+{"code": "h0ES", "name": "Keeper of the Grove - [Level 1]", "kind": "unknown", "category": "other"}
+{"code": "h0ET", "name": "Keeper of the Grove - [Level 2]", "kind": "unknown", "category": "other"}
+{"code": "h0F1", "name": "Keeper of the Grove - [Level 3]", "kind": "unknown", "category": "other"}
+{"code": "h0F2", "name": "Keeper of the Grove - [Level 7]", "kind": "unknown", "category": "other"}
+{"code": "h0F3", "name": "Keeper of the Grove - [Level 8]", "kind": "unknown", "category": "other"}
+{"code": "h0F4", "name": "Keeper of the Grove - [Level 9]", "kind": "unknown", "category": "other"}
+{"code": "h0F5", "name": "Keeper of the Grove - [Level 10]", "kind": "unknown", "category": "other"}
+{"code": "h0F6", "name": "Keeper of the Grove - [Level 3]", "kind": "unknown", "category": "tower"}
+{"code": "h0F7", "name": "Keeper of the Grove - [Level 6]", "kind": "unknown", "category": "other"}
+{"code": "h0F8", "name": "Keeper of the Grove - [Level 11]", "kind": "unknown", "category": "other"}
+{"code": "h0F9", "name": "Keeper of the Grove - [Level 5]", "kind": "unknown", "category": "other"}
+{"code": "h0FA", "name": "Keeper of the Grove - [Level 4]", "kind": "unknown", "category": "other"}
+{"code": "h0FB", "name": "Keeper of the Grove - [Level 2]", "kind": "unknown", "category": "tower"}
+{"code": "h0FC", "name": "Priestess of the Moon - [Level 3]", "kind": "unknown", "category": "tower"}
+{"code": "h0FD", "name": "Priestess of the Moon - [Level 4]", "kind": "unknown", "category": "other"}
+{"code": "h0FE", "name": "Priestess of the Moon - [Level 5]", "kind": "unknown", "category": "other"}
+{"code": "h0FF", "name": "Priestess of the Moon - [Level 6]", "kind": "unknown", "category": "other"}
+{"code": "h0FG", "name": "Priestess of the Moon - [Level 7]", "kind": "unknown", "category": "other"}
+{"code": "h0FH", "name": "Priestess of the Moon - [Level 8]", "kind": "unknown", "category": "other"}
+{"code": "h0FI", "name": "Priestess of the Moon - [Level 9]", "kind": "unknown", "category": "other"}
+{"code": "h0FJ", "name": "Priestess of the Moon - [Level 10]", "kind": "unknown", "category": "other"}
+{"code": "h0FK", "name": "Priestess of the Moon - [Level 1]", "kind": "unknown", "category": "tower"}
+{"code": "h0FL", "name": "Priestess of the Moon - [Level 11]", "kind": "unknown", "category": "other"}
+{"code": "h0FM", "name": "Priestess of the Moon - [Level 1]", "kind": "unknown", "category": "other"}
+{"code": "h0FN", "name": "Priestess of the Moon - [Level 2]", "kind": "unknown", "category": "other"}
+{"code": "h0FO", "name": "Priestess of the Moon - [Level 3]", "kind": "unknown", "category": "other"}
+{"code": "h0G3", "name": "Archmage - [Level 3]", "kind": "unknown", "category": "tower"}
+{"code": "h0G4", "name": "Archmage - [Level 2]", "kind": "unknown", "category": "tower"}
+{"code": "h0G5", "name": "Archmage - [Level 1]", "kind": "unknown", "category": "tower"}
+{"code": "h0GE", "name": "Archmage - [Level 3]", "kind": "unknown", "category": "other"}
+{"code": "h0GF", "name": "Archmage - [Level 2]", "kind": "unknown", "category": "other"}
+{"code": "h0GG", "name": "Sycophant", "kind": "unknown", "category": "other"}
+{"code": "h0GH", "name": "Archmage - [Level 1]", "kind": "unknown", "category": "other"}
+{"code": "h0GI", "name": "Dread Lord - [Level 1]", "kind": "unknown", "category": "tower"}
+{"code": "h0GJ", "name": "Dread Lord - [Level 3]", "kind": "unknown", "category": "tower"}
+{"code": "h0GK", "name": "Dread Lord - [Level 4]", "kind": "unknown", "category": "other"}
+{"code": "h0GL", "name": "Dread Lord - [Level 7]", "kind": "unknown", "category": "other"}
+{"code": "h0GM", "name": "Dread Lord - [Level 5]", "kind": "unknown", "category": "other"}
+{"code": "h0GN", "name": "Dread Lord - [Level 8]", "kind": "unknown", "category": "other"}
+{"code": "h0GO", "name": "Dread Lord - [Level 11]", "kind": "unknown", "category": "other"}
+{"code": "h0GP", "name": "Dread Lord - [Level 6]", "kind": "unknown", "category": "other"}
+{"code": "h0GQ", "name": "Dread Lord - [Level 10]", "kind": "unknown", "category": "other"}
+{"code": "h0GS", "name": "Dread Lord - [Level 2]", "kind": "unknown", "category": "tower"}
+{"code": "h0GT", "name": "Dread Lord - [Level 2]", "kind": "unknown", "category": "other"}
+{"code": "h0GZ", "name": "Dread Lord - [Level 3]", "kind": "unknown", "category": "other"}
+{"code": "h0H0", "name": "Dread Lord - [Level 1]", "kind": "unknown", "category": "other"}
+{"code": "h0H6", "name": "Naga Sea Witch - [Level 2]", "kind": "unknown", "category": "tower"}
+{"code": "h0H7", "name": "Naga Sea Witch - [Level 3]", "kind": "unknown", "category": "tower"}
+{"code": "h0HC", "name": "Naga Sea Witch - [Level 1]", "kind": "unknown", "category": "tower"}
+{"code": "h0HI", "name": "Naga Sea Witch - [Level 3]", "kind": "unknown", "category": "other"}
+{"code": "h0HJ", "name": "Naga Sea Witch - [Level 2]", "kind": "unknown", "category": "other"}
+{"code": "h0HK", "name": "Naga Sea Witch - [Level 1]", "kind": "unknown", "category": "other"}
+{"code": "h0HO", "name": "Mountain King - [Level 2]", "kind": "unknown", "category": "tower"}
+{"code": "h0HP", "name": "Mountain King - [Level 3]", "kind": "unknown", "category": "tower"}
+{"code": "h0HQ", "name": "Mountain King - [Level 4]", "kind": "unknown", "category": "other"}
+{"code": "h0HR", "name": "Mountain King - [Level 5]", "kind": "unknown", "category": "other"}
+{"code": "h0HS", "name": "Mountain King - [Level 6]", "kind": "unknown", "category": "other"}
+{"code": "h0HT", "name": "Mountain King - [Level 7]", "kind": "unknown", "category": "other"}
+{"code": "h0HU", "name": "Mountain King - [Level 8]", "kind": "unknown", "category": "other"}
+{"code": "h0HV", "name": "Mountain King - [Level 9]", "kind": "unknown", "category": "other"}
+{"code": "h0HW", "name": "Mountain King - [Level 10]", "kind": "unknown", "category": "other"}
+{"code": "h0HX", "name": "Mountain King - [Level 11]", "kind": "unknown", "category": "other"}
+{"code": "h0HY", "name": "Mountain King - [Level 1]", "kind": "unknown", "category": "other"}
+{"code": "h0HZ", "name": "Mountain King - [Level 2]", "kind": "unknown", "category": "other"}
+{"code": "h0I0", "name": "Mountain King - [Level 3]", "kind": "unknown", "category": "other"}
+{"code": "h0I9", "name": "Tauren Chieftain - [Level 2]", "kind": "unknown", "category": "tower"}
+{"code": "h0IA", "name": "Tauren Chieftain - [Level 3]", "kind": "unknown", "category": "tower"}
+{"code": "h0IB", "name": "Tauren Chieftain - [Level 4]", "kind": "unknown", "category": "other"}
+{"code": "h0IC", "name": "Tauren Chieftain - [Level 5]", "kind": "unknown", "category": "other"}
+{"code": "h0ID", "name": "Tauren Chieftain - [Level 6]", "kind": "unknown", "category": "other"}
+{"code": "h0IE", "name": "Tauren Chieftain - [Level 7]", "kind": "unknown", "category": "other"}
+{"code": "h0IF", "name": "Tauren Chieftain - [Level 8]", "kind": "unknown", "category": "other"}
+{"code": "h0IG", "name": "Tauren Chieftain - [Level 9]", "kind": "unknown", "category": "other"}
+{"code": "h0IH", "name": "Tauren Chieftain - [Level 10]", "kind": "unknown", "category": "other"}
+{"code": "h0II", "name": "Tauren Chieftain - [Level 11]", "kind": "unknown", "category": "other"}
+{"code": "h0IJ", "name": "Tauren Chieftain - [Level 1]", "kind": "unknown", "category": "other"}
+{"code": "h0IM", "name": "Tauren Chieftain - [Level 2]", "kind": "unknown", "category": "other"}
+{"code": "h0IN", "name": "Tauren Chieftain - [Level 3]", "kind": "unknown", "category": "other"}
+{"code": "h0IU", "name": "Paladin - [Level 2]", "kind": "unknown", "category": "tower"}
+{"code": "h0IV", "name": "Paladin - [Level 3]", "kind": "unknown", "category": "tower"}
+{"code": "h0IW", "name": "Paladin - [Level 4]", "kind": "unknown", "category": "other"}
+{"code": "h0IX", "name": "Paladin - [Level 5]", "kind": "unknown", "category": "other"}
+{"code": "h0IY", "name": "Paladin - [Level 6]", "kind": "unknown", "category": "other"}
+{"code": "h0IZ", "name": "Paladin - [Level 7]", "kind": "unknown", "category": "other"}
+{"code": "h0J0", "name": "Paladin - [Level 8]", "kind": "unknown", "category": "other"}
+{"code": "h0J1", "name": "Paladin - [Level 9]", "kind": "unknown", "category": "other"}
+{"code": "h0J2", "name": "Paladin - [Level 10]", "kind": "unknown", "category": "other"}
+{"code": "h0J3", "name": "Paladin - [Level 11]", "kind": "unknown", "category": "other"}
+{"code": "h0J6", "name": "Paladin - [Level 1]", "kind": "unknown", "category": "other"}
+{"code": "h0J7", "name": "Paladin - [Level 2]", "kind": "unknown", "category": "other"}
+{"code": "h0J8", "name": "Paladin - [Level 3]", "kind": "unknown", "category": "other"}
+{"code": "h0JF", "name": "Advanced Barracks", "kind": "unknown", "category": "other"}
+{"code": "h0SN", "name": "Shadow Council", "kind": "unknown", "category": "other"}
+{"code": "h11Y", "name": "Destroyer", "kind": "unknown", "category": "tower"}
+{"code": "h123", "name": "Relocate", "kind": "unknown", "category": "other"}
+{"code": "h12M", "name": "Hogger", "kind": "unknown", "category": "other"}
+{"code": "h12N", "name": "Hogger", "kind": "unknown", "category": "tower"}
+{"code": "h149", "name": "Obelisk of Eternity", "kind": "unknown", "category": "other"}
+{"code": "h14D", "name": "Elementalist", "kind": "unknown", "category": "other"}
+{"code": "h14E", "name": "Elementalist", "kind": "unknown", "category": "tower"}
+{"code": "h14O", "name": "Militia", "kind": "unknown", "category": "other"}
+{"code": "h14P", "name": "Bowman", "kind": "unknown", "category": "other"}
+{"code": "h14Q", "name": "Whelp", "kind": "unknown", "category": "other"}
+{"code": "h14R", "name": "Ghoul", "kind": "unknown", "category": "other"}
+{"code": "h14S", "name": "Warrior", "kind": "unknown", "category": "other"}
+{"code": "h14T", "name": "Hermit", "kind": "unknown", "category": "other"}
+{"code": "h14U", "name": "Dino", "kind": "unknown", "category": "other"}
+{"code": "h14V", "name": "Commander", "kind": "unknown", "category": "other"}
+{"code": "h14W", "name": "Furbolg", "kind": "unknown", "category": "other"}
+{"code": "h14X", "name": "Wyvern", "kind": "unknown", "category": "other"}
+{"code": "h14Y", "name": "Chariot", "kind": "unknown", "category": "other"}
+{"code": "h14Z", "name": "Blood Orc", "kind": "unknown", "category": "other"}
+{"code": "h150", "name": "Frost Wolf", "kind": "unknown", "category": "other"}
+{"code": "h151", "name": "Ice Troll", "kind": "unknown", "category": "other"}
+{"code": "h152", "name": "Warlock", "kind": "unknown", "category": "other"}
+{"code": "h153", "name": "Pandaren", "kind": "unknown", "category": "other"}
+{"code": "h154", "name": "Dark Draenei", "kind": "unknown", "category": "other"}
+{"code": "h155", "name": "Ballista", "kind": "unknown", "category": "other"}
+{"code": "h156", "name": "Shaman", "kind": "unknown", "category": "other"}
+{"code": "h157", "name": "Pudge", "kind": "unknown", "category": "other"}
+{"code": "h158", "name": "Sergeant", "kind": "unknown", "category": "tower"}
+{"code": "h159", "name": "Behemoth", "kind": "unknown", "category": "other"}
+{"code": "h15A", "name": "Infernal", "kind": "unknown", "category": "other"}
+{"code": "h15B", "name": "Kraken", "kind": "unknown", "category": "other"}
+{"code": "h15C", "name": "Barracks", "kind": "unknown", "category": "other"}
+{"code": "h15D", "name": "Advanced Barracks", "kind": "unknown", "category": "other"}
+{"code": "h15M", "name": "Gargoyle", "kind": "unknown", "category": "other"}
+{"code": "h17M", "name": "Gorloc", "kind": "unknown", "category": "other"}
+{"code": "h180", "name": "Gorloc", "kind": "unknown", "category": "other"}
+{"code": "h18J", "name": "Gryphon Rider", "kind": "unknown", "category": "other"}
+{"code": "h1BR", "name": "Demon", "kind": "unknown", "category": "other"}
+{"code": "h1DD", "name": "Turtle Cannon", "kind": "unknown", "category": "other"}
+{"code": "h22C", "name": "Destroyer", "kind": "unknown", "category": "other"}
+{"code": "h22O", "name": "Tree of Battle", "kind": "unknown", "category": "tower"}
+{"code": "h250", "name": "Frost Wolf", "kind": "unknown", "category": "other"}
+{"code": "h251", "name": "Ice Troll", "kind": "unknown", "category": "other"}
+{"code": "h252", "name": "Warlock", "kind": "unknown", "category": "other"}
+{"code": "h253", "name": "Pandaren", "kind": "unknown", "category": "other"}
+{"code": "h254", "name": "Dark Draenei", "kind": "unknown", "category": "other"}
+{"code": "h255", "name": "Ballista", "kind": "unknown", "category": "other"}
+{"code": "h256", "name": "Shaman", "kind": "unknown", "category": "other"}
+{"code": "h257", "name": "Pudge", "kind": "unknown", "category": "other"}
+{"code": "h259", "name": "Behemoth", "kind": "unknown", "category": "other"}
+{"code": "h25A", "name": "Infernal", "kind": "unknown", "category": "other"}
+{"code": "h25B", "name": "Kraken", "kind": "unknown", "category": "other"}
+{"code": "h25D", "name": "Advanced Barracks", "kind": "unknown", "category": "other"}
+{"code": "h25M", "name": "Gargoyle", "kind": "unknown", "category": "other"}
+{"code": "h28J", "name": "Gryphon Rider", "kind": "unknown", "category": "tower"}
+{"code": "h2BR", "name": "Demon", "kind": "unknown", "category": "other"}
+{"code": "h2DD", "name": "Turtle Cannon", "kind": "unknown", "category": "tower"}
+{"code": "h301", "name": "Yogg Tentacle", "kind": "unknown", "category": "other"}
+{"code": "h302", "name": "Yogg Tentacle Club", "kind": "unknown", "category": "other"}
+{"code": "h305", "name": "Lotus Portal Pet", "kind": "unknown", "category": "other"}
+{"code": "h306", "name": "Pet Cloud", "kind": "unknown", "category": "other"}
+{"code": "h5bp", "name": "The Parthenon", "kind": "unknown", "category": "other"}
+{"code": "h995", "name": "War Room", "kind": "unknown", "category": "tower"}
+{"code": "h996", "name": "Altar of Heroes", "kind": "unknown", "category": "tower"}
+{"code": "h997", "name": "Hellraiser", "kind": "unknown", "category": "other"}
+{"code": "h998", "name": "Hellraiser", "kind": "unknown", "category": "tower"}
+{"code": "h999", "name": "Tree of Battle", "kind": "unknown", "category": "other"}
+{"code": "hGLY", "name": "Glyph", "kind": "unknown", "category": "other"}
+{"code": "hTTT", "name": "MELEE TEST UNIT", "kind": "unknown", "category": "other"}
+{"code": "hcmp", "name": "The Campfire", "kind": "unknown", "category": "other"}
+{"code": "hlb1", "name": "Kel'Thuzad - [Level 1]", "kind": "unknown", "category": "tower"}
+{"code": "hlb2", "name": "Kel'Thuzad - [Level 2]", "kind": "unknown", "category": "tower"}
+{"code": "hlb3", "name": "Kel'Thuzad - [Level 3]", "kind": "unknown", "category": "tower"}
+{"code": "hlf1", "name": "Kel'Thuzad - [Level 1]", "kind": "unknown", "category": "other"}
+{"code": "hlf2", "name": "Kel'Thuzad - [Level 2]", "kind": "unknown", "category": "other"}
+{"code": "hlf3", "name": "Kel'Thuzad - [Level 3]", "kind": "unknown", "category": "other"}
+{"code": "hp3b", "name": "Orc Warrior", "kind": "unknown", "category": "other"}
+{"code": "iglo", "name": "Glory", "kind": "unknown", "category": "item"}
+{"code": "kpin", "name": "Flute of Insight", "kind": "unknown", "category": "item"}
+{"code": "lgdh", "name": "Legion Trumpet", "kind": "unknown", "category": "item"}
+{"code": "lhst", "name": "Horn of Winds", "kind": "unknown", "category": "item"}
+{"code": "manh", "name": "Medical treatise", "kind": "unknown", "category": "item"}
+{"code": "mcou", "name": "Medal of Courage", "kind": "unknown", "category": "item"}
+{"code": "modt", "name": "Death mask", "kind": "unknown", "category": "item"}
+{"code": "n001", "name": "Fiend", "kind": "unknown", "category": "other"}
+{"code": "n002", "name": "Fanatic", "kind": "unknown", "category": "other"}
+{"code": "n004", "name": "Imp", "kind": "unknown", "category": "other"}
+{"code": "n005", "name": "Ghoul Fanatic", "kind": "unknown", "category": "other"}
+{"code": "n007", "name": "Storm Geyser", "kind": "unknown", "category": "other"}
+{"code": "n009", "name": "Withdraw Effect", "kind": "unknown", "category": "other"}
+{"code": "n00B", "name": "Tuskarr", "kind": "unknown", "category": "other"}
+{"code": "n00E", "name": "Ice Troll Shaman", "kind": "unknown", "category": "other"}
+{"code": "n00G", "name": "Magnataur", "kind": "unknown", "category": "other"}
+{"code": "n00H", "name": "Ancient Wandigoo", "kind": "unknown", "category": "other"}
+{"code": "n00I", "name": "Wandigoo", "kind": "unknown", "category": "other"}
+{"code": "n00J", "name": "Azure Drake", "kind": "unknown", "category": "other"}
+{"code": "n00L", "name": "PanicX", "kind": "unknown", "category": "other"}
+{"code": "n00M", "name": "LISK", "kind": "unknown", "category": "other"}
+{"code": "n00N", "name": "Egze", "kind": "unknown", "category": "other"}
+{"code": "n00O", "name": "HuanAk", "kind": "unknown", "category": "other"}
+{"code": "n00P", "name": "Blood Orc Warlock", "kind": "unknown", "category": "other"}
+{"code": "n00Q", "name": "Wolf", "kind": "unknown", "category": "other"}
+{"code": "n00R", "name": "Blood Wolf", "kind": "unknown", "category": "other"}
+{"code": "nba2", "name": "Gatekeeper of Hell", "kind": "unknown", "category": "other"}
+{"code": "ndr1", "name": "Lesser Servant of Darkness", "kind": "unknown", "category": "other"}
+{"code": "nfel", "name": "Hell hunter", "kind": "unknown", "category": "other"}
+{"code": "nfra", "name": "Beorn-warrior", "kind": "unknown", "category": "other"}
+{"code": "nfrl", "name": "Beorn", "kind": "unknown", "category": "other"}
+{"code": "ngst", "name": "Stone golem", "kind": "unknown", "category": "other"}
+{"code": "nhl2", "name": "Yobbo Builder", "kind": "unknown", "category": "other"}
+{"code": "nrdr", "name": "Red Dragon", "kind": "unknown", "category": "other"}
+{"code": "nrvi", "name": "Ghost knight", "kind": "unknown", "category": "other"}
+{"code": "nsca", "name": "Skeleton-archer", "kind": "unknown", "category": "other"}
+{"code": "nsce", "name": "Skeleton", "kind": "unknown", "category": "other"}
+{"code": "o001", "name": "Ice Troll", "kind": "unknown", "category": "other"}
+{"code": "o002", "name": "Orc Warlock", "kind": "unknown", "category": "other"}
+{"code": "oeye", "name": "Invisible Guardian", "kind": "unknown", "category": "other"}
+{"code": "ofro", "name": "Sphere of Ice", "kind": "unknown", "category": "item"}
+{"code": "ohwd", "name": "Spirit-healer", "kind": "unknown", "category": "other"}
+{"code": "pdiv", "name": "Elixir of Invulnerability", "kind": "unknown", "category": "item"}
+{"code": "penr", "name": "Amulet of Energy", "kind": "unknown", "category": "item"}
+{"code": "pghe", "name": "Healing potion", "kind": "unknown", "category": "item"}
+{"code": "pgma", "name": "Elixir of Mana", "kind": "unknown", "category": "item"}
+{"code": "pmna", "name": "Amulet of Mana", "kind": "unknown", "category": "item"}
+{"code": "pnvl", "name": "Brew of Invincibility", "kind": "unknown", "category": "item"}
+{"code": "pomn", "name": "Potion of All Vision", "kind": "unknown", "category": "item"}
+{"code": "pres", "name": "Elixir of Rebirth", "kind": "unknown", "category": "item"}
+{"code": "prvt", "name": "Talisman of Health", "kind": "unknown", "category": "item"}
+{"code": "ps18", "name": "GoF Penguin", "kind": "unknown", "category": "other"}
+{"code": "ps19", "name": "GoF Packhorse", "kind": "unknown", "category": "other"}
+{"code": "ps20", "name": "GoF Chicken", "kind": "unknown", "category": "other"}
+{"code": "ps21", "name": "GoF Penguin", "kind": "unknown", "category": "other"}
+{"code": "ps22", "name": "GoF Stag", "kind": "unknown", "category": "other"}
+{"code": "ps23", "name": "GoF Crab", "kind": "unknown", "category": "other"}
+{"code": "ps24", "name": "GoF Frog", "kind": "unknown", "category": "other"}
+{"code": "ps25", "name": "GoF Hydralisk", "kind": "unknown", "category": "other"}
+{"code": "ps26", "name": "GoF Hellraiser", "kind": "unknown", "category": "other"}
+{"code": "ps27", "name": "GoF Pig", "kind": "unknown", "category": "other"}
+{"code": "ps28", "name": "GoF Raccoon", "kind": "unknown", "category": "other"}
+{"code": "ps29", "name": "GoF Cloud", "kind": "unknown", "category": "other"}
+{"code": "rag1", "name": "Shoes of Agility(+3)", "kind": "unknown", "category": "item"}
+{"code": "rat6", "name": "Battle claws(+6)", "kind": "unknown", "category": "item"}
+{"code": "rat9", "name": "Battle claws(+9)", "kind": "unknown", "category": "item"}
+{"code": "ratc", "name": "Battle claws(+12)", "kind": "unknown", "category": "item"}
+{"code": "ratf", "name": "Battle claws(+15)", "kind": "unknown", "category": "item"}
+{"code": "rde1", "name": "Ring of Protection(+2)", "kind": "unknown", "category": "item"}
+{"code": "rde2", "name": "Ring of Protection(+3)", "kind": "unknown", "category": "item"}
+{"code": "rde3", "name": "Ring of Protection(+4)", "kind": "unknown", "category": "item"}
+{"code": "rde4", "name": "Ring of Protection(+5)", "kind": "unknown", "category": "item"}
+{"code": "rej3", "name": "Rejuvenation Potion", "kind": "unknown", "category": "item"}
+{"code": "rhth", "name": "Life Stone", "kind": "unknown", "category": "item"}
+{"code": "rin1", "name": "Scholar's Mantle(+3)", "kind": "unknown", "category": "item"}
+{"code": "rst1", "name": "Ogre gauntlets(+3)", "kind": "unknown", "category": "item"}
+{"code": "rwiz", "name": "Sobi mask", "kind": "unknown", "category": "item"}
+{"code": "sand", "name": "Scroll of Electroplating", "kind": "unknown", "category": "item"}
+{"code": "sbch", "name": "Bone bells", "kind": "unknown", "category": "item"}
+{"code": "shar", "name": "Ice shard", "kind": "unknown", "category": "item"}
+{"code": "spsh", "name": "Amulet of Protection", "kind": "unknown", "category": "item"}
+{"code": "sres", "name": "Scroll of Rebirth", "kind": "unknown", "category": "item"}
+{"code": "tdex", "name": "Book of Dexterity", "kind": "unknown", "category": "item"}
+{"code": "tdx2", "name": "Book of Dexterity(+2)", "kind": "unknown", "category": "item"}
+{"code": "texp", "name": "Experience Book", "kind": "unknown", "category": "item"}
+{"code": "tin2", "name": "Book of Wisdom(+2)", "kind": "unknown", "category": "item"}
+{"code": "tint", "name": "Book of Wisdom", "kind": "unknown", "category": "item"}
+{"code": "tkno", "name": "Knowledge Book", "kind": "unknown", "category": "item"}
+{"code": "totw", "name": "Talisman of the Forest", "kind": "unknown", "category": "item"}
+{"code": "tpow", "name": "Knowledge Book", "kind": "unknown", "category": "item"}
+{"code": "tst2", "name": "Book of Power(+2)", "kind": "unknown", "category": "item"}
+{"code": "tstr", "name": "Book of Power", "kind": "unknown", "category": "item"}
+{"code": "u000", "name": "Mech", "kind": "unknown", "category": "builder"}
+{"code": "u001", "name": "Beast", "kind": "unknown", "category": "builder"}
+{"code": "u002", "name": "Shadow", "kind": "unknown", "category": "builder"}
+{"code": "u003", "name": "Nature", "kind": "unknown", "category": "builder"}
+{"code": "u004", "name": "Round In Progress", "kind": "unknown", "category": "other"}
+{"code": "u005", "name": "Diabolic", "kind": "unknown", "category": "other"}
+{"code": "u006", "name": "Dummy Caster", "kind": "unknown", "category": "other"}
+{"code": "u007", "name": "Dummy Caster", "kind": "unknown", "category": "other"}
+{"code": "u008", "name": "Upgrade King Hit Points", "kind": "unknown", "category": "other"}
+{"code": "u009", "name": "Upgrade King Attack", "kind": "unknown", "category": "other"}
+{"code": "u00A", "name": "Upgrade King Regeneration", "kind": "unknown", "category": "other"}
+{"code": "u00B", "name": "Wave - Level 4", "kind": "unknown", "category": "other"}
+{"code": "u00C", "name": "Element", "kind": "unknown", "category": "builder"}
+{"code": "u00D", "name": "Wave has not started yet", "kind": "unknown", "category": "other"}
+{"code": "u00E", "name": "Random Builder", "kind": "unknown", "category": "other"}
+{"code": "u00F", "name": "Red is picking a game mode", "kind": "unknown", "category": "other"}
+{"code": "u00G", "name": "Ghost", "kind": "unknown", "category": "builder"}
+{"code": "u00H", "name": "Demi-Human", "kind": "unknown", "category": "builder"}
+{"code": "u00I", "name": "Hybrid", "kind": "unknown", "category": "builder"}
+{"code": "u00J", "name": "Marine", "kind": "unknown", "category": "builder"}
+{"code": "u00K", "name": "Arctic", "kind": "unknown", "category": "builder"}
+{"code": "u00L", "name": "Elf", "kind": "unknown", "category": "builder"}
+{"code": "u00M", "name": "Goblin", "kind": "unknown", "category": "builder"}
+{"code": "u00N", "name": "600 value ( Mode = -li )", "kind": "unknown", "category": "other"}
+{"code": "u00O", "name": "Paladin", "kind": "unknown", "category": "builder"}
+{"code": "u00P", "name": "Mercenary", "kind": "unknown", "category": "other"}
+{"code": "u00Q", "name": "350 value ( Mode = -li )", "kind": "unknown", "category": "other"}
+{"code": "u00R", "name": "6000 value", "kind": "unknown", "category": "other"}
+{"code": "u00S", "name": "4000 value", "kind": "unknown", "category": "other"}
+{"code": "u00T", "name": "Prophet", "kind": "unknown", "category": "builder"}
+{"code": "u00U", "name": "Orc", "kind": "unknown", "category": "builder"}
+{"code": "u00V", "name": "Less than 50% of Recommend Value", "kind": "unknown", "category": "other"}
+{"code": "u00W", "name": "Dummy Caster", "kind": "unknown", "category": "other"}
+{"code": "u00Z", "name": "Undead", "kind": "unknown", "category": "builder"}
+{"code": "u011", "name": "Fire Archer", "kind": "unknown", "category": "other"}
+{"code": "u012", "name": "500 value", "kind": "unknown", "category": "other"}
+{"code": "u013", "name": "Dummy Vision", "kind": "unknown", "category": "other"}
+{"code": "u014", "name": "Fire Archer", "kind": "unknown", "category": "other"}
+{"code": "u01D", "name": "500 value", "kind": "unknown", "category": "other"}
+{"code": "u01K", "name": "Unused", "kind": "unknown", "category": "other"}
+{"code": "u0B6", "name": "Thicc Dummy Caster", "kind": "unknown", "category": "other"}
+{"code": "u834", "name": "Hero Unavailable During This Game", "kind": "unknown", "category": "upgrade"}
+{"code": "u835", "name": "Archmage is Not Available This Game", "kind": "unknown", "category": "upgrade"}
+{"code": "u836", "name": "Dark Ranger is Not Available This Game", "kind": "unknown", "category": "upgrade"}
+{"code": "u837", "name": "Naga Sea Witch is Not Available This Game", "kind": "unknown", "category": "upgrade"}
+{"code": "u838", "name": "Priestess of the Moon is Not Available This Game", "kind": "unknown", "category": "upgrade"}
+{"code": "u839", "name": "Mountain King is Not Available This Game", "kind": "unknown", "category": "upgrade"}
+{"code": "u840", "name": "Tauren Chieftain is Not Available This Game", "kind": "unknown", "category": "upgrade"}
+{"code": "u841", "name": "Dread Lord is Not Available This Game", "kind": "unknown", "category": "upgrade"}
+{"code": "u842", "name": "Paladin is Not Available This Game", "kind": "unknown", "category": "upgrade"}
+{"code": "u843", "name": "Death Knight is Not Available This Game", "kind": "unknown", "category": "upgrade"}
+{"code": "u844", "name": "Keeper of the Grove is Not Available This Game", "kind": "unknown", "category": "upgrade"}
+{"code": "u847", "name": "W3Champions Version", "kind": "unknown", "category": "upgrade"}
+{"code": "u848", "name": "Battle.Net Version", "kind": "unknown", "category": "upgrade"}
+{"code": "u849", "name": "At Least 4 Players In The Game", "kind": "unknown", "category": "upgrade"}
+{"code": "u850", "name": "Completion Of The Following", "kind": "unknown", "category": "upgrade"}
+{"code": "u851", "name": "Completion Of The Following", "kind": "unknown", "category": "upgrade"}
+{"code": "u852", "name": "Completion Of The Following", "kind": "unknown", "category": "upgrade"}
+{"code": "u853", "name": "Completion Of The Following", "kind": "unknown", "category": "upgrade"}
+{"code": "u854", "name": "Completion Of The Following", "kind": "unknown", "category": "upgrade"}
+{"code": "u997", "name": "King's Purge Upgrade", "kind": "unknown", "category": "other"}
+{"code": "u998", "name": "Upgrade King Hit Points x5", "kind": "unknown", "category": "other"}
+{"code": "u999", "name": "Upgrade King Attack x5", "kind": "unknown", "category": "other"}
+{"code": "u99A", "name": "Upgrade King Regeneration x5", "kind": "unknown", "category": "other"}
+{"code": "u99d", "name": "Dark Presence", "kind": "unknown", "category": "other"}
+{"code": "u99r", "name": "Royal Presence", "kind": "unknown", "category": "other"}
+{"code": "ward", "name": "Orc War Drums", "kind": "unknown", "category": "item"}
+{"code": "wcyc", "name": "Rod of Winds", "kind": "unknown", "category": "item"}
+{"code": "whwd", "name": "Perfume-healers", "kind": "unknown", "category": "item"}
+{"code": "wild", "name": "Amulet of the Forest", "kind": "unknown", "category": "item"}
+{"code": "wlsd", "name": "Lightning Rod", "kind": "unknown", "category": "item"}
+{"code": "woms", "name": "Wand of Drain Mana", "kind": "unknown", "category": "item"}
+{"code": "wshs", "name": "Wand of Alien Eyes", "kind": "unknown", "category": "item"}
+{"code": "wswd", "name": "Invisible Guardians", "kind": "unknown", "category": "item"}

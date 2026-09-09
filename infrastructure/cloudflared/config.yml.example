@@ -1,0 +1,12 @@
+# Cloudflare Tunnel ingress. Copy to config.yml on the box, or skip the file
+# entirely and give the container a TUNNEL_TOKEN from a dashboard-managed tunnel.
+#
+# ClickHouse is the only thing behind the tunnel: the GNL backend sends its
+# query with a ClickHouse user and password over HTTPS. No port is open on the box.
+tunnel: <tunnel id>
+credentials-file: /etc/cloudflared/<tunnel id>.json
+
+ingress:
+  - hostname: warehouse.<domain>
+    service: http://clickhouse:8123
+  - service: http_status:404

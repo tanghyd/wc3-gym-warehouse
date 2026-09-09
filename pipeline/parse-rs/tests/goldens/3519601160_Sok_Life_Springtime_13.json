@@ -1,0 +1,659 @@
+{
+ "apm": {
+  "trackingInterval": 60000
+ },
+ "buildNumber": 6117,
+ "chat": [
+  {
+   "message": "[FLO] Speed: 3x",
+   "mode": "Private",
+   "playerId": 24,
+   "playerName": "Kover00#2421",
+   "timeMS": 62
+  }
+ ],
+ "creator": "FLO",
+ "duration": 406000,
+ "expansion": true,
+ "gamename": "FLO-STREAM",
+ "id": "92336fe5a392d0043442e75ad4a5097086d6451a35b3d68d99c3093e65b8d8f6",
+ "map": {
+  "checksum": "b6dae6fe",
+  "checksumSha1": "86435da9c6aaae5970e80fa46fcbdfd7279779c4",
+  "file": "1075_w3c_251104_0950_Springtime_v1.3.w3x",
+  "path": "Maps/W3Champions\\1075_w3c_251104_0950_Springtime_v1.3.w3x"
+ },
+ "matchup": "HvN",
+ "observers": [
+  "orange#14823",
+  "hazy123123#3311",
+  "Egg#13438",
+  "HuyaYumiko#4873",
+  "ColorFul#4737",
+  "Aife#31808",
+  "Wolf#41578",
+  "IamNoob#21294",
+  "YouTiao#21908",
+  "峨眉峰#3254",
+  "flygogogo#31864",
+  "Kover00#2421"
+ ],
+ "parseTime": 0,
+ "players": [
+  {
+   "actions": {
+    "ability": 6,
+    "assigngroup": 229,
+    "basic": 22,
+    "buildtrain": 73,
+    "esc": 3,
+    "item": 1,
+    "removeunit": 0,
+    "rightclick": 437,
+    "select": 272,
+    "selecthotkey": 306,
+    "subgroup": 0,
+    "timed": [
+     167,
+     153,
+     269,
+     281,
+     225,
+     269,
+     7
+    ]
+   },
+   "apm": 227,
+   "buildings": {
+    "order": [
+     {
+      "id": "halt",
+      "ms": 3840
+     },
+     {
+      "id": "hhou",
+      "ms": 16804
+     },
+     {
+      "id": "hbar",
+      "ms": 17789
+     },
+     {
+      "id": "hhou",
+      "ms": 61685
+     },
+     {
+      "id": "hhou",
+      "ms": 88631
+     },
+     {
+      "id": "hhou",
+      "ms": 180239
+     },
+     {
+      "id": "htow",
+      "ms": 279668
+     },
+     {
+      "id": "hwtw",
+      "ms": 285528
+     },
+     {
+      "id": "hvlt",
+      "ms": 312157
+     },
+     {
+      "id": "hatw",
+      "ms": 313199
+     },
+     {
+      "id": "hwtw",
+      "ms": 345285
+     }
+    ],
+    "summary": {
+     "halt": 1,
+     "hatw": 1,
+     "hbar": 1,
+     "hhou": 4,
+     "htow": 1,
+     "hvlt": 1,
+     "hwtw": 2
+    }
+   },
+   "color": "#ff0303",
+   "groupHotkeys": {
+    "0": {
+     "assigned": 2,
+     "used": 49
+    },
+    "1": {
+     "assigned": 172,
+     "used": 106
+    },
+    "2": {
+     "assigned": 34,
+     "used": 46
+    },
+    "3": {
+     "assigned": 11,
+     "used": 20
+    },
+    "4": {
+     "assigned": 4,
+     "used": 4
+    },
+    "5": {
+     "assigned": 4,
+     "used": 41
+    },
+    "6": {
+     "assigned": 0,
+     "used": 0
+    },
+    "7": {
+     "assigned": 0,
+     "used": 0
+    },
+    "8": {
+     "assigned": 0,
+     "used": 0
+    },
+    "9": {
+     "assigned": 2,
+     "used": 40
+    }
+   },
+   "heroes": [
+    {
+     "abilities": {
+      "AHbh": 1,
+      "AHtb": 1
+     },
+     "abilityOrder": [
+      {
+       "time": 122811,
+       "type": "ability",
+       "value": "AHtb"
+      },
+      {
+       "time": 192394,
+       "type": "ability",
+       "value": "AHbh"
+      }
+     ],
+     "id": "Hmkg",
+     "level": 2,
+     "retrainingHistory": []
+    }
+   ],
+   "id": 1,
+   "items": {
+    "order": [
+     {
+      "id": "bspd",
+      "ms": 299539
+     },
+     {
+      "id": "dust",
+      "ms": 299632
+     }
+    ],
+    "summary": {
+     "bspd": 1,
+     "dust": 1
+    }
+   },
+   "name": "moosangsung#1804",
+   "race": "H",
+   "raceDetected": "H",
+   "resourceTransfers": [],
+   "teamid": 0,
+   "units": {
+    "order": [
+     {
+      "id": "hpea",
+      "ms": 919
+     },
+     {
+      "id": "hpea",
+      "ms": 1042
+     },
+     {
+      "id": "hpea",
+      "ms": 22303
+     },
+     {
+      "id": "hpea",
+      "ms": 37183
+     },
+     {
+      "id": "hpea",
+      "ms": 44373
+     },
+     {
+      "id": "hpea",
+      "ms": 50400
+     },
+     {
+      "id": "hfoo",
+      "ms": 79979
+     },
+     {
+      "id": "hpea",
+      "ms": 98039
+     },
+     {
+      "id": "hfoo",
+      "ms": 99880
+     },
+     {
+      "id": "hpea",
+      "ms": 113297
+     },
+     {
+      "id": "hfoo",
+      "ms": 120478
+     },
+     {
+      "id": "hfoo",
+      "ms": 141551
+     },
+     {
+      "id": "hpea",
+      "ms": 142352
+     },
+     {
+      "id": "hpea",
+      "ms": 155984
+     },
+     {
+      "id": "hfoo",
+      "ms": 175267
+     },
+     {
+      "id": "hfoo",
+      "ms": 226421
+     },
+     {
+      "id": "hpea",
+      "ms": 226910
+     },
+     {
+      "id": "hfoo",
+      "ms": 251234
+     },
+     {
+      "id": "hfoo",
+      "ms": 264554
+     },
+     {
+      "id": "hfoo",
+      "ms": 288631
+     },
+     {
+      "id": "hpea",
+      "ms": 344857
+     },
+     {
+      "id": "hpea",
+      "ms": 360050
+     }
+    ],
+    "summary": {
+     "hfoo": 9,
+     "hpea": 13
+    }
+   },
+   "unknown": {
+    "order": [
+     {
+      "id": "Hmkg",
+      "ms": 66501
+     }
+    ],
+    "summary": {
+     "Hmkg": 1
+    }
+   },
+   "upgrades": {
+    "order": [],
+    "summary": {}
+   }
+  },
+  {
+   "actions": {
+    "ability": 10,
+    "assigngroup": 47,
+    "basic": 96,
+    "buildtrain": 42,
+    "esc": 1,
+    "item": 2,
+    "removeunit": 0,
+    "rightclick": 689,
+    "select": 169,
+    "selecthotkey": 997,
+    "subgroup": 0,
+    "timed": [
+     590,
+     485,
+     242,
+     252,
+     269,
+     239,
+     20
+    ]
+   },
+   "apm": 346,
+   "buildings": {
+    "order": [
+     {
+      "id": "eate",
+      "ms": 2179
+     },
+     {
+      "id": "eate",
+      "ms": 2641
+     },
+     {
+      "id": "eate",
+      "ms": 2946
+     },
+     {
+      "id": "eate",
+      "ms": 3318
+     },
+     {
+      "id": "eate",
+      "ms": 3687
+     },
+     {
+      "id": "eate",
+      "ms": 4040
+     },
+     {
+      "id": "eate",
+      "ms": 4378
+     },
+     {
+      "id": "eate",
+      "ms": 4963
+     },
+     {
+      "id": "emow",
+      "ms": 15849
+     },
+     {
+      "id": "emow",
+      "ms": 16372
+     },
+     {
+      "id": "eaom",
+      "ms": 21111
+     },
+     {
+      "id": "emow",
+      "ms": 90046
+     },
+     {
+      "id": "emow",
+      "ms": 90599
+     },
+     {
+      "id": "emow",
+      "ms": 91123
+     },
+     {
+      "id": "emow",
+      "ms": 91551
+     },
+     {
+      "id": "emow",
+      "ms": 120111
+     },
+     {
+      "id": "etoa",
+      "ms": 174072
+     },
+     {
+      "id": "etoa",
+      "ms": 174196
+     },
+     {
+      "id": "edob",
+      "ms": 239066
+     },
+     {
+      "id": "etol",
+      "ms": 277920
+     },
+     {
+      "id": "eaoe",
+      "ms": 331228
+     },
+     {
+      "id": "eaoe",
+      "ms": 355733
+     }
+    ],
+    "summary": {
+     "eaoe": 2,
+     "eaom": 1,
+     "eate": 8,
+     "edob": 1,
+     "emow": 7,
+     "etoa": 2,
+     "etol": 1
+    }
+   },
+   "color": "#0042ff",
+   "groupHotkeys": {
+    "0": {
+     "assigned": 0,
+     "used": 0
+    },
+    "1": {
+     "assigned": 33,
+     "used": 113
+    },
+    "2": {
+     "assigned": 7,
+     "used": 121
+    },
+    "3": {
+     "assigned": 2,
+     "used": 205
+    },
+    "4": {
+     "assigned": 2,
+     "used": 276
+    },
+    "5": {
+     "assigned": 1,
+     "used": 258
+    },
+    "6": {
+     "assigned": 2,
+     "used": 24
+    },
+    "7": {
+     "assigned": 0,
+     "used": 0
+    },
+    "8": {
+     "assigned": 0,
+     "used": 0
+    },
+    "9": {
+     "assigned": 0,
+     "used": 0
+    }
+   },
+   "heroes": [
+    {
+     "abilities": {
+      "AEim": 1,
+      "AEmb": 1
+     },
+     "abilityOrder": [
+      {
+       "time": 128308,
+       "type": "ability",
+       "value": "AEim"
+      },
+      {
+       "time": 171000,
+       "type": "ability",
+       "value": "AEmb"
+      }
+     ],
+     "id": "Edem",
+     "level": 2,
+     "retrainingHistory": []
+    },
+    {
+     "abilities": {
+      "ANfa": 1
+     },
+     "abilityOrder": [
+      {
+       "time": 318131,
+       "type": "ability",
+       "value": "ANfa"
+      }
+     ],
+     "id": "Nngs",
+     "level": 1,
+     "retrainingHistory": []
+    }
+   ],
+   "id": 2,
+   "items": {
+    "order": [
+     {
+      "id": "cnob",
+      "ms": 231442
+     }
+    ],
+    "summary": {
+     "cnob": 1
+    }
+   },
+   "name": "Medusa#31315",
+   "race": "N",
+   "raceDetected": "N",
+   "resourceTransfers": [],
+   "teamid": 1,
+   "units": {
+    "order": [
+     {
+      "id": "ewsp",
+      "ms": 1042
+     },
+     {
+      "id": "ewsp",
+      "ms": 1135
+     },
+     {
+      "id": "ewsp",
+      "ms": 30643
+     },
+     {
+      "id": "ewsp",
+      "ms": 40992
+     },
+     {
+      "id": "ewsp",
+      "ms": 47329
+     },
+     {
+      "id": "ewsp",
+      "ms": 55278
+     },
+     {
+      "id": "ewsp",
+      "ms": 71920
+     },
+     {
+      "id": "earc",
+      "ms": 81487
+     },
+     {
+      "id": "ewsp",
+      "ms": 97796
+     },
+     {
+      "id": "ewsp",
+      "ms": 103902
+     },
+     {
+      "id": "ewsp",
+      "ms": 143549
+     },
+     {
+      "id": "ewsp",
+      "ms": 154479
+     },
+     {
+      "id": "earc",
+      "ms": 168948
+     },
+     {
+      "id": "earc",
+      "ms": 189568
+     },
+     {
+      "id": "earc",
+      "ms": 207396
+     },
+     {
+      "id": "ewsp",
+      "ms": 322853
+     }
+    ],
+    "summary": {
+     "earc": 4,
+     "ewsp": 12
+    }
+   },
+   "unknown": {
+    "order": [
+     {
+      "id": "Edem",
+      "ms": 66686
+     },
+     {
+      "id": "Nngs",
+      "ms": 316784
+     }
+    ],
+    "summary": {
+     "Edem": 1,
+     "Nngs": 1
+    }
+   },
+   "upgrades": {
+    "order": [],
+    "summary": {}
+   }
+  }
+ ],
+ "randomseed": 3519601160,
+ "settings": {
+  "alwaysVisible": false,
+  "fixedTeams": true,
+  "fullSharedUnitControl": false,
+  "hideTerrain": false,
+  "mapExplored": false,
+  "observerMode": "FULL",
+  "randomHero": false,
+  "randomRaces": false,
+  "referees": false,
+  "speed": 2,
+  "teamsTogether": true
+ },
+ "startSpots": 2,
+ "type": "1on1",
+ "version": "2.00",
+ "winningTeamId": 1
+}

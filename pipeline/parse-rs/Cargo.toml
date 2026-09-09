@@ -1,0 +1,44 @@
+[package]
+name = "w3warehouse-parse"
+version = "0.1.0"
+edition = "2021"
+description = "Backend replay tooling for w3warehouse (parse / mappings / S3 drain), via the w3grs Rust port of w3gjs."
+license = "MIT"
+
+[lib]
+name = "w3warehouse_parse"
+path = "src/lib.rs"
+
+[[bin]]
+name = "parse"
+path = "src/bin/parse.rs"
+
+[[bin]]
+name = "export-mappings"
+path = "src/bin/export-mappings.rs"
+
+[[bin]]
+name = "drain"
+path = "src/bin/drain.rs"
+
+[dependencies]
+w3grs = "0.2.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# drain (S3 object-store worker) only:
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+aws-sdk-s3 = "1"
+aws-smithy-types = "1"
+futures = "0.3"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+
+[profile.release]
+# Replay parsing is CPU-bound; let the optimiser go hard. lto=thin is the cheap
+# 90% of fat-lto.
+lto = "thin"
+
+# Vendored w3grs with one local patch: unknown (custom-map) rawcodes land in a
+# players[].unknown bucket instead of being silently dropped — the enabler for
+# custom-mode (Legion TD) build analytics. See vendor/README-PATCH.md.
+[patch.crates-io]
+w3grs = { path = "vendor/w3grs" }

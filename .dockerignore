@@ -1,0 +1,7 @@
+# The drain image needs only pipeline/parse-rs; keep the build context small.
+.git/
+target/
+db/
+infrastructure/
+.github/
+*.md

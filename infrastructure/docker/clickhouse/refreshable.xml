@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<!--
+  Refreshable materialized views (w3g.refresh__opener_rollup) are behind an
+  opt-in setting on 24.x. Drop this file when the image moves to 25.x, where
+  they are on by default.
+-->
+<clickhouse>
+    <profiles>
+        <default>
+            <allow_experimental_refreshable_materialized_view>1</allow_experimental_refreshable_materialized_view>
+        </default>
+    </profiles>
+</clickhouse>

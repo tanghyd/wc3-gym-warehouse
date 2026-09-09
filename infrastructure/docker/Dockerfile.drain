@@ -1,0 +1,25 @@
+# The parse worker. Reads .w3g objects from the bucket's replays/ prefix, parses
+# each via w3grs, and writes the parsed JSON to parsed/ for ClickHouse to load.
+# Run as a SINGLE instance — two instances race on the same keys.
+#
+# All three bins ship: `drain` is the service, `parse` and `export-mappings` are
+# one-shot tools run with `docker compose run`.
+#
+# Builder pinned to -bookworm so its glibc matches the debian:bookworm-slim
+# runtime (a newer rust:1-slim tracks trixie/glibc 2.38 and the binary won't load).
+FROM rust:1-slim-bookworm AS build
+WORKDIR /build
+COPY pipeline/parse-rs ./pipeline/parse-rs
+RUN cargo build --release --manifest-path pipeline/parse-rs/Cargo.toml
+
+FROM debian:bookworm-slim
+# ca-certificates is for TLS to R2 in production; local MinIO is plain http.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+COPY --from=build /build/pipeline/parse-rs/target/release/drain /usr/local/bin/drain
+COPY --from=build /build/pipeline/parse-rs/target/release/parse /usr/local/bin/parse
+COPY --from=build /build/pipeline/parse-rs/target/release/export-mappings /usr/local/bin/export-mappings
+
+# drain loops every WORKER_POLL_MS. `drain --once` is the batch mode.
+CMD ["drain"]
