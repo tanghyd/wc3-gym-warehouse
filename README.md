@@ -35,6 +35,11 @@ The clock on a step adds timing. "Within previous" caps the seconds between that
 step and the one above it. "Not before" and "not after" pin the step to a window
 in game time. A step with no timing may sit any distance from its neighbour.
 
+The page follows wc3-gym-frontend: stock Vuetify light and dark themes with the
+same three-way theme menu, that repo's `base.css` table polish, and its
+`RaceSelect` and `PlayerName` components mirrored so a race is drawn the same
+way in both apps. `frontend/race-icons/` holds its race marks.
+
 `frontend/icons/` holds the 530 command-card images the picker draws, copied
 from w3warehouse and cut to the objects this schema names. `frontend/icons.json`
 maps an object code to its file.
