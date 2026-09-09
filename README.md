@@ -23,6 +23,14 @@ map and an ordered list of what a player built, and it lists the games that
 match. The page reads ClickHouse over HTTP from the browser, so there is no API
 to run; the SQL it generates is on the second tab.
 
+The clock on a step adds timing. "Within previous" caps the seconds between that
+step and the one above it. "Not before" and "not after" pin the step to a window
+in game time. A step with no timing may sit any distance from its neighbour.
+
+`frontend/icons/` holds the 530 command-card images the picker draws, copied
+from w3warehouse and cut to the objects this schema names. `frontend/icons.json`
+maps an object code to its file.
+
 `just backfill-bucket` builds the URL from `.env`. Pass your own glob to
 `just backfill '<url>'` to load a narrower set, such as one date.
 

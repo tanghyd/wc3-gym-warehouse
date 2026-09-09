@@ -16,6 +16,9 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
   .step-index { width: 1.5rem; text-align: right; opacity: .6; }
+  /* WC3 command-card art, square and small enough to sit inside a dense field. */
+  .subject-icon { width: 22px; height: 22px; border-radius: 3px; flex: none; }
+  .timing-row { padding-left: 2.5rem; }
 </style>
 </head>
 <body>
@@ -98,21 +101,60 @@
             No steps yet. Add one to require something this player built, trained or researched.
           </div>
 
-          <v-row v-for="(step, qi) in slot.steps" :key="step.key" dense align="center" class="mb-1">
-            <v-col cols="auto" class="step-index text-body-2 tabular">{{ qi + 1 }}</v-col>
-            <v-col cols="12" sm="4" md="3">
-              <v-select v-model="step.type" :items="typeItems" label="Did what"
-                        density="compact" hide-details @update:model-value="step.code = null"></v-select>
-            </v-col>
-            <v-col cols="11" sm="6" md="7">
-              <v-autocomplete v-model="step.code" :items="subjectsFor(slot, step)"
-                              label="To what" density="compact" hide-details
-                              no-data-text="Nothing of that kind for this race"></v-autocomplete>
-            </v-col>
-            <v-col cols="1">
-              <v-btn icon="mdi-close" size="small" variant="text" @click="removeStep(slot, qi)"></v-btn>
-            </v-col>
-          </v-row>
+          <div v-for="(step, qi) in slot.steps" :key="step.key" class="mb-1">
+            <v-row dense align="center">
+              <v-col cols="auto" class="step-index text-body-2 tabular">{{ qi + 1 }}</v-col>
+              <v-col cols="12" sm="4" md="3">
+                <v-select v-model="step.type" :items="typeItems" label="Did what"
+                          density="compact" hide-details
+                          @update:model-value="step.code = null"></v-select>
+              </v-col>
+              <v-col cols="10" sm="5" md="6">
+                <v-autocomplete v-model="step.code" :items="subjectsFor(slot, step)"
+                                label="To what" density="compact" hide-details
+                                no-data-text="Nothing of that kind for this race">
+                  <template v-slot:item="{ props, item }">
+                    <v-list-item v-bind="props" :title="item.title">
+                      <template v-slot:prepend>
+                        <img v-if="item.raw.icon" :src="item.raw.icon" class="subject-icon" alt="">
+                      </template>
+                    </v-list-item>
+                  </template>
+                  <template v-slot:selection="{ item }">
+                    <img v-if="item.raw.icon" :src="item.raw.icon" class="subject-icon mr-2" alt="">
+                    <span>{{ item.title }}</span>
+                  </template>
+                </v-autocomplete>
+              </v-col>
+              <v-col cols="auto">
+                <v-btn icon="mdi-clock-outline" size="small"
+                       :variant="hasTiming(step) ? 'tonal' : 'text'"
+                       :color="hasTiming(step) ? 'primary' : undefined"
+                       @click="step.timing = !step.timing"></v-btn>
+              </v-col>
+              <v-col cols="auto">
+                <v-btn icon="mdi-close" size="small" variant="text"
+                       @click="removeStep(slot, qi)"></v-btn>
+              </v-col>
+            </v-row>
+            <v-row v-if="step.timing" dense align="center" class="timing-row mb-2">
+              <v-col cols="12" sm="4" md="3">
+                <v-text-field v-model="step.withinPrev" type="number" label="Within previous (s)"
+                              density="compact" hide-details :disabled="qi === 0"></v-text-field>
+              </v-col>
+              <v-col cols="6" sm="4" md="3">
+                <v-text-field v-model="step.fromMin" type="number" label="Not before minute"
+                              density="compact" hide-details></v-text-field>
+              </v-col>
+              <v-col cols="6" sm="4" md="3">
+                <v-text-field v-model="step.toMin" type="number" label="Not after minute"
+                              density="compact" hide-details></v-text-field>
+              </v-col>
+              <v-col cols="12" md="3" class="text-caption text-medium-emphasis">
+                {{ qi === 0 ? 'The first step has nothing before it.' : 'Seconds since the step above.' }}
+              </v-col>
+            </v-row>
+          </div>
 
           <v-btn size="small" variant="tonal" prepend-icon="mdi-plus"
                  class="mt-2" @click="addStep(slot)">Add step</v-btn>
@@ -226,6 +268,8 @@ const STEP_TYPES = [
 ];
 
 const q = (s) => "'" + String(s).replace(/'/g, "''") + "'";
+// A blank timing box means "no constraint", which is not the same as zero.
+const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
 
 async function chQuery(sql) {
   const res = await fetch(CH_URL + '?default_format=JSON', {
@@ -245,7 +289,10 @@ async function chQuery(sql) {
 }
 
 let nextKey = 1;
-const newStep = () => ({ key: nextKey++, type: 'building', code: null });
+const newStep = () => ({
+  key: nextKey++, type: 'building', code: null,
+  timing: false, withinPrev: null, fromMin: null, toMin: null,
+});
 const newSlot = () => ({ key: nextKey++, race: null, outcome: 'either', steps: [newStep()] });
 
 const vuetify = Vuetify.createVuetify({
@@ -259,6 +306,7 @@ createApp({
     const slots = ref([newSlot()]);
     const maxResults = ref(100);
     const subjects = ref([]);
+    const iconMap = ref({});
     const maps = ref([]);
     const rows = ref([]);
     const sql = ref('');
@@ -298,8 +346,15 @@ createApp({
       return subjects.value
         .filter(s => s.subject_kind === type.kind)
         .filter(s => !race || s.code.startsWith(race.codePrefix))
-        .map(s => ({ title: s.label, value: s.code }));
+        .map(s => ({
+          title: s.label,
+          value: s.code,
+          icon: iconMap.value[s.code] ? 'icons/' + iconMap.value[s.code] : null,
+        }));
     }
+
+    const hasTiming = (step) =>
+      num(step.withinPrev) !== null || num(step.fromMin) !== null || num(step.toMin) !== null;
 
     const ready = computed(() => !fatal.value);
 
@@ -318,10 +373,28 @@ createApp({
     // One player's ordered build, as a set of (replay, player) pairs.
     // sequenceMatch takes its conditions positionally, so `(?1).*(?2)` reads
     // "condition 1, then later condition 2".
+    // The object a step names, plus its own window in game time when one is set.
+    function stepCondition(s) {
+      const parts = ['event_type = ' + q(s.type), 'subject_code = ' + q(s.code)];
+      const from = num(s.fromMin), to = num(s.toMin);
+      if (from !== null) parts.push('time_ms >= ' + Math.round(from * 60000));
+      if (to !== null) parts.push('time_ms <= ' + Math.round(to * 60000));
+      return parts.join(' AND ');
+    }
+
+    // `(?t<=N)` caps the gap to the step before, in the timestamp's own unit,
+    // which is milliseconds here. `.*` in its place leaves the gap open.
+    function slotPattern(steps) {
+      return steps.slice(1).reduce((acc, s, i) => {
+        const within = num(s.withinPrev);
+        const link = within === null ? '.*' : '(?t<=' + Math.round(within * 1000) + ')';
+        return acc + link + '(?' + (i + 2) + ')';
+      }, '(?1)');
+    }
+
     function slotSelect({ slot, steps }) {
-      const pattern = steps.map((_, i) => '(?' + (i + 1) + ')').join('.*');
-      const conds = steps.map(s =>
-        '        event_type = ' + q(s.type) + ' AND subject_code = ' + q(s.code)).join(',\n');
+      const pattern = slotPattern(steps);
+      const conds = steps.map(s => '        ' + stepCondition(s)).join(',\n');
       const where = [];
       const race = slot.race || scope.race;
       if (race) where.push('e.race = ' + q(race));
@@ -332,6 +405,8 @@ createApp({
       const codes = [...new Set(steps.map(s => s.code))].map(q).join(', ');
       where.push('e.event_type IN (' + types + ')');
       where.push('e.subject_code IN (' + codes + ')');
+      // One step needs no ordering, so its own condition is the whole test.
+      if (steps.length < 2) where.push('(' + stepCondition(steps[0]) + ')');
       const head = '    SELECT replay_id, player_id\n' +
         '    FROM w3g.replay_events AS e\n' +
         '    WHERE ' + where.join('\n      AND ') + '\n' +
@@ -502,6 +577,8 @@ createApp({
           'GROUP BY m.code ORDER BY label');
         const m = await chQuery('SELECT DISTINCT map FROM w3g.replay_map ORDER BY map');
         maps.value = m.map(r => r.map).filter(Boolean);
+        // Command-card art, keyed by object code. A code with no art shows none.
+        iconMap.value = await (await fetch('icons.json')).json();
       } catch (e) {
         fatal.value = 'Cannot reach ClickHouse: ' + e.message;
       }
@@ -509,7 +586,7 @@ createApp({
 
     return {
       dark, scope, slots, maxResults, maps, rows, sql, tab, loading, ran, error, fatal, headers,
-      elapsedMs, copied, raceItems, typeItems, outcomeItems, subjectsFor, ready,
+      elapsedMs, copied, raceItems, typeItems, outcomeItems, subjectsFor, ready, hasTiming,
       winRate, winRateColor, medianMinutes, run, addSlot, removeSlot, addStep, removeStep,
       toggleTheme, copySql, chUrl: CH_URL, COLOR_WIN, COLOR_LOSS,
     };
