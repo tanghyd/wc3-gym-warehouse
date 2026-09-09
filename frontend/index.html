@@ -19,6 +19,8 @@
   /* WC3 command-card art, square and small enough to sit inside a dense field. */
   .subject-icon { width: 22px; height: 22px; border-radius: 3px; flex: none; }
   .timing-row { padding-left: 2.5rem; }
+  /* Buildings already walked past sit quieter than the one this row adds. */
+  .opener-past { opacity: .45; }
 </style>
 </head>
 <body>
@@ -38,6 +40,14 @@
           The page reads ClickHouse at {{ chUrl }}. Start it with <code>just up</code>.
         </div>
       </v-alert>
+
+      <v-tabs v-model="mainTab" class="mb-4">
+        <v-tab value="search">Build search</v-tab>
+        <v-tab value="openers">Openers</v-tab>
+      </v-tabs>
+
+      <v-window v-model="mainTab">
+      <v-window-item value="search">
 
       <!-- Scope: what set of games we search inside. -->
       <v-card class="mb-4" variant="outlined">
@@ -227,6 +237,101 @@
         </v-window>
       </v-card>
 
+      </v-window-item>
+
+      <v-window-item value="openers">
+        <v-card class="mb-4" variant="outlined">
+          <v-card-text>
+            <v-row dense align="center">
+              <v-col cols="12" sm="6" md="3">
+                <v-select v-model="op.race" :items="raceItems" label="Race"
+                          density="comfortable" hide-details
+                          @update:model-value="loadOpeners"></v-select>
+              </v-col>
+              <v-col cols="12" sm="6" md="3">
+                <v-select v-model="op.opponent" :items="raceItems" label="Opponent race"
+                          density="comfortable" hide-details clearable
+                          @update:model-value="loadOpeners"></v-select>
+              </v-col>
+              <v-col cols="12" sm="6" md="3">
+                <v-select v-model="op.map" :items="maps" label="Map"
+                          density="comfortable" hide-details clearable
+                          @update:model-value="loadOpeners"></v-select>
+              </v-col>
+              <v-col cols="12" sm="6" md="3">
+                <v-select v-model="op.sort" :items="sortItems" label="Sort by"
+                          density="comfortable" hide-details
+                          @update:model-value="loadOpeners"></v-select>
+              </v-col>
+            </v-row>
+            <div class="text-caption text-medium-emphasis mt-3">
+              Every game this race opened with, one building at a time. Click a row to
+              open the next building. Win rate stays grey under {{ WR_FLOOR }} games,
+              where it is noise.
+            </div>
+          </v-card-text>
+        </v-card>
+
+        <v-card variant="outlined">
+          <v-card-text v-if="openerError">
+            <v-alert type="error" variant="tonal">{{ openerError }}</v-alert>
+          </v-card-text>
+          <div v-else-if="!openerRows.length" class="pa-8 text-center text-medium-emphasis">
+            No opener for that race and map yet.
+          </div>
+          <v-data-table v-else :headers="openerHeaders" :items="openerRows"
+                        :items-per-page="-1" hide-default-footer density="comfortable"
+                        item-value="key" @click:row="onOpenerRow">
+            <template v-slot:item.opener="{ item }">
+              <div class="d-flex align-center flex-nowrap ga-1">
+                <img v-for="(c, i) in item.prefix.slice(0, -1)" :key="i"
+                     :src="iconFor(c)" class="subject-icon opener-past" alt="">
+                <img v-if="iconFor(item.code)" :src="iconFor(item.code)"
+                     class="subject-icon" alt="">
+                <span class="ml-1">{{ nameFor(item.code) }}</span>
+                <v-chip v-if="item.branch > 0" size="x-small" variant="outlined" class="ml-2">
+                  {{ item.expanded ? 'open' : '+' + item.branch }}
+                </v-chip>
+              </div>
+            </template>
+            <template v-slot:item.winrate="{ item }">
+              <span class="tabular" :style="{ color: winrateColor(item) }">
+                {{ Math.round(100 * item.wins / item.matches) }}%
+              </span>
+            </template>
+            <template v-slot:item.replays="{ item }">
+              <v-btn icon="mdi-play-box-multiple" size="small" variant="text"
+                     @click.stop="showOpenerReplays(item)"></v-btn>
+            </template>
+          </v-data-table>
+        </v-card>
+
+        <v-dialog v-model="openerDialog" max-width="1100">
+          <v-card>
+            <v-card-title class="d-flex align-center">
+              <span>Games that opened this way</span>
+              <v-spacer></v-spacer>
+              <v-btn icon="mdi-close" variant="text" @click="openerDialog = false"></v-btn>
+            </v-card-title>
+            <v-divider></v-divider>
+            <div v-if="openerDialogLoading" class="pa-8 text-center">
+              <v-progress-circular indeterminate></v-progress-circular>
+            </div>
+            <v-data-table v-else :headers="headers" :items="openerDialogRows"
+                          :items-per-page="25" density="comfortable" item-value="replay_id">
+              <template v-slot:item.result="{ item }">
+                <v-chip v-if="item.result" size="small" variant="tonal"
+                        :style="{ color: item.result === 'Won' ? COLOR_WIN : COLOR_LOSS }">
+                  {{ item.result }}
+                </v-chip>
+                <span v-else class="text-medium-emphasis">unknown</span>
+              </template>
+            </v-data-table>
+          </v-card>
+        </v-dialog>
+      </v-window-item>
+      </v-window>
+
     </v-container>
   </v-main>
 </v-app>
@@ -246,6 +351,10 @@ const CH_URL = 'http://127.0.0.1:8123/';
 // separation against both Vuetify surfaces.
 const COLOR_WIN = '#D2694A';
 const COLOR_LOSS = '#4795C6';
+// Under this many games a win rate is noise, so it is shown without a colour.
+const WR_FLOOR = 10;
+// The opener rollup caps a stored prefix at six buildings.
+const MAX_OPENER_DEPTH = 6;
 
 // A race owns a letter in the data and a letter at the head of every object
 // code, so `race` also picks which subjects a step can name.
@@ -326,6 +435,13 @@ createApp({
     const maxResults = ref(100);
     const subjects = ref([]);
     const iconMap = ref({});
+    const mainTab = ref('search');
+    const op = reactive({ race: 'N', opponent: null, map: null, sort: 'popular' });
+    const openerRows = ref([]);
+    const openerError = ref('');
+    const openerDialog = ref(false);
+    const openerDialogLoading = ref(false);
+    const openerDialogRows = ref([]);
     const maps = ref([]);
     const rows = ref([]);
     const sql = ref('');
@@ -350,6 +466,17 @@ createApp({
     ];
     const raceItems = RACES.map(r => ({ title: r.name, value: r.letter }));
     const typeItems = STEP_TYPES.map(t => ({ title: t.title, value: t.value }));
+    const sortItems = [
+      { title: 'most played', value: 'popular' },
+      { title: 'best win rate', value: 'winrate' },
+    ];
+    const openerHeaders = [
+      { title: 'Opener', key: 'opener', sortable: false },
+      { title: 'Games', key: 'matches', align: 'end' },
+      { title: 'Win rate', key: 'winrate', align: 'end', sortable: false },
+      { title: 'Avg minutes', key: 'avgMin', align: 'end' },
+      { title: '', key: 'replays', align: 'center', sortable: false },
+    ];
     const outcomeItems = [
       { title: 'won or lost', value: 'either' },
       { title: 'won', value: 'win' },
@@ -371,6 +498,10 @@ createApp({
           icon: iconMap.value[s.code] ? 'icons/' + iconMap.value[s.code] : null,
         }));
     }
+
+    const byCode = computed(() => Object.fromEntries(subjects.value.map(s => [s.code, s.label])));
+    const nameFor = (code) => byCode.value[code] || code;
+    const iconFor = (code) => (iconMap.value[code] ? 'icons/' + iconMap.value[code] : '');
 
     const hasTiming = (step) =>
       num(step.withinPrev) !== null || num(step.fromMin) !== null || num(step.toMin) !== null;
@@ -494,6 +625,28 @@ createApp({
         'ORDER BY replay_id\nLIMIT ' + limit;
     }
 
+    // One replay as the table shows it. `focusId` is the player whose result the
+    // Player 1 column reports; leave it out and that column stays blank.
+    function describeReplay(d, focusId) {
+      const players = d.players.map(p => ({
+        id: Number(p[0]), name: p[1], race: p[2], team: Number(p[3]),
+      }));
+      const focus = players.find(p => p.id === focusId) || null;
+      const winner = Number(d.winning_team_id);
+      return {
+        replay_id: d.replay_id,
+        series: d.series,
+        game: d.game,
+        map: d.map,
+        matchup: d.matchup,
+        minutes: d.minutes,
+        playersLabel: players
+          .sort((a, b) => a.id - b.id)
+          .map(p => p.name + ' (' + p.race + ')').join('  vs  '),
+        result: !focus || winner < 0 ? null : (winner === focus.team ? 'Won' : 'Lost'),
+      };
+    }
+
     // The matched ids, then one plain lookup for what to show. Two small
     // queries read better than one query that does both jobs.
     async function detailsFor(ids) {
@@ -525,25 +678,7 @@ createApp({
         const matched = await chQuery(sql.value);
         const byId = new Map(matched.map(m => [m.replay_id, Number(m.player_id)]));
         const details = matched.length ? await detailsFor([...byId.keys()]) : [];
-        rows.value = details.map(d => {
-          const players = d.players.map(p => ({
-            id: Number(p[0]), name: p[1], race: p[2], team: Number(p[3]),
-          }));
-          const focus = players.find(p => p.id === byId.get(d.replay_id)) || null;
-          const winner = Number(d.winning_team_id);
-          return {
-            replay_id: d.replay_id,
-            series: d.series,
-            game: d.game,
-            map: d.map,
-            matchup: d.matchup,
-            minutes: d.minutes,
-            playersLabel: players
-              .sort((a, b) => a.id - b.id)
-              .map(p => p.name + ' (' + p.race + ')').join('  vs  '),
-            result: !focus || winner < 0 ? null : (winner === focus.team ? 'Won' : 'Lost'),
-          };
-        });
+        rows.value = details.map(d => describeReplay(d, byId.get(d.replay_id)));
       } catch (e) {
         error.value = e.message;
         rows.value = [];
@@ -573,6 +708,121 @@ createApp({
       return m.length % 2 ? m[mid] : Math.round(((m[mid - 1] + m[mid]) / 2) * 10) / 10;
     });
 
+    // ---- Openers: the build tree over w3g.opener_rollup ----
+
+    function openerWhere(prefix) {
+      const w = ['race = ' + q(op.race)];
+      if (op.opponent) w.push('opponent_race = ' + q(op.opponent));
+      if (op.map) w.push('map = ' + q(op.map));
+      if (prefix.length) {
+        w.push('arraySlice(prefix, 1, ' + prefix.length + ') = [' + prefix.map(q).join(', ') + ']');
+      }
+      return w;
+    }
+
+    // One level of the tree: what came next after `prefix`, with how many ways
+    // each of those continues, so a row can say whether it opens further.
+    async function openerLevel(prefix) {
+      const d = prefix.length;
+      const where = openerWhere(prefix);
+      const order = op.sort === 'winrate'
+        // A rate over a handful of games is noise, so popularity breaks the tie
+        // and anything under the floor sorts below what clears it.
+        ? 'ORDER BY c.matches >= ' + WR_FLOOR + ' DESC, c.wins / c.matches DESC, c.matches DESC'
+        : 'ORDER BY c.matches DESC, c.wins / c.matches DESC';
+      const rows = await chQuery(
+        'SELECT c.code AS code, c.matches AS matches, c.wins AS wins,\n' +
+        '       round(c.dur_ms / c.matches / 60000, 1) AS avgMin,\n' +
+        '       ifNull(b.bf, 0) AS branch\n' +
+        'FROM (\n' +
+        '    SELECT arrayElement(prefix, ' + (d + 1) + ') AS code,\n' +
+        '           sum(matches) AS matches, sum(wins) AS wins, sum(sum_duration_ms) AS dur_ms\n' +
+        '    FROM w3g.opener_rollup\n' +
+        '    WHERE depth = ' + (d + 1) + ' AND ' + where.join(' AND ') + '\n' +
+        '    GROUP BY code\n' +
+        ') AS c\n' +
+        'LEFT JOIN (\n' +
+        '    SELECT arrayElement(prefix, ' + (d + 1) + ') AS code,\n' +
+        '           uniqExact(arrayElement(prefix, ' + (d + 2) + ')) AS bf\n' +
+        '    FROM w3g.opener_rollup\n' +
+        '    WHERE depth = ' + (d + 2) + ' AND ' + where.join(' AND ') + '\n' +
+        '    GROUP BY code\n' +
+        ') AS b ON b.code = c.code\n' +
+        order);
+      return rows.map(r => ({
+        key: [...prefix, r.code].join('>'),
+        prefix: [...prefix, r.code],
+        code: r.code,
+        matches: Number(r.matches),
+        wins: Number(r.wins),
+        avgMin: r.avgMin,
+        // The rollup stores nothing past six, so the last level never expands.
+        branch: d + 1 >= MAX_OPENER_DEPTH ? 0 : Number(r.branch),
+        expanded: false,
+      }));
+    }
+
+    async function loadOpeners() {
+      openerError.value = '';
+      try {
+        openerRows.value = await openerLevel([]);
+      } catch (e) {
+        openerError.value = e.message;
+        openerRows.value = [];
+      }
+    }
+
+    // Expanding inserts the children right below their parent, so the paths
+    // either side of the one being read stay on screen.
+    async function onOpenerRow(_event, { item }) {
+      if (!item || item.branch <= 0) return;
+      const at = openerRows.value.findIndex(r => r.key === item.key);
+      if (at < 0) return;
+      const isBelow = (r) =>
+        r.prefix.length > item.prefix.length && item.prefix.every((c, i) => r.prefix[i] === c);
+      if (item.expanded) {
+        openerRows.value = openerRows.value.filter(r => !isBelow(r));
+        item.expanded = false;
+        return;
+      }
+      try {
+        const kids = await openerLevel(item.prefix);
+        openerRows.value.splice(at + 1, 0, ...kids);
+        item.expanded = true;
+      } catch (e) {
+        openerError.value = e.message;
+      }
+    }
+
+    function winrateColor(row) {
+      if (row.matches < WR_FLOOR) return undefined;
+      const wr = 100 * row.wins / row.matches;
+      if (wr > 52) return COLOR_WIN;
+      if (wr < 48) return COLOR_LOSS;
+      return undefined;
+    }
+
+    // The games behind one row of the tree.
+    async function showOpenerReplays(row) {
+      openerDialog.value = true;
+      openerDialogLoading.value = true;
+      openerDialogRows.value = [];
+      try {
+        const ids = await chQuery(
+          'SELECT arrayJoin(arrayDistinct(arrayFlatten(groupArray(sample_replays)))) AS replay_id\n' +
+          'FROM w3g.opener_rollup\n' +
+          'WHERE depth = ' + row.prefix.length + ' AND ' + openerWhere(row.prefix).join(' AND '));
+        openerDialogRows.value = ids.length
+          ? (await detailsFor(ids.map(r => r.replay_id))).map(d => describeReplay(d))
+          : [];
+      } catch (e) {
+        openerError.value = e.message;
+        openerDialog.value = false;
+      } finally {
+        openerDialogLoading.value = false;
+      }
+    }
+
     function addSlot() { slots.value.push(newSlot()); }
     function removeSlot(i) { slots.value.splice(i, 1); }
     function addStep(slot) { slot.steps.push(newStep()); }
@@ -598,6 +848,7 @@ createApp({
         maps.value = m.map(r => r.map).filter(Boolean);
         // Command-card art, keyed by object code. A code with no art shows none.
         iconMap.value = await (await fetch('icons.json')).json();
+        await loadOpeners();
       } catch (e) {
         fatal.value = 'Cannot reach ClickHouse: ' + e.message;
       }
@@ -607,7 +858,10 @@ createApp({
       dark, scope, slots, maxResults, maps, rows, sql, tab, loading, ran, error, fatal, headers,
       elapsedMs, copied, raceItems, typeItems, outcomeItems, subjectsFor, ready, hasTiming,
       winRate, winRateColor, medianMinutes, run, addSlot, removeSlot, addStep, removeStep,
-      toggleTheme, copySql, chUrl: CH_URL, COLOR_WIN, COLOR_LOSS,
+      toggleTheme, copySql, chUrl: CH_URL, COLOR_WIN, COLOR_LOSS, WR_FLOOR,
+      mainTab, op, sortItems, openerHeaders, openerRows, openerError, loadOpeners,
+      onOpenerRow, winrateColor, showOpenerReplays, nameFor, iconFor,
+      openerDialog, openerDialogLoading, openerDialogRows,
     };
   },
 }).use(vuetify).mount('#app');
