@@ -268,6 +268,25 @@ const STEP_TYPES = [
 ];
 
 const q = (s) => "'" + String(s).replace(/'/g, "''") + "'";
+
+const RACE_PREFIXES = new Set(['h', 'o', 'e', 'u']);
+
+// Where the race letter sits in an object code depends on the kind. A building
+// or unit leads with it in lower case (eaom), a hero leads with it in upper
+// case (Edem), an upgrade is R plus the letter (Recb), a hero ability is A plus
+// the letter (AEmb). An item carries no race at all.
+function codeRace(code, kind) {
+  if (kind === 'item') return null;
+  const at = (kind === 'upgrade' || kind === 'hero_skill') ? 1 : 0;
+  return (code[at] || '').toLowerCase();
+}
+
+// Anything that is not one of the four race letters is neutral — tavern heroes,
+// mercenaries, creeps — and every race can reach it, so it always shows.
+function subjectFitsRace(code, kind, codePrefix) {
+  const r = codeRace(code, kind);
+  return r === null || !RACE_PREFIXES.has(r) || r === codePrefix;
+}
 // A blank timing box means "no constraint", which is not the same as zero.
 const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
 
@@ -345,7 +364,7 @@ createApp({
       const race = RACES.find(r => r.letter === (slot.race || scope.race));
       return subjects.value
         .filter(s => s.subject_kind === type.kind)
-        .filter(s => !race || s.code.startsWith(race.codePrefix))
+        .filter(s => !race || subjectFitsRace(s.code, type.kind, race.codePrefix))
         .map(s => ({
           title: s.label,
           value: s.code,
