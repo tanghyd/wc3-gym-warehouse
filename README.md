@@ -23,6 +23,11 @@ map and an ordered list of what a player built, and it lists the games that
 match. The page reads ClickHouse over HTTP from the browser, so there is no API
 to run; the SQL it generates is on the second tab.
 
+The Openers tab reads the same data from the other end. It shows every opener
+this race played, one building at a time, with games, win rate and average
+length. Click a row to open the next building; the paths either side stay on
+screen. The replay button lists the games behind that row.
+
 The clock on a step adds timing. "Within previous" caps the seconds between that
 step and the one above it. "Not before" and "not after" pin the step to a window
 in game time. A step with no timing may sit any distance from its neighbour.
