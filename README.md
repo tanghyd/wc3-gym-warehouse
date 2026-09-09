@@ -23,6 +23,9 @@ map and an ordered list of what a player built, and it lists the games that
 match. The page reads ClickHouse over HTTP from the browser, so there is no API
 to run; the SQL it generates is on the second tab.
 
+Naming a player narrows either tab to the games they played. On the search tab
+the name sits on a player slot, so it says which side of the game did the build.
+
 The Openers tab reads the same data from the other end. It shows every opener
 this race played, one building at a time, with games, win rate and average
 length. Click a row to open the next building; the paths either side stay on
