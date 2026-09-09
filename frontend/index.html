@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GNL replay search</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%231867C0'/%3E%3Cpath d='M4 11.5V5h1.6v5.2H9V5h1.6v6.5z' fill='white'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@3.8.0/dist/vuetify.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+<style>
+  /* Numbers line up in the results table and the stat tiles. */
+  .tabular { font-variant-numeric: tabular-nums; }
+  .sql-view {
+    white-space: pre; overflow-x: auto; font-size: 12.5px; line-height: 1.55;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .step-index { width: 1.5rem; text-align: right; opacity: .6; }
+</style>
+</head>
+<body>
+<div id="app">
+<v-app>
+  <v-app-bar flat density="comfortable" border>
+    <v-app-bar-title>GNL replay search</v-app-bar-title>
+    <v-btn :icon="dark ? 'mdi-weather-night' : 'mdi-weather-sunny'" @click="toggleTheme"></v-btn>
+  </v-app-bar>
+
+  <v-main>
+    <v-container fluid class="pa-4" style="max-width: 1400px;">
+
+      <v-alert v-if="fatal" type="error" variant="tonal" class="mb-4">
+        {{ fatal }}
+        <div class="text-caption mt-2">
+          The page reads ClickHouse at {{ chUrl }}. Start it with <code>just up</code>.
+        </div>
+      </v-alert>
+
+      <!-- Scope: what set of games we search inside. -->
+      <v-card class="mb-4" variant="outlined">
+        <v-card-text>
+          <v-row dense align="center">
+            <v-col cols="12" sm="6" md="3">
+              <v-select v-model="scope.race" :items="raceItems" label="Race"
+                        density="comfortable" hide-details clearable></v-select>
+            </v-col>
+            <v-col cols="12" sm="6" md="3">
+              <v-select v-model="scope.opponent" :items="raceItems" label="Opponent race"
+                        density="comfortable" hide-details clearable></v-select>
+            </v-col>
+            <v-col cols="12" sm="6" md="3">
+              <v-select v-model="scope.map" :items="maps" label="Map"
+                        density="comfortable" hide-details clearable></v-select>
+            </v-col>
+            <v-col cols="6" sm="3" md="1">
+              <v-text-field v-model.number="scope.minMinutes" label="From (min)" type="number"
+                            density="comfortable" hide-details></v-text-field>
+            </v-col>
+            <v-col cols="6" sm="3" md="1">
+              <v-text-field v-model.number="scope.maxMinutes" label="To (min)" type="number"
+                            density="comfortable" hide-details></v-text-field>
+            </v-col>
+            <v-col cols="12" md="1">
+              <v-text-field v-model.number="maxResults" label="Limit" type="number"
+                            density="comfortable" hide-details></v-text-field>
+            </v-col>
+          </v-row>
+          <div class="text-caption text-medium-emphasis mt-3">
+            Leave a field empty to match anything. Both races set means that matchup only.
+          </div>
+        </v-card-text>
+      </v-card>
+
+      <!-- One card per player whose build we are describing. -->
+      <v-card v-for="(slot, si) in slots" :key="slot.key" class="mb-3" variant="outlined">
+        <v-card-text>
+          <v-row dense align="center" class="mb-1">
+            <v-col cols="12" sm="4" md="3">
+              <div class="text-subtitle-2">Player {{ si + 1 }} did this, in order</div>
+            </v-col>
+            <v-col cols="6" sm="4" md="3">
+              <v-select v-model="slot.race" :items="raceItems" label="Race"
+                        density="compact" hide-details clearable></v-select>
+            </v-col>
+            <v-col cols="6" sm="4" md="3">
+              <v-select v-model="slot.outcome" :items="outcomeItems" label="Outcome"
+                        density="compact" hide-details></v-select>
+            </v-col>
+            <v-col cols="12" md="3" class="text-md-right">
+              <v-btn v-if="slots.length > 1" size="small" variant="text" color="error"
+                     prepend-icon="mdi-close" @click="removeSlot(si)">Remove player</v-btn>
+            </v-col>
+          </v-row>
+
+          <v-divider class="my-3"></v-divider>
+
+          <div v-if="!slot.steps.length" class="text-body-2 text-medium-emphasis mb-3">
+            No steps yet. Add one to require something this player built, trained or researched.
+          </div>
+
+          <v-row v-for="(step, qi) in slot.steps" :key="step.key" dense align="center" class="mb-1">
+            <v-col cols="auto" class="step-index text-body-2 tabular">{{ qi + 1 }}</v-col>
+            <v-col cols="12" sm="4" md="3">
+              <v-select v-model="step.type" :items="typeItems" label="Did what"
+                        density="compact" hide-details @update:model-value="step.code = null"></v-select>
+            </v-col>
+            <v-col cols="11" sm="6" md="7">
+              <v-autocomplete v-model="step.code" :items="subjectsFor(slot, step)"
+                              label="To what" density="compact" hide-details
+                              no-data-text="Nothing of that kind for this race"></v-autocomplete>
+            </v-col>
+            <v-col cols="1">
+              <v-btn icon="mdi-close" size="small" variant="text" @click="removeStep(slot, qi)"></v-btn>
+            </v-col>
+          </v-row>
+
+          <v-btn size="small" variant="tonal" prepend-icon="mdi-plus"
+                 class="mt-2" @click="addStep(slot)">Add step</v-btn>
+        </v-card-text>
+      </v-card>
+
+      <div class="d-flex align-center flex-wrap ga-2 mb-6">
+        <v-btn variant="tonal" prepend-icon="mdi-account-plus" @click="addSlot">Add player</v-btn>
+        <v-spacer></v-spacer>
+        <v-btn color="primary" size="large" prepend-icon="mdi-magnify"
+               :loading="loading" :disabled="!ready" @click="run">Run search</v-btn>
+      </div>
+
+      <!-- Results -->
+      <v-card v-if="ran" variant="outlined">
+        <v-card-text>
+          <v-row dense>
+            <v-col cols="6" md="3">
+              <div class="text-caption text-medium-emphasis">Replays found</div>
+              <div class="text-h4 tabular">{{ rows.length }}</div>
+            </v-col>
+            <v-col cols="6" md="3">
+              <div class="text-caption text-medium-emphasis">Player 1 win rate</div>
+              <div class="text-h4 tabular" :style="{ color: winRateColor }">
+                {{ winRate === null ? '--' : winRate + '%' }}
+              </div>
+            </v-col>
+            <v-col cols="6" md="3">
+              <div class="text-caption text-medium-emphasis">Median length</div>
+              <div class="text-h4 tabular">{{ medianMinutes === null ? '--' : medianMinutes }}</div>
+            </v-col>
+            <v-col cols="6" md="3">
+              <div class="text-caption text-medium-emphasis">Query time</div>
+              <div class="text-h4 tabular">{{ elapsedMs }} ms</div>
+            </v-col>
+          </v-row>
+        </v-card-text>
+
+        <v-tabs v-model="tab" density="comfortable">
+          <v-tab value="replays">Replays</v-tab>
+          <v-tab value="sql">SQL</v-tab>
+        </v-tabs>
+        <v-divider></v-divider>
+
+        <v-window v-model="tab">
+          <v-window-item value="replays">
+            <v-alert v-if="error" type="error" variant="tonal" class="ma-4">{{ error }}</v-alert>
+            <div v-else-if="!rows.length" class="pa-8 text-center text-medium-emphasis">
+              No replay matches. Drop a step or widen the scope.
+            </div>
+            <v-data-table v-else :headers="headers" :items="rows" :items-per-page="25"
+                          density="comfortable" item-value="replay_id">
+              <template v-slot:item.result="{ item }">
+                <v-chip v-if="item.result" size="small" variant="tonal"
+                        :style="{ color: item.result === 'Won' ? COLOR_WIN : COLOR_LOSS }">
+                  {{ item.result }}
+                </v-chip>
+                <span v-else class="text-medium-emphasis">unknown</span>
+              </template>
+            </v-data-table>
+          </v-window-item>
+
+          <v-window-item value="sql">
+            <div class="pa-4">
+              <v-btn size="small" variant="tonal" prepend-icon="mdi-content-copy"
+                     class="mb-3" @click="copySql">{{ copied ? 'Copied' : 'Copy' }}</v-btn>
+              <div class="sql-view">{{ sql }}</div>
+            </div>
+          </v-window-item>
+        </v-window>
+      </v-card>
+
+    </v-container>
+  </v-main>
+</v-app>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@3.8.0/dist/vuetify.min.js"></script>
+<script>
+const { createApp, ref, reactive, computed, onMounted } = Vue;
+
+// ClickHouse speaks HTTP on the host and answers cross-origin already, so this
+// page needs no backend of its own.
+const CH_URL = 'http://127.0.0.1:8123/';
+
+// Win and loss are the one place colour carries meaning, so the pair is a real
+// diverging pair rather than a theme accent. Checked for colour-blind
+// separation against both Vuetify surfaces.
+const COLOR_WIN = '#D2694A';
+const COLOR_LOSS = '#4795C6';
+
+// A race owns a letter in the data and a letter at the head of every object
+// code, so `race` also picks which subjects a step can name.
+const RACES = [
+  { letter: 'H', name: 'Human',     codePrefix: 'h' },
+  { letter: 'O', name: 'Orc',       codePrefix: 'o' },
+  { letter: 'N', name: 'Night Elf', codePrefix: 'e' },
+  { letter: 'U', name: 'Undead',    codePrefix: 'u' },
+];
+
+// What a step can be. `value` is the replay_events.event_type it filters on;
+// `kind` is the w3g.mappings.kind that supplies its pickable subjects.
+const STEP_TYPES = [
+  { title: 'built',      value: 'building',     kind: 'building' },
+  { title: 'trained',    value: 'unit',         kind: 'unit' },
+  { title: 'researched', value: 'upgrade',      kind: 'upgrade' },
+  { title: 'got hero',   value: 'hero_trained', kind: 'hero' },
+  { title: 'used skill', value: 'hero_skill',   kind: 'hero_skill' },
+  { title: 'bought',     value: 'item',         kind: 'item' },
+];
+
+const q = (s) => "'" + String(s).replace(/'/g, "''") + "'";
+
+async function chQuery(sql) {
+  const res = await fetch(CH_URL + '?default_format=JSON', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: sql,
+  });
+  const text = await res.text();
+  let body;
+  try { body = JSON.parse(text); } catch { body = null; }
+  // With default_format=JSON an error arrives as a JSON object carrying
+  // `exception`, so the first line of the body is just "{".
+  if (!res.ok || body?.exception) {
+    throw new Error((body?.exception || text).trim().split('\n')[0]);
+  }
+  return body.data;
+}
+
+let nextKey = 1;
+const newStep = () => ({ key: nextKey++, type: 'building', code: null });
+const newSlot = () => ({ key: nextKey++, race: null, outcome: 'either', steps: [newStep()] });
+
+const vuetify = Vuetify.createVuetify({
+  theme: { defaultTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' },
+});
+
+createApp({
+  setup() {
+    const dark = ref(window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const scope = reactive({ race: null, opponent: null, map: null, minMinutes: null, maxMinutes: null });
+    const slots = ref([newSlot()]);
+    const maxResults = ref(100);
+    const subjects = ref([]);
+    const maps = ref([]);
+    const rows = ref([]);
+    const sql = ref('');
+    const tab = ref('replays');
+    const loading = ref(false);
+    const ran = ref(false);
+    const error = ref('');
+    const fatal = ref('');
+    const elapsedMs = ref(0);
+    const copied = ref(false);
+
+    // Kept in JS: an in-DOM template cannot hold <thead>/<tr>, because the HTML
+    // parser hoists table tags out of any element that is not a real <table>.
+    const headers = [
+      { title: 'Series', key: 'series', align: 'end' },
+      { title: 'Game', key: 'game', align: 'end' },
+      { title: 'Map', key: 'map' },
+      { title: 'Matchup', key: 'matchup' },
+      { title: 'Players', key: 'playersLabel' },
+      { title: 'Minutes', key: 'minutes', align: 'end' },
+      { title: 'Player 1', key: 'result', sortable: false },
+    ];
+    const raceItems = RACES.map(r => ({ title: r.name, value: r.letter }));
+    const typeItems = STEP_TYPES.map(t => ({ title: t.title, value: t.value }));
+    const outcomeItems = [
+      { title: 'won or lost', value: 'either' },
+      { title: 'won', value: 'win' },
+      { title: 'lost', value: 'loss' },
+    ];
+
+    // Subjects a step can name: the mapping kind its type implies, narrowed to
+    // the slot's race when one is chosen. Codes start with the race letter.
+    function subjectsFor(slot, step) {
+      const type = STEP_TYPES.find(t => t.value === step.type);
+      if (!type) return [];
+      const race = RACES.find(r => r.letter === (slot.race || scope.race));
+      return subjects.value
+        .filter(s => s.subject_kind === type.kind)
+        .filter(s => !race || s.code.startsWith(race.codePrefix))
+        .map(s => ({ title: s.label, value: s.code }));
+    }
+
+    const ready = computed(() => !fatal.value);
+
+    // Every step that actually names something. A slot with none adds no
+    // sequence condition, so it drops out of the query entirely.
+    const filledSlots = computed(() =>
+      slots.value
+        .map(slot => ({ slot, steps: slot.steps.filter(s => s.code) }))
+        .filter(x => x.steps.length));
+
+    function matchupLiteral() {
+      if (!scope.race || !scope.opponent) return null;
+      return [scope.race, scope.opponent].sort().join('v');
+    }
+
+    // One player's ordered build, as a set of (replay, player) pairs.
+    // sequenceMatch takes its conditions positionally, so `(?1).*(?2)` reads
+    // "condition 1, then later condition 2".
+    function slotSelect({ slot, steps }) {
+      const pattern = steps.map((_, i) => '(?' + (i + 1) + ')').join('.*');
+      const conds = steps.map(s =>
+        '        event_type = ' + q(s.type) + ' AND subject_code = ' + q(s.code)).join(',\n');
+      const where = [];
+      const race = slot.race || scope.race;
+      if (race) where.push('e.race = ' + q(race));
+      const mu = matchupLiteral();
+      if (mu) where.push('e.matchup = ' + q(mu));
+      // Narrow the scan to the objects the pattern mentions before grouping.
+      const types = [...new Set(steps.map(s => s.type))].map(q).join(', ');
+      const codes = [...new Set(steps.map(s => s.code))].map(q).join(', ');
+      where.push('e.event_type IN (' + types + ')');
+      where.push('e.subject_code IN (' + codes + ')');
+      const head = '    SELECT replay_id, player_id\n' +
+        '    FROM w3g.replay_events AS e\n' +
+        '    WHERE ' + where.join('\n      AND ') + '\n' +
+        '    GROUP BY replay_id, player_id';
+      if (steps.length < 2) return head;
+      return head + '\n' +
+        '    HAVING sequenceMatch(' + q(pattern) + ')(\n' +
+        '        time_ms,\n' + conds + '\n' +
+        '    ) = 1';
+    }
+
+    // A slot's outcome gate needs the player's team and the replay's winner,
+    // which live on the header tables rather than on the event stream.
+    function outcomeWhere(slot, alias) {
+      if (slot.outcome === 'win') return ['r.winning_team_id = ' + alias + '.team_id'];
+      if (slot.outcome === 'loss') {
+        return ['r.winning_team_id != ' + alias + '.team_id', 'r.winning_team_id >= 0'];
+      }
+      return [];
+    }
+
+    function buildSql() {
+      const limit = Math.max(1, Math.min(1000, maxResults.value || 100));
+      const filled = filledSlots.value;
+      const where = ["r.type = '1on1'"];
+      if (scope.map) where.push('mp.map = ' + q(scope.map));
+      if (scope.minMinutes) where.push('r.duration_ms >= ' + Math.round(scope.minMinutes * 60000));
+      if (scope.maxMinutes) where.push('r.duration_ms <= ' + Math.round(scope.maxMinutes * 60000));
+
+      // No steps anywhere: this is a plain browse of the scope.
+      if (!filled.length) {
+        const mu = matchupLiteral();
+        if (mu) where.push('r.matchup = ' + q(mu));
+        return 'SELECT DISTINCT r.replay_id AS replay_id, 255 AS player_id\n' +
+          'FROM w3g.replays AS r FINAL\n' +
+          'INNER JOIN w3g.replay_map AS mp ON mp.replay_id = r.replay_id\n' +
+          'WHERE ' + where.join('\n  AND ') + '\n' +
+          'ORDER BY replay_id\nLIMIT ' + limit;
+      }
+
+      // Player 1 drives the result column, so its player_id is the one returned.
+      where.push(...outcomeWhere(filled[0].slot, 'rp'));
+      // Every further player is an extra membership test on the same replay.
+      filled.slice(1).forEach((f, i) => {
+        const alias = 'rp' + (i + 2);
+        const extra = outcomeWhere(f.slot, alias);
+        const inner = extra.length
+          ? '    SELECT s.replay_id\n    FROM (\n' +
+            slotSelect(f).replace(/^/gm, '    ') + '\n    ) AS s\n' +
+            '    INNER JOIN w3g.replay_players AS ' + alias + ' FINAL\n' +
+            '        ON ' + alias + '.replay_id = s.replay_id AND ' + alias + '.player_id = s.player_id\n' +
+            '    INNER JOIN w3g.replays AS r FINAL ON r.replay_id = s.replay_id\n' +
+            '    WHERE ' + extra.join(' AND ')
+          : '    SELECT s.replay_id\n    FROM (\n' +
+            slotSelect(f).replace(/^/gm, '    ') + '\n    ) AS s';
+        where.push('r.replay_id IN (\n' + inner + '\n  )');
+      });
+
+      return 'SELECT DISTINCT m.replay_id AS replay_id, m.player_id AS player_id\n' +
+        'FROM (\n' + slotSelect(filled[0]) + '\n) AS m\n' +
+        'INNER JOIN w3g.replay_players AS rp FINAL\n' +
+        '    ON rp.replay_id = m.replay_id AND rp.player_id = m.player_id\n' +
+        'INNER JOIN w3g.replays AS r FINAL ON r.replay_id = m.replay_id\n' +
+        'INNER JOIN w3g.replay_map AS mp ON mp.replay_id = m.replay_id\n' +
+        'WHERE ' + where.join('\n  AND ') + '\n' +
+        'ORDER BY replay_id\nLIMIT ' + limit;
+    }
+
+    // The matched ids, then one plain lookup for what to show. Two small
+    // queries read better than one query that does both jobs.
+    async function detailsFor(ids) {
+      const list = ids.map(q).join(', ');
+      return chQuery(
+        'SELECT\n' +
+        '    r.replay_id AS replay_id,\n' +
+        '    r.gnl_series_id AS series,\n' +
+        '    r.gnl_game_no AS game,\n' +
+        '    mp.map AS map,\n' +
+        '    r.matchup AS matchup,\n' +
+        '    round(r.duration_ms / 60000, 1) AS minutes,\n' +
+        '    r.winning_team_id AS winning_team_id,\n' +
+        '    groupArray((rp.player_id, rp.name, rp.race, rp.team_id)) AS players\n' +
+        'FROM w3g.replays AS r FINAL\n' +
+        'INNER JOIN w3g.replay_map AS mp ON mp.replay_id = r.replay_id\n' +
+        'INNER JOIN w3g.replay_players AS rp FINAL ON rp.replay_id = r.replay_id\n' +
+        'WHERE r.replay_id IN (' + list + ')\n' +
+        'GROUP BY replay_id, series, game, map, matchup, r.duration_ms, winning_team_id\n' +
+        'ORDER BY series, game');
+    }
+
+    async function run() {
+      loading.value = true;
+      error.value = '';
+      const started = performance.now();
+      try {
+        sql.value = buildSql();
+        const matched = await chQuery(sql.value);
+        const byId = new Map(matched.map(m => [m.replay_id, Number(m.player_id)]));
+        const details = matched.length ? await detailsFor([...byId.keys()]) : [];
+        rows.value = details.map(d => {
+          const players = d.players.map(p => ({
+            id: Number(p[0]), name: p[1], race: p[2], team: Number(p[3]),
+          }));
+          const focus = players.find(p => p.id === byId.get(d.replay_id)) || null;
+          const winner = Number(d.winning_team_id);
+          return {
+            replay_id: d.replay_id,
+            series: d.series,
+            game: d.game,
+            map: d.map,
+            matchup: d.matchup,
+            minutes: d.minutes,
+            playersLabel: players
+              .sort((a, b) => a.id - b.id)
+              .map(p => p.name + ' (' + p.race + ')').join('  vs  '),
+            result: !focus || winner < 0 ? null : (winner === focus.team ? 'Won' : 'Lost'),
+          };
+        });
+      } catch (e) {
+        error.value = e.message;
+        rows.value = [];
+      } finally {
+        elapsedMs.value = Math.round(performance.now() - started);
+        loading.value = false;
+        ran.value = true;
+        tab.value = 'replays';
+      }
+    }
+
+    const decided = computed(() => rows.value.filter(r => r.result));
+    const winRate = computed(() => {
+      if (!decided.value.length) return null;
+      return Math.round(100 * decided.value.filter(r => r.result === 'Won').length / decided.value.length);
+    });
+    const winRateColor = computed(() => {
+      if (winRate.value === null) return undefined;
+      if (winRate.value > 50) return COLOR_WIN;
+      if (winRate.value < 50) return COLOR_LOSS;
+      return undefined;               // an even split gets no colour to argue with
+    });
+    const medianMinutes = computed(() => {
+      if (!rows.value.length) return null;
+      const m = rows.value.map(r => Number(r.minutes)).sort((a, b) => a - b);
+      const mid = Math.floor(m.length / 2);
+      return m.length % 2 ? m[mid] : Math.round(((m[mid - 1] + m[mid]) / 2) * 10) / 10;
+    });
+
+    function addSlot() { slots.value.push(newSlot()); }
+    function removeSlot(i) { slots.value.splice(i, 1); }
+    function addStep(slot) { slot.steps.push(newStep()); }
+    function removeStep(slot, i) { slot.steps.splice(i, 1); }
+    function toggleTheme() {
+      dark.value = !dark.value;
+      vuetify.theme.global.name.value = dark.value ? 'dark' : 'light';
+    }
+    async function copySql() {
+      await navigator.clipboard.writeText(sql.value);
+      copied.value = true;
+      setTimeout(() => { copied.value = false; }, 1500);
+    }
+
+    onMounted(async () => {
+      try {
+        subjects.value = await chQuery(
+          'SELECT m.code AS code, any(m.name) AS label, any(m.kind) AS subject_kind\n' +
+          'FROM w3g.mappings AS m\n' +
+          "WHERE m.kind != 'unknown' AND m.name != ''\n" +
+          'GROUP BY m.code ORDER BY label');
+        const m = await chQuery('SELECT DISTINCT map FROM w3g.replay_map ORDER BY map');
+        maps.value = m.map(r => r.map).filter(Boolean);
+      } catch (e) {
+        fatal.value = 'Cannot reach ClickHouse: ' + e.message;
+      }
+    });
+
+    return {
+      dark, scope, slots, maxResults, maps, rows, sql, tab, loading, ran, error, fatal, headers,
+      elapsedMs, copied, raceItems, typeItems, outcomeItems, subjectsFor, ready,
+      winRate, winRateColor, medianMinutes, run, addSlot, removeSlot, addStep, removeStep,
+      toggleTheme, copySql, chUrl: CH_URL, COLOR_WIN, COLOR_LOSS,
+    };
+  },
+}).use(vuetify).mount('#app');
+</script>
+</body>
+</html>

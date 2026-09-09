@@ -72,6 +72,17 @@ services:
       WORKER_POLL_MS: "${WORKER_POLL_MS:-60000}"
     restart: unless-stopped
 
+  # The search page, served as a static file. The browser queries ClickHouse
+  # directly on 127.0.0.1:8123, which answers cross-origin already, so there is
+  # no API to run. Loopback only: this is a local tool, not a public site.
+  ui:
+    image: nginx:alpine
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
   # A local stand-in for the R2 bucket.
   minio:
     image: minio/minio
