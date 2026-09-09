@@ -99,7 +99,12 @@
               <v-select v-model="slot.outcome" :items="outcomeItems" label="Outcome"
                         density="compact" hide-details></v-select>
             </v-col>
-            <v-col cols="12" md="3" class="text-md-right">
+            <v-col cols="12" sm="8" md="3">
+              <v-autocomplete v-model="slot.players" class="player-filter" :items="playerNames" label="Named player"
+                              density="compact" hide-details multiple chips closable-chips
+                              no-data-text="No player loaded"></v-autocomplete>
+            </v-col>
+            <v-col cols="12" sm="4" md="12" class="text-sm-right">
               <v-btn v-if="slots.length > 1" size="small" variant="text" color="error"
                      prepend-icon="mdi-close" @click="removeSlot(si)">Remove player</v-btn>
             </v-col>
@@ -120,7 +125,7 @@
                           @update:model-value="step.code = null"></v-select>
               </v-col>
               <v-col cols="10" sm="5" md="6">
-                <v-autocomplete v-model="step.code" :items="subjectsFor(slot, step)"
+                <v-autocomplete v-model="step.code" class="step-subject" :items="subjectsFor(slot, step)"
                                 label="To what" density="compact" hide-details
                                 no-data-text="Nothing of that kind for this race">
                   <template v-slot:item="{ props, item }">
@@ -262,6 +267,12 @@
                 <v-select v-model="op.sort" :items="sortItems" label="Sort by"
                           density="comfortable" hide-details
                           @update:model-value="loadOpeners"></v-select>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-autocomplete v-model="op.players" class="player-filter" :items="playerNames" label="Named player"
+                                density="comfortable" hide-details multiple chips closable-chips
+                                no-data-text="No player loaded"
+                                @update:model-value="loadOpeners"></v-autocomplete>
               </v-col>
             </v-row>
             <div class="text-caption text-medium-emphasis mt-3">
@@ -421,7 +432,7 @@ const newStep = () => ({
   key: nextKey++, type: 'building', code: null,
   timing: false, withinPrev: null, fromMin: null, toMin: null,
 });
-const newSlot = () => ({ key: nextKey++, race: null, outcome: 'either', steps: [newStep()] });
+const newSlot = () => ({ key: nextKey++, race: null, outcome: 'either', players: [], steps: [newStep()] });
 
 const vuetify = Vuetify.createVuetify({
   theme: { defaultTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' },
@@ -436,7 +447,8 @@ createApp({
     const subjects = ref([]);
     const iconMap = ref({});
     const mainTab = ref('search');
-    const op = reactive({ race: 'N', opponent: null, map: null, sort: 'popular' });
+    const op = reactive({ race: 'N', opponent: null, map: null, sort: 'popular', players: [] });
+    const playerNames = ref([]);
     const openerRows = ref([]);
     const openerError = ref('');
     const openerDialog = ref(false);
@@ -568,14 +580,18 @@ createApp({
         '    ) = 1';
     }
 
-    // A slot's outcome gate needs the player's team and the replay's winner,
-    // which live on the header tables rather than on the event stream.
-    function outcomeWhere(slot, alias) {
-      if (slot.outcome === 'win') return ['r.winning_team_id = ' + alias + '.team_id'];
+    // Who this slot may be: a named player, a result, or both. Neither lives on
+    // the event stream, so both read the header tables through `alias`.
+    function slotGate(slot, alias) {
+      const parts = [];
+      if (slot.outcome === 'win') parts.push('r.winning_team_id = ' + alias + '.team_id');
       if (slot.outcome === 'loss') {
-        return ['r.winning_team_id != ' + alias + '.team_id', 'r.winning_team_id >= 0'];
+        parts.push('r.winning_team_id != ' + alias + '.team_id', 'r.winning_team_id >= 0');
       }
-      return [];
+      if (slot.players.length) {
+        parts.push(alias + '.name IN (' + slot.players.map(q).join(', ') + ')');
+      }
+      return parts;
     }
 
     function buildSql() {
@@ -590,6 +606,12 @@ createApp({
       if (!filled.length) {
         const mu = matchupLiteral();
         if (mu) where.push('r.matchup = ' + q(mu));
+        const named = slots.value.flatMap(sl => sl.players);
+        if (named.length) {
+          where.push('r.replay_id IN (\n' +
+            '    SELECT replay_id FROM w3g.replay_players FINAL\n' +
+            '    WHERE name IN (' + [...new Set(named)].map(q).join(', ') + ')\n  )');
+        }
         return 'SELECT DISTINCT r.replay_id AS replay_id, 255 AS player_id\n' +
           'FROM w3g.replays AS r FINAL\n' +
           'INNER JOIN w3g.replay_map AS mp ON mp.replay_id = r.replay_id\n' +
@@ -598,11 +620,11 @@ createApp({
       }
 
       // Player 1 drives the result column, so its player_id is the one returned.
-      where.push(...outcomeWhere(filled[0].slot, 'rp'));
+      where.push(...slotGate(filled[0].slot, 'rp'));
       // Every further player is an extra membership test on the same replay.
       filled.slice(1).forEach((f, i) => {
         const alias = 'rp' + (i + 2);
-        const extra = outcomeWhere(f.slot, alias);
+        const extra = slotGate(f.slot, alias);
         const inner = extra.length
           ? '    SELECT s.replay_id\n    FROM (\n' +
             slotSelect(f).replace(/^/gm, '    ') + '\n    ) AS s\n' +
@@ -714,8 +736,9 @@ createApp({
       const w = ['race = ' + q(op.race)];
       if (op.opponent) w.push('opponent_race = ' + q(op.opponent));
       if (op.map) w.push('map = ' + q(op.map));
+      if (op.players.length) w.push('player_name IN (' + op.players.map(q).join(', ') + ')');
       if (prefix.length) {
-        w.push('arraySlice(prefix, 1, ' + prefix.length + ') = [' + prefix.map(q).join(', ') + ']');
+        w.push('arraySlice(seq, 1, ' + prefix.length + ') = [' + prefix.map(q).join(', ') + ']');
       }
       return w;
     }
@@ -730,22 +753,23 @@ createApp({
         // and anything under the floor sorts below what clears it.
         ? 'ORDER BY c.matches >= ' + WR_FLOOR + ' DESC, c.wins / c.matches DESC, c.matches DESC'
         : 'ORDER BY c.matches DESC, c.wins / c.matches DESC';
+      // w3g.replay_openers is one row per player per game, so a player filter
+      // is a plain WHERE. The pre-aggregated rollup has no player to filter on.
       const rows = await chQuery(
         'SELECT c.code AS code, c.matches AS matches, c.wins AS wins,\n' +
         '       round(c.dur_ms / c.matches / 60000, 1) AS avgMin,\n' +
         '       ifNull(b.bf, 0) AS branch\n' +
         'FROM (\n' +
-        '    SELECT arrayElement(prefix, ' + (d + 1) + ') AS code,\n' +
-        '           sum(matches) AS matches, sum(wins) AS wins, sum(sum_duration_ms) AS dur_ms\n' +
-        '    FROM w3g.opener_rollup\n' +
-        '    WHERE depth = ' + (d + 1) + ' AND ' + where.join(' AND ') + '\n' +
+        '    SELECT seq[' + (d + 1) + '] AS code, count() AS matches,\n' +
+        '           sum(won) AS wins, sum(duration_ms) AS dur_ms\n' +
+        '    FROM w3g.replay_openers\n' +
+        '    WHERE length(seq) >= ' + (d + 1) + ' AND ' + where.join(' AND ') + '\n' +
         '    GROUP BY code\n' +
         ') AS c\n' +
         'LEFT JOIN (\n' +
-        '    SELECT arrayElement(prefix, ' + (d + 1) + ') AS code,\n' +
-        '           uniqExact(arrayElement(prefix, ' + (d + 2) + ')) AS bf\n' +
-        '    FROM w3g.opener_rollup\n' +
-        '    WHERE depth = ' + (d + 2) + ' AND ' + where.join(' AND ') + '\n' +
+        '    SELECT seq[' + (d + 1) + '] AS code, uniqExact(seq[' + (d + 2) + ']) AS bf\n' +
+        '    FROM w3g.replay_openers\n' +
+        '    WHERE length(seq) >= ' + (d + 2) + ' AND ' + where.join(' AND ') + '\n' +
         '    GROUP BY code\n' +
         ') AS b ON b.code = c.code\n' +
         order);
@@ -809,9 +833,10 @@ createApp({
       openerDialogRows.value = [];
       try {
         const ids = await chQuery(
-          'SELECT arrayJoin(arrayDistinct(arrayFlatten(groupArray(sample_replays)))) AS replay_id\n' +
-          'FROM w3g.opener_rollup\n' +
-          'WHERE depth = ' + row.prefix.length + ' AND ' + openerWhere(row.prefix).join(' AND '));
+          'SELECT DISTINCT replay_id\n' +
+          'FROM w3g.replay_openers\n' +
+          'WHERE length(seq) >= ' + row.prefix.length + ' AND ' +
+          openerWhere(row.prefix).join(' AND '));
         openerDialogRows.value = ids.length
           ? (await detailsFor(ids.map(r => r.replay_id))).map(d => describeReplay(d))
           : [];
@@ -848,6 +873,9 @@ createApp({
         maps.value = m.map(r => r.map).filter(Boolean);
         // Command-card art, keyed by object code. A code with no art shows none.
         iconMap.value = await (await fetch('icons.json')).json();
+        const pl = await chQuery(
+          'SELECT DISTINCT name FROM w3g.replay_players FINAL WHERE name != \'\' ORDER BY name');
+        playerNames.value = pl.map(r => r.name);
         await loadOpeners();
       } catch (e) {
         fatal.value = 'Cannot reach ClickHouse: ' + e.message;
@@ -860,7 +888,7 @@ createApp({
       winRate, winRateColor, medianMinutes, run, addSlot, removeSlot, addStep, removeStep,
       toggleTheme, copySql, chUrl: CH_URL, COLOR_WIN, COLOR_LOSS, WR_FLOOR,
       mainTab, op, sortItems, openerHeaders, openerRows, openerError, loadOpeners,
-      onOpenerRow, winrateColor, showOpenerReplays, nameFor, iconFor,
+      onOpenerRow, winrateColor, showOpenerReplays, nameFor, iconFor, playerNames,
       openerDialog, openerDialogLoading, openerDialogRows,
     };
   },

@@ -36,6 +36,57 @@ SELECT
 -- FINAL: replays is a ReplacingMergeTree, so an unmerged re-stage would double a row.
 FROM w3g.replays FINAL;
 
+-- ---------- One opener per player per game ----------
+
+-- One row per player per 1v1, holding the first six distinct non-supply
+-- buildings they put down. Both the opener rollup and the search page read it,
+-- so the derivation lives here once. It keeps player_id and player_name, which
+-- the rollup aggregates away, so a caller can ask about one player.
+CREATE VIEW IF NOT EXISTS w3g.replay_openers AS
+SELECT
+    rp.race AS race,
+    opp.race AS opponent_race,
+    mp.map AS map,
+    e.replay_id AS replay_id,
+    e.player_id AS player_id,
+    any(rp.name) AS player_name,
+    r.duration_ms AS duration_ms,
+    if(r.winning_team_id = rp.team_id, toUInt8(1), toUInt8(0)) AS won,
+    -- arraySort -> arrayMap (drop time) -> arrayCompact (dedup spam-clicks)
+    -- -> arraySlice (cap depth at 6).
+    arraySlice(
+        arrayCompact(
+            arrayMap(t -> t.2,
+                arraySort(t -> t.1, groupArray((e.time_ms, e.subject_code)))
+            )
+        ),
+        1, 6
+    ) AS seq
+-- No FINAL on replay_events: the replay_id gate in backfill.sql means a replay
+-- is inserted once. FINAL stays on the header joins.
+FROM w3g.replay_events AS e
+INNER JOIN w3g.mappings AS m
+    ON m.code = e.subject_code AND m.kind = 'building'
+INNER JOIN w3g.replay_players AS rp FINAL
+    ON rp.replay_id = e.replay_id AND rp.player_id = e.player_id
+INNER JOIN w3g.replays AS r FINAL
+    ON r.replay_id = e.replay_id
+INNER JOIN w3g.replay_map AS mp
+    ON mp.replay_id = e.replay_id
+INNER JOIN w3g.replay_players AS opp FINAL
+    ON opp.replay_id = e.replay_id
+WHERE e.event_type = 'building'
+  AND m.is_supply_building = 0
+  AND r.type = '1on1'
+  -- Exclude unknown-winner replays (winning_team_id = -1): no team_id is -1,
+  -- so `won` would always be 0, deflating winrate.
+  AND r.winning_team_id >= 0
+  -- Any two DISTINCT teams count as playing. WC3 lobbies allow arbitrary team
+  -- slots, and observers never land in replay_players.
+  AND rp.team_id != opp.team_id
+  AND opp.player_id != e.player_id
+GROUP BY race, opponent_race, map, replay_id, e.player_id, duration_ms, won;
+
 -- ---------- Load-time fan-out from replays_raw ----------
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS w3g.mv__replays
@@ -409,69 +460,7 @@ FROM (
         arrayJoin(
             arrayMap(k -> arraySlice(seq, 1, k), range(1, length(seq) + 1))
         ) AS prefix
-    FROM (
-        -- The map name comes out of the replay's own header: strip the
-        -- extension, then pull the map segment out of the w3c filename. Two
-        -- layouts are seen: "[<id>_]w3c_<date>_<time>_<NAME>" and
-        -- "1v1_<NAME>_w3c_<date>_<time>_<id>"; other names pass through whole.
-        WITH replaceRegexpOne(JSONExtractString(r.map_json, 'file'), '\\.(w3x|w3m|w3g)$', '') AS stem
-        SELECT
-            rp.race AS race,
-            opp.race AS opponent_race,
-            -- "Springtime_v1.3" -> "Springtime 1.3", "AutumnLeaves" -> "Autumn
-            -- Leaves": _v<n> -> " <n>", then split camelCase, then _ -> space.
-            replaceRegexpAll(
-                replaceRegexpAll(
-                    replaceRegexpOne(
-                        multiIf(
-                            match(stem, '_w3c_[0-9]{6}_[0-9]{4}_[0-9]+$'),
-                                extract(stem, '^(?:1v1_)?(.+?)_w3c_[0-9]{6}_[0-9]{4}_[0-9]+$'),
-                            match(stem, '^(?:[0-9]+_)?w3c_[0-9]{6}_[0-9]{4}_'),
-                                extract(stem, '^(?:[0-9]+_)?w3c_[0-9]{6}_[0-9]{4}_(.+)$'),
-                            stem),
-                    '_v([0-9])', ' \\1'),
-                '([a-z0-9])([A-Z])', '\\1 \\2'),
-            '_', ' ') AS map,
-            e.replay_id AS replay_id,
-            e.player_id AS player_id,
-            r.duration_ms AS duration_ms,
-            if(r.winning_team_id = rp.team_id, toUInt8(1), toUInt8(0)) AS won,
-            -- arraySort → arrayMap (drop time) → arrayCompact (dedup spam-
-            -- clicks) → arraySlice (cap depth at 6).
-            arraySlice(
-                arrayCompact(
-                    arrayMap(t -> t.2,
-                        arraySort(t -> t.1, groupArray((e.time_ms, e.subject_code)))
-                    )
-                ),
-                1, 6
-            ) AS seq
-        -- No FINAL on replay_events: the replay_id gate in backfill.sql means
-        -- a replay is inserted once. FINAL stays on the header joins below.
-        FROM w3g.replay_events AS e
-        INNER JOIN w3g.mappings AS m
-            ON m.code = e.subject_code AND m.kind = 'building'
-        INNER JOIN w3g.replay_players AS rp FINAL
-            ON rp.replay_id = e.replay_id AND rp.player_id = e.player_id
-        INNER JOIN w3g.replays AS r FINAL
-            ON r.replay_id = e.replay_id
-        INNER JOIN w3g.replay_players AS opp FINAL
-            ON opp.replay_id = e.replay_id
-        WHERE e.event_type = 'building'
-          AND m.is_supply_building = 0
-          AND r.type = '1on1'
-          -- Exclude unknown-winner replays (winning_team_id = -1): no team_id
-          -- is -1, so `won` would always be 0, deflating winrate.
-          AND r.winning_team_id >= 0
-          -- Any two DISTINCT teams count as playing — WC3 lobbies allow
-          -- arbitrary team slots (real 1v1s exist on teams [3,4], [0,5]), and
-          -- observers never land in replay_players (every 1on1 has exactly two
-          -- rows), so distinctness is the whole invariant. A 0/1 gate here
-          -- silently dropped those replays from the rollup.
-          AND rp.team_id != opp.team_id
-          AND opp.player_id != e.player_id
-        GROUP BY race, opponent_race, map, replay_id, e.player_id, duration_ms, won
-    )
+    FROM w3g.replay_openers
     WHERE length(seq) > 0
 )
 GROUP BY race, opponent_race, map, prefix
