@@ -110,7 +110,10 @@ services:
     profiles: ["prod"]
     command: tunnel --no-autoupdate run
     environment:
-      TUNNEL_TOKEN: "${TUNNEL_TOKEN:?set TUNNEL_TOKEN in .env}"
+      # Compose interpolates every service before it applies profiles, so a `:?`
+      # guard here would fail `up` on any machine with no tunnel. cloudflared
+      # rejects an empty token itself, and only under the prod profile.
+      TUNNEL_TOKEN: "${TUNNEL_TOKEN:-}"
     network_mode: "service:clickhouse"
     restart: unless-stopped
     depends_on:

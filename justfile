@@ -2,8 +2,11 @@
 # Secrets come from .env (see .env.example), never from a recipe.
 set dotenv-load
 
-# clickhouse-client against CLICKHOUSE_HOST, with the password only if one is set
-client := 'clickhouse-client --host "${CLICKHOUSE_HOST:-127.0.0.1}" ${CLICKHOUSE_PASSWORD:+--password=$CLICKHOUSE_PASSWORD}'
+# clickhouse-client against CLICKHOUSE_HOST, with the password only if one is set.
+# A Docker-only machine has no host binary, so fall back to the compose container.
+# Recipes pipe SQL on stdin, so the .sql path is resolved by the shell and the
+# container needs no mount of db/.
+client := """sh -c 'if command -v clickhouse-client >/dev/null 2>&1; then exec clickhouse-client --host "${CLICKHOUSE_HOST:-127.0.0.1}" ${CLICKHOUSE_PASSWORD:+--password=$CLICKHOUSE_PASSWORD} "$@"; else exec docker compose exec -T clickhouse clickhouse-client ${CLICKHOUSE_PASSWORD:+--password=$CLICKHOUSE_PASSWORD} "$@"; fi' --"""
 manifest := 'pipeline/parse-rs/Cargo.toml'
 # Must match PARSE_VERSION in pipeline/parse-rs/src/lib.rs.
 parse_version := '2'
@@ -21,8 +24,8 @@ down:
 
 # apply tables.sql then views.sql to CLICKHOUSE_HOST
 schema:
-    {{client}} --queries-file db/w3g/tables.sql
-    {{client}} --queries-file db/w3g/views.sql
+    {{client}} --multiquery < db/w3g/tables.sql
+    {{client}} --multiquery < db/w3g/views.sql
 
 # rebuild w3g.mappings: the parser's melee tables, then the custom-map seed
 mappings:
@@ -37,10 +40,10 @@ drain-once:
 
 # load parsed documents from an s3 glob into w3g.replays_raw, then refresh the rollup
 backfill url:
-    {{client}} --queries-file db/w3g/backfill.sql \
+    {{client}} --multiquery \
       --param_url='{{url}}' \
       --param_access_key="$W3WAREHOUSE_S3_ACCESS_KEY" \
-      --param_secret_key="$W3WAREHOUSE_S3_SECRET_KEY"
+      --param_secret_key="$W3WAREHOUSE_S3_SECRET_KEY" < db/w3g/backfill.sql
     {{client}} --query 'SYSTEM REFRESH VIEW w3g.refresh__opener_rollup'
 
 # load every parsed document in the configured bucket, so no URL is typed by hand
@@ -60,4 +63,6 @@ test:
 
 # an interactive clickhouse-client
 ch:
-    {{client}}
+    @if command -v clickhouse-client >/dev/null 2>&1; then \
+      clickhouse-client --host "${CLICKHOUSE_HOST:-127.0.0.1}" ${CLICKHOUSE_PASSWORD:+--password=$CLICKHOUSE_PASSWORD}; \
+    else docker compose exec clickhouse clickhouse-client ${CLICKHOUSE_PASSWORD:+--password=$CLICKHOUSE_PASSWORD}; fi
