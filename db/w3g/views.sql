@@ -12,6 +12,30 @@
 
 CREATE DATABASE IF NOT EXISTS w3g;
 
+-- ---------- Readable map name ----------
+
+-- The map name the search UI filters and displays on. Same derivation the
+-- opener rollup does inline: strip the extension, then pull the map segment out
+-- of the w3c filename, then tidy "_v1.3" and camelCase into spaces.
+CREATE VIEW IF NOT EXISTS w3g.replay_map AS
+WITH replaceRegexpOne(JSONExtractString(map_json, 'file'), '\\.(w3x|w3m|w3g)$', '') AS stem
+SELECT
+    replay_id,
+    replaceRegexpAll(
+        replaceRegexpAll(
+            replaceRegexpOne(
+                multiIf(
+                    match(stem, '_w3c_[0-9]{6}_[0-9]{4}_[0-9]+$'),
+                        extract(stem, '^(?:1v1_)?(.+?)_w3c_[0-9]{6}_[0-9]{4}_[0-9]+$'),
+                    match(stem, '^(?:[0-9]+_)?w3c_[0-9]{6}_[0-9]{4}_'),
+                        extract(stem, '^(?:[0-9]+_)?w3c_[0-9]{6}_[0-9]{4}_(.+)$'),
+                    stem),
+            '_v([0-9])', ' \\1'),
+        '([a-z0-9])([A-Z])', '\\1 \\2'),
+    '_', ' ') AS map
+-- FINAL: replays is a ReplacingMergeTree, so an unmerged re-stage would double a row.
+FROM w3g.replays FINAL;
+
 -- ---------- Load-time fan-out from replays_raw ----------
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS w3g.mv__replays

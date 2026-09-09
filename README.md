@@ -18,6 +18,11 @@ just backfill-bucket    # load the parsed prefix out of the configured bucket
 just ch                 # a clickhouse-client shell
 ```
 
+`just up` also serves the search page at http://localhost:8080. Pick a race, a
+map and an ordered list of what a player built, and it lists the games that
+match. The page reads ClickHouse over HTTP from the browser, so there is no API
+to run; the SQL it generates is on the second tab.
+
 `just backfill-bucket` builds the URL from `.env`. Pass your own glob to
 `just backfill '<url>'` to load a narrower set, such as one date.
 
