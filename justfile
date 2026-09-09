@@ -5,6 +5,8 @@ set dotenv-load
 # clickhouse-client against CLICKHOUSE_HOST, with the password only if one is set
 client := 'clickhouse-client --host "${CLICKHOUSE_HOST:-127.0.0.1}" ${CLICKHOUSE_PASSWORD:+--password=$CLICKHOUSE_PASSWORD}'
 manifest := 'pipeline/parse-rs/Cargo.toml'
+# Must match PARSE_VERSION in pipeline/parse-rs/src/lib.rs.
+parse_version := '2'
 
 _default:
     @just --list
@@ -40,6 +42,17 @@ backfill url:
       --param_access_key="$W3WAREHOUSE_S3_ACCESS_KEY" \
       --param_secret_key="$W3WAREHOUSE_S3_SECRET_KEY"
     {{client}} --query 'SYSTEM REFRESH VIEW w3g.refresh__opener_rollup'
+
+# load every parsed document in the configured bucket, so no URL is typed by hand
+backfill-bucket:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "${W3WAREHOUSE_S3_SECURE:-false}" = "true" ]; then scheme=https; else scheme=http; fi
+    # W3WAREHOUSE_S3_PREFIX is the Vercel environment segment, empty for a flat bucket.
+    prefix="${W3WAREHOUSE_S3_PREFIX:-}"; prefix="${prefix#/}"; prefix="${prefix%/}"
+    url="$scheme://${W3WAREHOUSE_S3_ENDPOINT}/${W3WAREHOUSE_S3_BUCKET}/${prefix:+$prefix/}parsed/v{{parse_version}}/**.json"
+    echo "loading $url"
+    {{just_executable()}} backfill "$url"
 
 # parser unit tests and the parity goldens
 test:

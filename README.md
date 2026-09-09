@@ -14,9 +14,12 @@ Copy `.env.example` to `.env` and fill in the bucket credentials, then:
 just up                 # clickhouse, the schema, and the drain
 just mappings           # load the WC3 name mappings once
 just drain-once         # parse everything new in replays/
-just backfill 'http://localhost:9000/warehouse/parsed/v2/**.json'
+just backfill-bucket    # load the parsed prefix out of the configured bucket
 just ch                 # a clickhouse-client shell
 ```
+
+`just backfill-bucket` builds the URL from `.env`. Pass your own glob to
+`just backfill '<url>'` to load a narrower set, such as one date.
 
 `docker compose --profile local up -d` adds a MinIO to stand in for the R2
 bucket; `--profile prod` adds the Cloudflare Tunnel.
@@ -27,7 +30,11 @@ and MinIO straight on the host.
 ## How it fits together
 
 The GNL backend writes a reported replay to `replays/<series id>/game<n>.w3g` in
-the bucket and keeps the public download URL. The drain lists that prefix, parses
+the bucket and keeps the public download URL. Every key starts with the Vercel
+environment that wrote it (`app/services/r2.py`), so the real key is
+`preview/replays/435/game1.w3g`. Set `W3WAREHOUSE_S3_PREFIX` to that segment and
+`replays/`, `parsed/` and `status/` all move under it together, which keeps one
+environment's parsed output out of another's. The drain lists that prefix, parses
 each new or changed file, and writes the parsed document to
 `parsed/v2/dt=<date>/<replay id>.json` with the series and game number in a `gnl`
 field. It never moves or deletes the raw file. `backfill.sql` loads the parsed

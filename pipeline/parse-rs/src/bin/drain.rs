@@ -3,6 +3,11 @@
 //! `parsed/v<PARSE_VERSION>/dt=<date>/<replay_id>.json`, the prefix ClickHouse
 //! reads with s3() (db/w3g/backfill.sql).
 //!
+//! The GNL backend writes every key under its Vercel environment, so a real key
+//! is `preview/replays/12/game1.w3g` (wc3-gym-backend app/services/r2.py). Set
+//! W3WAREHOUSE_S3_PREFIX to that leading segment and all three prefixes move
+//! together, which keeps one environment's parsed output out of another's.
+//!
 //! A raw object is never moved or deleted: the site's download URLs point at it.
 //! Work already done is recorded by a breadcrumb at
 //! `status/<series id>/game<n>.json` holding the raw object's ETag, so a pass
@@ -31,6 +36,27 @@ struct Cfg {
     bucket: String,
     poll: Duration,
     concurrency: usize,
+    /// Leading segment on every key, such as "preview/". Empty for a flat bucket.
+    prefix: String,
+}
+
+impl Cfg {
+    fn raw(&self) -> String {
+        format!("{}{RAW}", self.prefix)
+    }
+    fn status(&self) -> String {
+        format!("{}{STATUS}", self.prefix)
+    }
+}
+
+/// Normalise W3WAREHOUSE_S3_PREFIX: empty stays empty, anything else ends in "/".
+fn normalise_prefix(raw: &str) -> String {
+    let t = raw.trim().trim_matches('/');
+    if t.is_empty() {
+        String::new()
+    } else {
+        format!("{t}/")
+    }
 }
 
 fn env_or(key: &str, default: &str) -> String {
@@ -51,6 +77,7 @@ async fn main() {
         bucket: env_or("W3WAREHOUSE_S3_BUCKET", "warehouse"),
         poll: Duration::from_millis(env_or("WORKER_POLL_MS", "3000").parse().unwrap_or(3000)),
         concurrency: env_or("DRAIN_CONCURRENCY", "16").parse().unwrap_or(16),
+        prefix: normalise_prefix(&env_or("W3WAREHOUSE_S3_PREFIX", "")),
     };
 
     let creds = Credentials::new(access, secret, None, None, "w3warehouse-env");
@@ -63,16 +90,15 @@ async fn main() {
         .build();
     let client = Client::from_conf(conf);
 
-    ensure_bucket(&client, &cfg.bucket).await;
-
     if once {
         let n = drain_once(&client, &cfg).await;
         log(&format!("drained {n} object(s), exiting (--once)"));
         return;
     }
     log(&format!(
-        "watching {}/{RAW} every {}ms (concurrency={})",
+        "watching {}/{} every {}ms (concurrency={})",
         cfg.bucket,
+        cfg.raw(),
         cfg.poll.as_millis(),
         cfg.concurrency
     ));
@@ -82,10 +108,10 @@ async fn main() {
     }
 }
 
-/// `replays/<series id>/game<n>.w3g` → (series id, game number). Any other
-/// shape answers None and the drain skips the key.
-fn parse_key(key: &str) -> Option<(u32, u8)> {
-    let rest = key.strip_prefix(RAW)?;
+/// `<prefix>replays/<series id>/game<n>.w3g` → (series id, game number). Any
+/// other shape answers None and the drain skips the key.
+fn parse_key(raw_prefix: &str, key: &str) -> Option<(u32, u8)> {
+    let rest = key.strip_prefix(raw_prefix)?;
     let (series, game) = rest.split_once('/')?;
     let n = game.strip_prefix("game")?.strip_suffix(".w3g")?;
     if n.len() != 1 || !series.chars().all(|c| c.is_ascii_digit()) {
@@ -95,9 +121,9 @@ fn parse_key(key: &str) -> Option<(u32, u8)> {
 }
 
 /// The breadcrumb for a raw key: `replays/12/game2.w3g` → `status/12/game2.json`.
-fn status_key(raw_key: &str) -> String {
-    let rest = raw_key.strip_prefix(RAW).unwrap_or(raw_key);
-    format!("{STATUS}{}.json", rest.strip_suffix(".w3g").unwrap_or(rest))
+fn status_key(cfg: &Cfg, raw_key: &str) -> String {
+    let rest = raw_key.strip_prefix(&cfg.raw()).unwrap_or(raw_key);
+    format!("{}{}.json", cfg.status(), rest.strip_suffix(".w3g").unwrap_or(rest))
 }
 
 /// Process every new or changed `replays/` object once, concurrently. Returns
@@ -110,18 +136,19 @@ async fn drain_once(client: &Client, cfg: &Cfg) -> usize {
             return 0;
         }
     };
-    let raw = match list_prefix(client, &cfg.bucket, RAW).await {
+    let raw = match list_prefix(client, &cfg.bucket, &cfg.raw()).await {
         Ok(k) => k,
         Err(e) => {
             log(&format!("list error, will retry: {e}"));
             return 0;
         }
     };
+    let raw_prefix = cfg.raw();
     let todo: Vec<(String, String)> = raw
         .into_iter()
         .filter(|(key, etag)| {
-            if parse_key(key).is_none() {
-                log(&format!("skipping {key}: not replays/<series id>/game<n>.w3g"));
+            if parse_key(&raw_prefix, key).is_none() {
+                log(&format!("skipping {key}: not {raw_prefix}<series id>/game<n>.w3g"));
                 return false;
             }
             done.get(key) != Some(etag)
@@ -130,7 +157,7 @@ async fn drain_once(client: &Client, cfg: &Cfg) -> usize {
 
     let outcomes = stream::iter(todo)
         .map(|(key, etag)| async move {
-            match process_one(client, &cfg.bucket, &key, &etag).await {
+            match process_one(client, cfg, &key, &etag).await {
                 Ok(()) => true,
                 Err(e) => {
                     // Transient (network/S3): no breadcrumb written, retry next pass.
@@ -145,14 +172,11 @@ async fn drain_once(client: &Client, cfg: &Cfg) -> usize {
     outcomes.into_iter().filter(|ok| *ok).count()
 }
 
-async fn process_one(
-    client: &Client,
-    bucket: &str,
-    raw_key: &str,
-    etag: &str,
-) -> Result<(), String> {
-    let (series_id, game_no) = parse_key(raw_key).ok_or("key does not name a series and game")?;
-    let status_key = status_key(raw_key);
+async fn process_one(client: &Client, cfg: &Cfg, raw_key: &str, etag: &str) -> Result<(), String> {
+    let bucket = &cfg.bucket;
+    let (series_id, game_no) =
+        parse_key(&cfg.raw(), raw_key).ok_or("key does not name a series and game")?;
+    let status_key = status_key(cfg, raw_key);
     let bytes = get_object(client, bucket, raw_key).await?;
 
     let parsed = match w3warehouse_parse::parse_replay(&bytes) {
@@ -188,7 +212,8 @@ async fn process_one(
         client,
         bucket,
         &format!(
-            "parsed/v{}/dt={date}/{}.json",
+            "{}parsed/v{}/dt={date}/{}.json",
+            cfg.prefix,
             w3warehouse_parse::PARSE_VERSION,
             parsed.replay_id
         ),
@@ -213,7 +238,7 @@ async fn process_one(
 /// A listing carries the breadcrumb's own ETag, not the replay's, so each body
 /// is fetched; the fetches run at the pass concurrency.
 async fn read_breadcrumbs(client: &Client, cfg: &Cfg) -> Result<HashMap<String, String>, String> {
-    let keys = list_prefix(client, &cfg.bucket, STATUS).await?;
+    let keys = list_prefix(client, &cfg.bucket, &cfg.status()).await?;
     let bodies = stream::iter(keys)
         .map(|(key, _)| async move { get_object(client, &cfg.bucket, &key).await })
         .buffer_unordered(cfg.concurrency)
@@ -292,26 +317,6 @@ async fn put_json(
     put_bytes(client, bucket, key, value.to_string().into_bytes()).await
 }
 
-async fn ensure_bucket(client: &Client, bucket: &str) {
-    // The bucket usually exists already, but on a cold start the drain may win
-    // the race — create defensively, retrying so it doesn't die racing MinIO.
-    loop {
-        if client.head_bucket().bucket(bucket).send().await.is_ok() {
-            return;
-        }
-        match client.create_bucket().bucket(bucket).send().await {
-            Ok(_) => {
-                log(&format!("created bucket {bucket}"));
-                return;
-            }
-            Err(e) => {
-                log(&format!("waiting for minio: {e}"));
-                tokio::time::sleep(Duration::from_secs(1)).await;
-            }
-        }
-    }
-}
-
 fn log(msg: &str) {
     println!("[drain] {msg}");
 }
@@ -320,12 +325,44 @@ fn log(msg: &str) {
 mod tests {
     use super::*;
 
+    fn cfg(prefix: &str) -> Cfg {
+        Cfg {
+            bucket: "b".into(),
+            poll: Duration::from_millis(1),
+            concurrency: 1,
+            prefix: normalise_prefix(prefix),
+        }
+    }
+
     #[test]
     fn keys_parse_and_map_to_breadcrumbs() {
-        assert_eq!(parse_key("replays/12/game2.w3g"), Some((12, 2)));
-        assert_eq!(parse_key("replays/x/notes.txt"), None);
-        assert_eq!(parse_key("replays/12/game2.txt"), None);
-        assert_eq!(parse_key("replays/12/notgame2.w3g"), None);
-        assert_eq!(status_key("replays/12/game2.w3g"), "status/12/game2.json");
+        let c = cfg("");
+        assert_eq!(parse_key(&c.raw(), "replays/12/game2.w3g"), Some((12, 2)));
+        assert_eq!(parse_key(&c.raw(), "replays/x/notes.txt"), None);
+        assert_eq!(parse_key(&c.raw(), "replays/12/game2.txt"), None);
+        assert_eq!(parse_key(&c.raw(), "replays/12/notgame2.w3g"), None);
+        assert_eq!(status_key(&c, "replays/12/game2.w3g"), "status/12/game2.json");
+    }
+
+    #[test]
+    fn the_environment_prefix_moves_every_path() {
+        let c = cfg("preview");
+        assert_eq!(c.raw(), "preview/replays/");
+        assert_eq!(c.status(), "preview/status/");
+        assert_eq!(parse_key(&c.raw(), "preview/replays/435/game1.w3g"), Some((435, 1)));
+        // Another environment's keys are not this drain's work.
+        assert_eq!(parse_key(&c.raw(), "production/replays/435/game1.w3g"), None);
+        assert_eq!(
+            status_key(&c, "preview/replays/435/game1.w3g"),
+            "preview/status/435/game1.json"
+        );
+    }
+
+    #[test]
+    fn a_prefix_normalises_to_one_trailing_slash() {
+        assert_eq!(normalise_prefix(""), "");
+        assert_eq!(normalise_prefix("  "), "");
+        assert_eq!(normalise_prefix("preview"), "preview/");
+        assert_eq!(normalise_prefix("/preview/"), "preview/");
     }
 }
