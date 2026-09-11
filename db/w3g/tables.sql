@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS w3g.player_order_events
     player_id    UInt8,
     -- 'unknown' = rawcodes outside the parser's melee mapping tables
     -- (custom-map objects, plus a few melee order classes upstream never
-    -- tracked — see pipeline/parse-rs/vendor/README-PATCH.md).
+    -- tracked — see the tanghyd/w3grs fork pinned in pipeline/parse-rs/Cargo.toml).
     kind         Enum8('building'=1,'unit'=2,'item'=3,'upgrade'=4,'unknown'=5),
     object_code  LowCardinality(String),
     time_ms      UInt32,

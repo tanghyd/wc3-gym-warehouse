@@ -1,6 +1,6 @@
 # wc3-gym-warehouse: replay analytics on Cloudflare R2 and a Hetzner box
 
-ON ICE since 2026-09-04: Daniel paused analytics to focus on replay upload and download. The first cut is on `feature/initial-stack`, proven against a host ClickHouse and MinIO, no PR.
+Active again since 2026-09-09: the pipeline runs locally against the staging bucket, and the search page is on `main`.
 
 Written 2026-09-04 by Claude Code after a design conversation with Daniel. Not yet reviewed. Daniel pays for the box. Prices are from memory unless a command is given to check them. Supersedes the phase 2 sections of `../REPLAYS-PLAN.md`.
 
@@ -99,6 +99,12 @@ infrastructure/       clickhouse tuning.xml, cloudflared config, the cron lines
 ```
 
 Same rules as the other org repos: branch and PR to main, squash merge, Daniel merges. Secrets on the box are the R2 key pair, the ClickHouse passwords and the tunnel token, in an env file that is never committed.
+
+## Decided 2026-09-11
+
+- **Two repos.** `tanghyd/w3warehouse` stays Daniel's research repo. This repo copies in the parts it has proven, one PR per part, and never depends on it.
+- **The parser comes from the `tanghyd/w3grs` fork**, pinned by commit in `pipeline/parse-rs/Cargo.toml`. The fork is upstream w3grs plus one patch: an object code that is in no mapping table lands in `players[].unknown` instead of being dropped.
+- **Stat-events wait.** Start only when `w3champions/map-updater-scripts` PR #36 merges, a W3C map pool ships the library, and a GNL replay carries the `WC` payloads. R2 keeps every raw replay, so one re-drain then covers past games.
 
 ## Operations
 
