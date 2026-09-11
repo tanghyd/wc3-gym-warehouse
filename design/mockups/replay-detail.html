@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concealed Hill replay</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@3.8.0/dist/vuetify.min.css">
+<link rel="stylesheet" href="./tokens.css">
+<script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@3.8.0/dist/vuetify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<style>
+  .v-application, .v-overlay-container { font-family: var(--font-body); }
+  .v-btn, .v-tab { font-family: inherit; text-transform: none; letter-spacing: normal; }
+  .wrap { max-width: 1200px; margin-inline: auto; padding-inline: 24px; box-sizing: border-box; }
+  .band .wrap { padding-block: 30px 32px; }
+  .band h1 { color: var(--on-band); font-size: 40px; }
+  .band .v-icon { color: var(--on-band-muted); }
+  .band .race { border-radius: 50%; box-shadow: 0 0 0 1px var(--on-band-muted); }
+  .title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
+  .ico { display: inline-flex; align-items: center; gap: 4px; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+  .panel-head { flex-wrap: wrap; row-gap: 8px; }
+  .key { display: inline-block; width: 16px; height: 3px; border-radius: var(--radius); flex: none; }
+  .obj { display: block; border-radius: var(--radius); flex: none; }
+  .chart-box { position: relative; }
+  .tip { min-width: 150px; }
+  .tip-row { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .hero { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: start; }
+  .hero + .hero { margin-top: 14px; }
+  .skills { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+  .skill { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; color: var(--muted); }
+  .ev { display: flex; align-items: center; gap: 8px; min-height: 30px; font-size: 14px; }
+  .ev-l { justify-content: flex-end; text-align: right; }
+  .trail { display: flex; gap: 4px; padding: 0 0 6px 32px; }
+  .ev-l + .trail, .trail-l { justify-content: flex-end; padding: 0 32px 6px 0; }
+  .bo td { vertical-align: top; padding-block: 2px; }
+  .bo .t { width: 64px; text-align: center; color: var(--muted); font-size: 13px; padding-top: 7px; }
+  .bo th { color: var(--ink-2); font-size: 14px; }
+  .chat-row { display: grid; grid-template-columns: 44px auto 1fr; gap: 12px; align-items: center; padding: 4px 0; font-size: 14px; }
+  .state-block { padding: 48px 16px; text-align: center; }
+  @media (max-width: 600px) {
+    .wrap { padding-inline: 16px; }
+    .band .wrap { padding-block: 22px 24px; }
+    .band h1 { font-size: 30px; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script type="text/x-template" id="app-tpl">
+<v-app>
+  <header class="bar">
+    <a class="brand" href="#">GNL replays</a>
+    <nav class="d-flex ga-6">
+      <a class="navlink" href="#">Search</a><a class="navlink" href="#">Openers</a><a class="navlink" href="#">Stats</a>
+    </nav>
+  </header>
+
+  <v-main>
+    <div v-if="STATE === 'missing'" class="wrap state-block">
+      <h2 class="mb-4">No game with this id</h2>
+      <a class="btn ghost" href="#"><v-icon size="18" icon="mdi-magnify" />Go to Search</a>
+    </div>
+    <div v-else-if="STATE === 'offline'" class="wrap state-block">
+      <h2 class="mb-4">Warehouse offline</h2>
+      <button class="btn ghost"><v-icon size="18" icon="mdi-refresh" />Retry</button>
+    </div>
+    <template v-else>
+
+    <section class="band">
+      <div class="wrap">
+        <div class="title-row">
+          <h1 class="mr-auto">{{ R.map }}</h1>
+          <a class="btn" :href="R.download_url"><v-icon size="18" icon="mdi-download" style="color:inherit" />Download replay</a>
+        </div>
+        <div class="d-flex flex-wrap align-center mt-3" style="column-gap:14px; row-gap:6px; font-size:17px">
+          <template v-for="(p, i) in R.players" :key="p.player_id">
+            <span v-if="i" class="muted">v</span>
+            <span class="pname">
+              <span :class="p.won ? 'font-weight-bold' : ''">{{ p.name }}</span>
+              <race-icon :race="p.race" :size="20" />
+              <v-icon v-if="p.won" size="18" icon="mdi-trophy-outline" aria-label="Winner" />
+            </span>
+          </template>
+        </div>
+        <div class="meta mt-2 muted">
+          <span class="ico"><v-icon size="16" icon="mdi-timer-outline" />{{ fmt(R.duration_ms) }}</span>
+          <span class="ico"><v-icon size="16" icon="mdi-sword-cross" />{{ R.matchup }}</span>
+          <span class="ico"><v-icon size="16" icon="mdi-tag-outline" />Patch {{ R.version }}</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="wrap py-6">
+      <div class="grid2">
+        <div v-for="(p, i) in R.players" :key="p.player_id" class="panel">
+          <div class="panel-head">
+            <span class="key" :style="{ background: seriesColor(i) }"></span>
+            <span class="pname"><h3>{{ p.name }}</h3><race-icon :race="p.race" :size="20" /></span>
+            <span class="tag push" :class="p.won ? 'accent' : ''">
+              <v-icon v-if="p.won" size="16" icon="mdi-trophy-outline" />{{ p.won ? 'Won' : 'Lost' }}
+            </span>
+          </div>
+          <div class="panel-body">
+            <div class="d-flex align-baseline ga-2">
+              <span class="figure">{{ p.apm }}</span><span class="muted">APM</span>
+            </div>
+            <hr class="rule my-4">
+            <div v-for="h in p.heroes" :key="h.slot" class="hero">
+              <obj-icon :code="h.code" :size="40" />
+              <div>
+                <div>
+                  <span class="font-weight-medium">{{ nameOf(h.code) }}</span>
+                  <span class="muted ml-2">Level {{ h.final_level }}</span>
+                </div>
+                <div class="skills">
+                  <v-tooltip v-for="(s, j) in skillsOf(p.player_id, h.code)" :key="j" location="top"
+                    :text="'Level ' + (j + 1) + ': ' + nameOf(s.code) + ' at ' + fmt(s.t)">
+                    <template #activator="{ props }">
+                      <div v-bind="props" class="skill" tabindex="0">
+                        <obj-icon :code="s.code" :size="28" />
+                        <span>{{ fmt(s.t) }}</span>
+                      </div>
+                    </template>
+                  </v-tooltip>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mt-4">
+        <div class="panel-head" style="column-gap:16px">
+          <h2 class="mr-2" :class="xs ? 'mr-auto' : ''">APM per minute</h2>
+          <span v-for="(p, i) in R.players" :key="p.player_id" class="d-inline-flex align-center ga-2 small ink-2" :style="xs ? { order: 3 } : {}">
+            <span class="key" :style="{ background: seriesColor(i) }"></span>{{ p.name }}
+          </span>
+          <span class="chips" :class="xs ? '' : 'push'" role="group" aria-label="View">
+            <button class="chip" :class="apmView === 'chart' && 'on'" :aria-pressed="apmView === 'chart'" aria-label="Chart" @click="apmView = 'chart'"><v-icon size="18" icon="mdi-chart-line" /></button>
+            <button class="chip" :class="apmView === 'table' && 'on'" :aria-pressed="apmView === 'table'" aria-label="Table" @click="apmView = 'table'"><v-icon size="18" icon="mdi-table" /></button>
+          </span>
+        </div>
+        <div class="panel-body">
+          <apm-chart v-if="apmView === 'chart'" :players="R.players" :duration-ms="R.duration_ms" :gutter="gutter" :compact="xs" />
+          <table v-else class="rows" style="max-width:480px">
+            <thead><tr><th>Minute</th><th v-for="p in R.players" :key="p.player_id" class="num">{{ p.name }}</th></tr></thead>
+            <tbody><tr v-for="(v, m) in R.players[0].apm_per_minute" :key="m">
+              <td>{{ m + 1 }}</td><td v-for="p in R.players" :key="p.player_id" class="num">{{ p.apm_per_minute[m] }}</td>
+            </tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel mt-4">
+        <div class="panel-head">
+          <h2 class="mr-4" :class="xs ? 'mr-auto' : ''">Build timeline</h2>
+          <span class="chips" role="group" aria-label="Kinds" :style="xs ? { order: 3, width: '100%' } : {}">
+            <button v-for="k in KINDS" :key="k.k" class="chip" :class="kinds.includes(k.k) && 'on'" :aria-pressed="kinds.includes(k.k)" @click="toggleKind(k.k)">
+              <v-icon v-if="kinds.includes(k.k)" size="16" icon="mdi-check" />{{ k.label }}
+            </button>
+          </span>
+        </div>
+
+        <div v-if="xs" class="panel-body pt-2">
+          <v-tabs v-model="tab" density="compact" grow color="bronze-ink">
+            <v-tab v-for="(p, i) in R.players" :key="p.player_id" :value="i">
+              <span class="d-inline-flex align-center ga-2"><span class="key" :style="{ background: seriesColor(i) }"></span>
+              <race-icon :race="p.race" :size="18" />{{ short(p.name) }}</span>
+            </v-tab>
+          </v-tabs>
+          <hr class="rule">
+          <div class="mt-2">
+            <template v-for="e in listFor(R.players[tab].player_id)" :key="e.i">
+              <div class="d-flex align-center ga-3" style="min-height:32px">
+                <span class="muted small text-no-wrap" style="width:44px; flex:none">{{ fmt(e.t) }}</span>
+                <obj-icon :code="e.code" :size="24" />
+                <span class="small">{{ nameOf(e.code) }}</span>
+              </div>
+              <div v-if="e.skills.length" class="trail" style="padding-left:92px">
+                <obj-icon v-for="s in e.skills" :key="s.t" :code="s.code" :size="20" :title="nameOf(s.code) + ' at ' + fmt(s.t)" />
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <table v-else class="rows bo">
+          <thead><tr>
+            <th style="text-align:right"><span class="d-inline-flex align-center ga-2">{{ R.players[0].name }}<race-icon :race="R.players[0].race" :size="18" /><span class="key" :style="{ background: seriesColor(0) }"></span></span></th>
+            <th style="text-align:center">Time</th>
+            <th><span class="d-inline-flex align-center ga-2"><span class="key" :style="{ background: seriesColor(1) }"></span>{{ R.players[1].name }}<race-icon :race="R.players[1].race" :size="18" /></span></th>
+          </tr></thead>
+          <tbody>
+            <tr v-for="r in sharedRows" :key="r.t">
+              <td>
+                <template v-for="e in r.a" :key="e.i">
+                  <div class="ev ev-l"><span>{{ nameOf(e.code) }}</span><obj-icon :code="e.code" :size="24" /></div>
+                  <div v-if="e.skills.length" class="trail trail-l">
+                    <obj-icon v-for="s in e.skills" :key="s.t" :code="s.code" :size="20" :title="nameOf(s.code) + ' at ' + fmt(s.t)" />
+                  </div>
+                </template>
+              </td>
+              <td class="t">{{ fmt(r.t) }}</td>
+              <td>
+                <template v-for="e in r.b" :key="e.i">
+                  <div class="ev"><obj-icon :code="e.code" :size="24" /><span>{{ nameOf(e.code) }}</span></div>
+                  <div v-if="e.skills.length" class="trail">
+                    <obj-icon v-for="s in e.skills" :key="s.t" :code="s.code" :size="20" :title="nameOf(s.code) + ' at ' + fmt(s.t)" />
+                  </div>
+                </template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div v-if="R.chat.length" class="panel mt-4">
+        <div class="panel-head"><h2>Chat</h2></div>
+        <div class="panel-body py-3">
+          <div v-for="c in R.chat" :key="c.time_ms" class="chat-row">
+            <span class="muted">{{ fmt(c.time_ms) }}</span>
+            <span class="pname">
+              <span class="font-weight-medium">{{ player(c.player_id).name }}</span>
+              <race-icon :race="player(c.player_id).race" :size="18" />
+            </span>
+            <span>{{ c.message }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    </template>
+  </v-main>
+</v-app>
+</script>
+
+<script>
+// Rows read from the local ClickHouse w3g tables for replay dcd39e47…, 2026-09-11.
+const EVENTS=[[2,2105,"u","opeo"],[1,2601,"u","ewsp"],[2,6722,"b","oalt"],[1,8025,"b","eate"],[1,8584,"u","ewsp"],[1,16198,"u","ewsp"],[1,18264,"b","emow"],[2,19034,"u","opeo"],[2,22557,"b","otrb"],[1,27158,"b","eaom"],[2,34996,"u","opeo"],[1,35121,"u","ewsp"],[1,51953,"u","ewsp"],[2,53588,"b","ofor"],[2,58808,"u","opeo"],[2,65652,"u","opeo"],[1,71711,"u","ewsp"],[1,74187,"u","ewsp"],[2,76261,"u","opeo"],[1,91458,"u","ewsp"],[2,92385,"b","obar"],[1,95077,"u","earc"],[1,103084,"b","emow"],[2,105219,"u","opeo"],[1,105867,"u","earc"],[1,108246,"u","ewsp"],[1,110823,"u","ewsp"],[2,120827,"u","opeo"],[2,124147,"b","otrb"],[2,137034,"h","Ofar"],[2,137034,"s","AOsf","Ofar"],[1,137312,"u","ewsp"],[1,142254,"h","Edem"],[1,142254,"s","AEim","Edem"],[1,148378,"b","eden"],[2,148997,"u","opeo"],[2,158821,"u","ohun"],[1,163093,"u","ewsp"],[1,164487,"b","etoa"],[1,164642,"b","etoa"],[2,179442,"u","ohun"],[2,186007,"u","opeo"],[1,189946,"b","emow"],[1,203024,"u","earc"],[2,204291,"u","ohun"],[1,208612,"i","cnob"],[2,215492,"b","ostr"],[1,220572,"i","bspd"],[1,220758,"i","bspd"],[1,246470,"s","AEmb","Edem"],[2,257712,"u","ohun"],[2,257960,"u","ohun"],[1,262699,"u","earc"],[1,271658,"b","edob"],[2,293471,"b","ovln"],[1,293751,"u","earc"],[1,320224,"u","earc"],[1,325084,"b","eden"],[2,327343,"u","ohun"],[1,337065,"b","eaoe"],[1,339202,"b","eaoe"],[1,340870,"b","eaoe"],[2,349972,"b","otrb"],[1,355017,"u","ewsp"],[1,355420,"u","ewsp"],[1,356813,"b","emow"],[2,357898,"b","ofrt"],[2,360468,"b","obea"],[2,366193,"b","osld"],[2,378737,"g","Rotr"],[1,378923,"i","stel"],[2,384628,"b","otrb"],[2,388065,"g","Rorb"],[2,388498,"g","Rora"],[1,400465,"s","AEmb","Edem"],[2,404890,"i","hslv"],[1,409087,"g","Reuv"],[2,409429,"s","AOcl","Ofar"],[1,437913,"u","edoc"],[1,438720,"g","Redc"],[2,451758,"u","okod"],[2,462648,"i","hslv"],[1,463760,"i","moon"],[2,474385,"u","odoc"],[1,477578,"b","etoe"],[2,481511,"u","oshm"],[1,483708,"h","Ekee"],[1,483708,"s","AEer","Ekee"],[1,485721,"i","spre"],[2,493173,"i","shas"],[2,493980,"i","plcl"],[1,504456,"g","Reuv"],[2,505264,"h","Oshd"],[2,505264,"s","AOhx","Oshd"],[1,549466,"u","edoc"],[1,550177,"u","edoc"],[1,554421,"s","AEah","Ekee"],[1,559708,"i","pnvl"],[1,566516,"g","Resw"],[2,570266,"g","Robk"],[2,571446,"u","ohun"],[1,577876,"i","moon"],[1,577907,"i","plcl"],[1,590950,"g","Reib"],[1,593918,"u","edoc"],[2,598781,"s","AOsf","Ofar"],[2,618877,"u","okod"],[2,619279,"g","Rwdm"],[2,621015,"u","oshm"],[2,621354,"g","Rost"],[1,622163,"g","Redc"],[1,623803,"g","Rews"],[1,639315,"b","emow"],[2,640489,"u","otbk"],[1,642873,"i","oven"],[2,647143,"h","Otch"],[2,647143,"s","AOws","Otch"],[2,660184,"u","otbk"],[1,687876,"s","AEer","Ekee"],[1,703022,"b","emow"],[1,704846,"b","emow"],[1,705751,"g","Renb"],[1,706274,"g","Resw"],[1,707423,"u","edoc"],[1,714233,"s","AEim","Edem"],[2,743557,"s","AOhw","Oshd"],[2,757170,"g","Rowd"],[1,757294,"i","moon"],[2,757520,"g","Rost"],[1,758914,"i","plcl"],[2,759750,"u","otbk"],[2,765414,"u","oshm"],[1,770360,"g","Rerh"],[1,771843,"u","ewsp"],[1,772246,"u","ewsp"],[1,773299,"g","Reeb"],[1,773797,"g","Resi"],[1,815199,"s","AEah","Ekee"],[2,820591,"u","opeo"],[2,820932,"u","opeo"],[2,821148,"u","opeo"],[1,830164,"u","ewsp"],[1,830812,"u","edoc"],[1,832484,"u","edry"],[1,833596,"g","Resw"],[1,833754,"g","Resw"],[2,856092,"u","opeo"],[2,856496,"u","opeo"],[1,867144,"u","edoc"],[1,869125,"g","Rerh"],[1,899394,"u","edoc"],[1,899518,"u","edoc"]];
+const NAMES={"opeo":"Peon","ewsp":"Wisp","oalt":"Altar of Storms","eate":"Altar of Elders","emow":"Moon Well","otrb":"Orc Burrow","eaom":"Ancient of War","ofor":"War Mill","obar":"Barracks","earc":"Archer","Ofar":"Far Seer","AOsf":"Feral Spirit","Edem":"Demon Hunter","AEim":"Immolation","eden":"Ancient of Wonders","ohun":"Troll Headhunter/Berserker","etoa":"Tree of Ages","cnob":"Circlet of Nobility","ostr":"Stronghold","bspd":"Boots of Speed","AEmb":"Mana Burn","edob":"Hunter's Hall","ovln":"Voodoo Lounge","eaoe":"Ancient of Lore","ofrt":"Fortress","obea":"Beastiary","osld":"Spirit Lodge","Rotr":"Troll Regeneration","stel":"Staff of Teleportation","Rorb":"Reinforced Defenses","Rora":"Ranged Weapons","hslv":"Healing Salve","Reuv":"Ultravision","AOcl":"Chain Lighting","edoc":"Druid of the Claw","Redc":"Druid of the Claw Training","okod":"Kodo Beast","moon":"Moonstone","odoc":"Troll Witch Doctor","etoe":"Tree of Eternity","oshm":"Shaman","Ekee":"Keeper of the Grove","AEer":"Entangling Roots","spre":"Staff of Preservation","shas":"Scroll of Speed","plcl":"Lesser Clarity Potion","Oshd":"Shadow Hunter","AOhx":"Hex","AEah":"Thorns Aura","pnvl":"Potion of Lesser Invulnerability","Resw":"Strength of the Wild","Robk":"Berserker Upgrade","Reib":"Improved Bows","Rwdm":"War Drums Damage Increase","Rost":"Shaman Training","Rews":"Well Spring","otbk":"Troll Headhunter/Berserker","oven":"Orb of Venom","Otch":"Tauren Chieftain","AOws":"War Stomp","Renb":"Nature's Blessing","AOhw":"Healing Wave","Rowd":"Witch Doctor Training","Rerh":"Reinforced Hides","Reeb":"Mark of the Claw","Resi":"Abolish Magic","edry":"Dryad"};
+const R = {
+  replay_id: 'dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8',
+  map: 'Concealed Hill', matchup: 'NvO', duration_ms: 937219, version: '2.00', winning_team_id: 0,
+  download_url: '#',
+  players: [
+    { player_id: 1, name: 'thanks#11187', race: 'N', team_id: 0, won: true, apm: 140,
+      apm_per_minute: [110,96,162,130,149,136,121,135,152,137,149,157,160,151,147,102],
+      heroes: [{ slot: 0, code: 'Edem', final_level: 4 }, { slot: 1, code: 'Ekee', final_level: 4 }] },
+    { player_id: 2, name: 'Okeanos#22605', race: 'O', team_id: 1, won: false, apm: 89,
+      apm_per_minute: [54,36,72,84,98,100,88,74,114,105,107,100,65,100,142,55],
+      heroes: [{ slot: 0, code: 'Ofar', final_level: 3 }, { slot: 1, code: 'Oshd', final_level: 2 }, { slot: 2, code: 'Otch', final_level: 1 }] },
+  ],
+  chat: [
+    { time_ms: 9573, player_id: 1, mode: 'All', message: 'glhf' },
+    { time_ms: 14188, player_id: 1, mode: 'All', message: '-commands' },
+    { time_ms: 34008, player_id: 1, mode: 'All', message: '-ping' },
+  ],
+}
+// mockup-only state switch: ?state=missing | offline (frontend.md 12.4, 5.2)
+const STATE = new URLSearchParams(location.search).get('state')
+const EV = EVENTS.map(([p, t, k, code, hero], i) => ({ i, p, t, k, code, hero }))
+const KINDS = [
+  { k: 'b', label: 'Buildings', verb: 'Building' }, { k: 'u', label: 'Units', verb: 'Unit' },
+  { k: 'g', label: 'Upgrades', verb: 'Upgrade' }, { k: 'h', label: 'Heroes', verb: 'Hero' },
+  { k: 'i', label: 'Items', verb: 'Item' },
+]
+const RACES = { H: ['Human', 'HUMAN'], O: ['Orc', 'ORC'], N: ['Night Elf', 'NIGHT_ELF'], U: ['Undead', 'UNDEAD'], R: ['Random', 'RANDOM'] }
+
+const { createApp, ref, computed, watchEffect, onMounted, onBeforeUnmount } = Vue
+const icons = ref({})
+fetch('../../frontend/icons.json').then(r => r.json()).then(j => { icons.value = j }).catch(() => {})
+const iconSrc = code => icons.value[code] ? '../../frontend/icons/' + icons.value[code] : null
+const nameOf = code => NAMES[code] || code
+const fmt = ms => Math.floor(ms / 60000) + ':' + String(Math.floor(ms / 1000) % 60).padStart(2, '0')
+const short = n => n.split('#')[0]
+const seriesColor = i => `var(--series-${i + 1})`
+const skillsOf = (p, hero) => EV.filter(e => e.k === 's' && e.p === p && e.hero === hero)
+// ticks on whole minutes, density from width (gnl DivisionBracketing.vue:180)
+const minuteTicks = (maxMin, plotW) => {
+  const n = Math.max(2, Math.round(plotW / 90))
+  const step = [1, 2, 5, 10, 15, 20, 30].find(s => maxMin / s <= n) || 60
+  return d3.range(0, maxMin + 1e-9, step)
+}
+function useWidth(el, min = 280) {
+  const w = ref(0); let ro
+  onMounted(() => { ro = new ResizeObserver(([e]) => { w.value = Math.max(min, Math.floor(e.contentRect.width)) }); ro.observe(el.value) })
+  onBeforeUnmount(() => ro && ro.disconnect())
+  return w
+}
+
+const RaceIcon = {
+  props: { race: String, size: { type: Number, default: 20 } },
+  setup: p => ({ r: computed(() => RACES[p.race]) }),
+  template: `<v-tooltip v-if="r" location="top" :text="r[0]"><template #activator="{ props }">
+    <img v-bind="props" class="race" :src="'../../frontend/race-icons/' + r[1] + '.png'" :alt="r[0]" :style="{ width: size + 'px', height: size + 'px' }" /></template></v-tooltip>`,
+}
+const ObjIcon = {
+  props: { code: String, size: { type: Number, default: 24 } },
+  setup: p => ({ src: computed(() => iconSrc(p.code)), name: computed(() => nameOf(p.code)) }),
+  template: `<img v-if="src" :src="src" :width="size" :height="size" :alt="name" class="obj" />
+    <v-icon v-else :size="size" icon="mdi-help-box-outline" :aria-label="name" />`,
+}
+
+const ApmChart = {
+  props: { players: Array, durationMs: Number, gutter: Number, compact: Boolean },
+  setup(props) {
+    const box = ref(null), gx = ref(null), gy = ref(null), hi = ref(null)
+    const width = useWidth(box)
+    const H = 200, T = 12, AX = 28
+    const m = computed(() => props.compact ? { l: 36, r: 12 } : { l: props.gutter, r: 88 })
+    const maxMin = props.durationMs / 60000
+    const x = computed(() => d3.scaleLinear([0, maxMin], [m.value.l, width.value - m.value.r]))
+    const y = computed(() => d3.scaleLinear().domain([0, d3.max(props.players.flatMap(p => p.apm_per_minute))]).nice().range([T + H, T]))
+    const n = props.players[0].apm_per_minute.length
+    const series = computed(() => props.players.map((p, i) => {
+      const pts = p.apm_per_minute.map((v, k) => [x.value(k + 0.5), y.value(v)])
+      return { p, i, d: d3.line()(pts), end: pts[pts.length - 1], color: seriesColor(i) }
+    }))
+    const endLabels = computed(() => {
+      if (props.compact || width.value < 600) return []
+      const e = series.value.map(s => s.end[1])
+      return Math.abs(e[0] - e[1]) >= 16 ? series.value : []
+    })
+    watchEffect(() => {
+      if (!gx.value || !width.value) return
+      const w = width.value - m.value.l - m.value.r
+      d3.select(gx.value).call(d3.axisBottom(x.value).tickValues(minuteTicks(maxMin, w)).tickFormat(d => d + ':00').tickSizeOuter(0))
+      d3.select(gy.value).call(d3.axisLeft(y.value).ticks(4).tickSize(-w).tickSizeOuter(0)).call(g => g.select('.domain').remove())
+    }, { flush: 'post' })
+    const move = e => {
+      const px = e.clientX - e.currentTarget.getBoundingClientRect().left
+      hi.value = Math.max(0, Math.min(n - 1, Math.round(x.value.invert(px) - 0.5)))
+    }
+    const key = e => {
+      if (e.key === 'ArrowRight') hi.value = Math.min(n - 1, (hi.value ?? -1) + 1)
+      else if (e.key === 'ArrowLeft') hi.value = Math.max(0, (hi.value ?? n) - 1)
+    }
+    const tip = computed(() => {
+      if (hi.value == null) return null
+      const cx = x.value(hi.value + 0.5)
+      const left = cx + 180 > width.value ? cx - 172 : cx + 12
+      const rows = series.value.map(s => ({ ...s, v: s.p.apm_per_minute[hi.value] })).sort((a, b) => b.v - a.v)
+      return { cx, left, rows, label: `Minute ${hi.value + 1}` }
+    })
+    return { box, gx, gy, hi, width, H, T, AX, m, x, y, series, endLabels, move, key, tip, short }
+  },
+  template: `<div ref="box" class="chart-box">
+    <svg v-if="width" :width="width" :height="T + H + AX" tabindex="0" role="img" aria-label="APM per minute, both players"
+      @pointermove="move" @pointerleave="hi = null" @keydown="key" @blur="hi = null" style="display:block; touch-action:pan-y">
+      <g ref="gy" class="axis" :transform="'translate(' + m.l + ',0)'" />
+      <g ref="gx" class="axis" :transform="'translate(0,' + (T + H) + ')'" />
+      <line v-if="tip" :x1="tip.cx" :x2="tip.cx" :y1="T" :y2="T + H" style="stroke: var(--faint)" />
+      <path v-for="s in series" :key="s.i" :d="s.d" fill="none" :style="{ stroke: s.color }" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+      <circle v-for="s in series" :key="'e' + s.i" :cx="s.end[0]" :cy="s.end[1]" r="4" :style="{ fill: s.color, stroke: 'var(--surface)' }" stroke-width="2" />
+      <template v-if="tip"><circle v-for="s in tip.rows" :key="'h' + s.i" :cx="tip.cx" :cy="y(s.v)" r="4.5" :style="{ fill: s.color, stroke: 'var(--surface)' }" stroke-width="2" /></template>
+      <text v-for="s in endLabels" :key="'l' + s.i" :x="s.end[0] + 10" :y="s.end[1] + 4" font-size="13" style="fill: var(--ink-2)">{{ short(s.p.name) }}</text>
+    </svg>
+    <div v-if="tip" class="tip" :style="{ left: tip.left + 'px', top: '8px' }">
+      <div class="muted mb-1">{{ tip.label }}</div>
+      <div v-for="s in tip.rows" :key="s.i" class="tip-row"><span class="key" :style="{ background: s.color }"></span>
+        <b>{{ s.v }}</b><span>{{ s.p.name }}</span></div>
+    </div>
+  </div>`,
+}
+
+const App = {
+  template: '#app-tpl',
+  setup() {
+    const { xs } = Vuetify.useDisplay()
+    const kinds = ref(KINDS.map(k => k.k))
+    const toggleKind = k => { kinds.value = kinds.value.includes(k) ? kinds.value.filter(x => x !== k) : [...kinds.value, k] }
+    const apmView = ref('chart')
+    const tab = ref(0)
+    const gutter = 88
+    const shownEvents = computed(() => EV.filter(e => kinds.value.includes(e.k === 's' ? 'h' : e.k)))
+    // skill rows nest under their hero_trained row (docs/design/frontend.md 12.2)
+    const withSkills = e => ({ ...e, skills: e.k === 'h' ? skillsOf(e.p, e.code) : [] })
+    const listFor = p => shownEvents.value.filter(e => e.p === p && e.k !== 's').map(withSkills)
+    const sharedRows = computed(() => {
+      const rows = new Map()
+      shownEvents.value.filter(e => e.k !== 's').forEach(e => {
+        if (!rows.has(e.t)) rows.set(e.t, { t: e.t, a: [], b: [] })
+        rows.get(e.t)[e.p === R.players[0].player_id ? 'a' : 'b'].push(withSkills(e))
+      })
+      return [...rows.values()]
+    })
+    const player = id => R.players.find(p => p.player_id === id)
+    return { R, STATE, KINDS, xs, kinds, toggleKind, apmView, tab, gutter, shownEvents, listFor, sharedRows, player,
+      fmt, short, nameOf, seriesColor, skillsOf }
+  },
+}
+
+// Vuetify parses hex, so the theme reads the tokens.css values (frontend.md 6.2)
+const css = getComputedStyle(document.documentElement)
+const tok = n => css.getPropertyValue('--' + n).trim()
+const THEME = { background: 'ground', surface: 'surface', 'on-background': 'ink', 'on-surface': 'ink', primary: 'bronze',
+  'on-primary': 'on-bronze', secondary: 'ink-2', error: 'danger', 'surface-variant': 'band', 'on-surface-variant': 'on-band', 'bronze-ink': 'bronze-ink' }
+createApp(App)
+  .component('race-icon', RaceIcon).component('obj-icon', ObjIcon)
+  .component('apm-chart', ApmChart)
+  .use(Vuetify.createVuetify({
+    theme: { defaultTheme: 'light', themes: { light: { dark: false, colors: Object.fromEntries(Object.entries(THEME).map(([k, v]) => [k, tok(v)])) } } },
+    defaults: { VTooltip: { openOnClick: true } },
+  }))
+  .mount('#app')
+</script>
+</body>
+</html>
