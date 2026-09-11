@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="./tokens.css">
 <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@3.8.0/dist/vuetify.min.js"></script>
+<script src="./theme.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
 <style>
   .v-application, .v-overlay-container { font-family: var(--font-body); }
@@ -16,8 +17,8 @@
   .wrap { max-width: 1200px; margin-inline: auto; padding-inline: 24px; box-sizing: border-box; }
   .band .wrap { padding-block: 30px 32px; }
   .band h1 { color: var(--on-band); font-size: 40px; }
-  .band .v-icon { color: var(--on-band-muted); }
-  .band .race { border-radius: 50%; box-shadow: 0 0 0 1px var(--on-band-muted); }
+  .band .v-icon { color: var(--band-muted); }
+  .band .race { border-radius: 50%; box-shadow: 0 0 0 1px var(--band-muted); }
   .title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
   .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
   .ico { display: inline-flex; align-items: center; gap: 4px; }
@@ -38,13 +39,13 @@
   .ev-l + .trail, .trail-l { justify-content: flex-end; padding: 0 32px 6px 0; }
   .bo td { vertical-align: top; padding-block: 2px; }
   .bo .t { width: 64px; text-align: center; color: var(--muted); font-size: 13px; padding-top: 7px; }
-  .bo th { color: var(--ink-2); font-size: 14px; }
+  .bo th { color: var(--secondary); font-size: 14px; }
   .chat-row { display: grid; grid-template-columns: 44px auto 1fr; gap: 12px; align-items: center; padding: 4px 0; font-size: 14px; }
   .state-block { padding: 48px 16px; text-align: center; }
   @media (max-width: 600px) {
     .wrap { padding-inline: 16px; }
     .band .wrap { padding-block: 22px 24px; }
-    .band h1 { font-size: 30px; }
+    .band h1 { font-size: 28px; }
   }
 </style>
 </head>
@@ -58,6 +59,7 @@
     <nav class="d-flex ga-6">
       <a class="navlink" href="#">Search</a><a class="navlink" href="#">Openers</a><a class="navlink" href="#">Stats</a>
     </nav>
+    <theme-menu class="push"></theme-menu>
   </header>
 
   <v-main>
@@ -98,7 +100,7 @@
     <div class="wrap py-6">
       <div class="grid2">
         <div v-for="(p, i) in R.players" :key="p.player_id" class="panel">
-          <div class="panel-head">
+          <div class="card-head">
             <span class="key" :style="{ background: seriesColor(i) }"></span>
             <span class="pname"><h3>{{ p.name }}</h3><race-icon :race="p.race" :size="20" /></span>
             <span class="tag push" :class="p.won ? 'accent' : ''">
@@ -135,17 +137,19 @@
       </div>
 
       <div class="panel mt-4">
-        <div class="panel-head" style="column-gap:16px">
-          <h2 class="mr-2" :class="xs ? 'mr-auto' : ''">APM per minute</h2>
-          <span v-for="(p, i) in R.players" :key="p.player_id" class="d-inline-flex align-center ga-2 small ink-2" :style="xs ? { order: 3 } : {}">
-            <span class="key" :style="{ background: seriesColor(i) }"></span>{{ p.name }}
-          </span>
-          <span class="chips" :class="xs ? '' : 'push'" role="group" aria-label="View">
+        <div class="panel-head">
+          <h2 class="mr-auto">APM per minute</h2>
+          <span class="chips" role="group" aria-label="View">
             <button class="chip" :class="apmView === 'chart' && 'on'" :aria-pressed="apmView === 'chart'" aria-label="Chart" @click="apmView = 'chart'"><v-icon size="18" icon="mdi-chart-line" /></button>
             <button class="chip" :class="apmView === 'table' && 'on'" :aria-pressed="apmView === 'table'" aria-label="Table" @click="apmView = 'table'"><v-icon size="18" icon="mdi-table" /></button>
           </span>
         </div>
         <div class="panel-body">
+          <div v-if="apmView === 'chart'" class="d-flex flex-wrap mb-3" style="column-gap:20px; row-gap:4px">
+            <span v-for="(p, i) in R.players" :key="p.player_id" class="d-inline-flex align-center ga-2 small ink-2">
+              <span class="key" :style="{ background: seriesColor(i) }"></span>{{ p.name }}
+            </span>
+          </div>
           <apm-chart v-if="apmView === 'chart'" :players="R.players" :duration-ms="R.duration_ms" :gutter="gutter" :compact="xs" />
           <table v-else class="rows" style="max-width:480px">
             <thead><tr><th>Minute</th><th v-for="p in R.players" :key="p.player_id" class="num">{{ p.name }}</th></tr></thead>
@@ -167,7 +171,7 @@
         </div>
 
         <div v-if="xs" class="panel-body pt-2">
-          <v-tabs v-model="tab" density="compact" grow color="bronze-ink">
+          <v-tabs v-model="tab" density="compact" grow color="primary-text">
             <v-tab v-for="(p, i) in R.players" :key="p.player_id" :value="i">
               <span class="d-inline-flex align-center ga-2"><span class="key" :style="{ background: seriesColor(i) }"></span>
               <race-icon :race="p.race" :size="18" />{{ short(p.name) }}</span>
@@ -356,7 +360,7 @@ const ApmChart = {
       <path v-for="s in series" :key="s.i" :d="s.d" fill="none" :style="{ stroke: s.color }" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
       <circle v-for="s in series" :key="'e' + s.i" :cx="s.end[0]" :cy="s.end[1]" r="4" :style="{ fill: s.color, stroke: 'var(--surface)' }" stroke-width="2" />
       <template v-if="tip"><circle v-for="s in tip.rows" :key="'h' + s.i" :cx="tip.cx" :cy="y(s.v)" r="4.5" :style="{ fill: s.color, stroke: 'var(--surface)' }" stroke-width="2" /></template>
-      <text v-for="s in endLabels" :key="'l' + s.i" :x="s.end[0] + 10" :y="s.end[1] + 4" font-size="13" style="fill: var(--ink-2)">{{ short(s.p.name) }}</text>
+      <text v-for="s in endLabels" :key="'l' + s.i" :x="s.end[0] + 10" :y="s.end[1] + 4" font-size="13" style="fill: var(--secondary)">{{ short(s.p.name) }}</text>
     </svg>
     <div v-if="tip" class="tip" :style="{ left: tip.left + 'px', top: '8px' }">
       <div class="muted mb-1">{{ tip.label }}</div>
@@ -393,18 +397,10 @@ const App = {
   },
 }
 
-// Vuetify parses hex, so the theme reads the tokens.css values (frontend.md 6.2)
-const css = getComputedStyle(document.documentElement)
-const tok = n => css.getPropertyValue('--' + n).trim()
-const THEME = { background: 'ground', surface: 'surface', 'on-background': 'ink', 'on-surface': 'ink', primary: 'bronze',
-  'on-primary': 'on-bronze', secondary: 'ink-2', error: 'danger', 'surface-variant': 'band', 'on-surface-variant': 'on-band', 'bronze-ink': 'bronze-ink' }
 createApp(App)
   .component('race-icon', RaceIcon).component('obj-icon', ObjIcon)
-  .component('apm-chart', ApmChart)
-  .use(Vuetify.createVuetify({
-    theme: { defaultTheme: 'light', themes: { light: { dark: false, colors: Object.fromEntries(Object.entries(THEME).map(([k, v]) => [k, tok(v)])) } } },
-    defaults: { VTooltip: { openOnClick: true } },
-  }))
+  .component('apm-chart', ApmChart).component('theme-menu', gnlMockup.ThemeMenu)
+  .use(gnlMockup.vuetify())
   .mount('#app')
 </script>
 </body>

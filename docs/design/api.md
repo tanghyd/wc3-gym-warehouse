@@ -3,8 +3,8 @@
 - Scope: the HTTP contract of the Rust service (axum + serde + reqwest) for the stories in `stories.md`. SQL shape lives in `queries.md`; SQL appears here only where it fixes a contract rule. Rule names come from the `clickhouse-best-practices` skill.
 - `w3warehouse:` = `/home/daniel/code/warcraft/w3warehouse/services/api/src/api/` at 8a204c9. `gnl-frontend:` = `wc3-gym-frontend` at `origin/main`.
 - Examples are real output from the 3 fixture replays (6 players, 323 `replay_events` rows) unless marked "cut".
-- **(F)** = measured 2026-09-11 on 26.9.1 over the dev load: 6,567 replays (6,564 from `gs://w3warehouse-05b6-replays/w3g/gnl/` + 3 fixtures, loaded by parse bin + `INSERT ... FROM file()`), 950,132 `replay_events`, 12,881 `replay_openers` rows. Debugging only; the org deploy holds only app-reported GNL replays. **(X)** = measured on the fixtures.
-- PR 2 pins compose.yaml:12, :43 and infrastructure/ci.yml:26 to `clickhouse-server:26.8` (26.8 LTS; today 24.10). All facts were measured on 26.9; PR 2 re-runs them on 26.8, and re-measures fixture numbers after the repeat flag (2.1).
+- **(F)** = measured 2026-09-11 on 26.9.1 (host binary) over the dev load: 6,567 replays (6,564 from `gs://w3warehouse-05b6-replays/w3g/gnl/` + 3 fixtures, loaded by parse bin + `INSERT ... FROM file()`), 950,132 `replay_events`, 12,881 `replay_openers` rows. Debugging only; the org deploy holds only app-reported GNL replays. **(X)** = measured on the fixtures.
+- PR 2 pins compose.yaml:12, :43 and infrastructure/ci.yml:26 to `clickhouse-server:26.8` (26.8 LTS; today 24.10). All facts were measured on 26.9 (host binary); PR 2 re-runs them in the 26.8 container, and re-measures fixture numbers after the repeat flag (2.1).
 
 ## 1. Routes
 
@@ -145,7 +145,7 @@ Every non-2xx answer is `{"error": "<text>"}` with `Cache-Control: no-store`. Th
 
 | Response | `Cache-Control` | Why |
 |---|---|---|
-| `GET /mappings` 200 | `public, max-age=3600` | Changes only when `just mappings` runs (justfile:31-35) |
+| `GET /mappings` 200 | `public, max-age=3600` | Changes only when `just local::mappings` or `just box::mappings` runs (rust.md §16) |
 | `GET /replays/{id}` 200 | `public, max-age=3600` | Changes only on a re-stage (PLAN.md:106). No private chat (3.8). |
 | `GET /filters`, `/openers`, `/openers/replays`, `/stats` 200 | `public, max-age=60` | Report-to-searchable is already minutes (PLAN.md:54) |
 | `POST /search`, `GET /health`, every error | `no-store` | An error must not stick |

@@ -4,19 +4,19 @@
 - Scope: the Vite + Vue 3 + Vuetify 3 app that replaces `frontend/index.html`, for the four stories in `docs/design/stories.md`. The HTTP contract is `docs/design/api.md`. This file does not change it.
 - Paths are relative to this repo. `gnl:` means `wc3-gym-frontend` at `origin/main`. `vuetify:` means `node_modules/vuetify/lib/` in the gnl clone (Vuetify 3.8.0).
 - Data: examples in sections 4 and 12 come from the 3 fixture replays. Examples in sections 10 and 11 and the mockups come from the local dev set: 6,567 replays (`SELECT count() FROM w3g.replays FINAL`, 2026-09-11; 6,564 from `gs://w3warehouse-05b6-replays/w3g/gnl/` plus the 3 fixtures), measured on 26.9. The dev set is for debugging only. The org deploy holds only app-reported GNL replays.
-- Palette checks: the `dataviz` skill validator (`scripts/validate_palette.js`), run 2026-09-11 (section 6.5).
+- Palette checks: the `dataviz` skill validator (`scripts/validate_palette.js`), run 2026-09-11 on the light and dark surfaces (section 6.5).
 - This file also owns how the app ships: Vite dev, build, nginx, compose and CI (section 14).
 
 ## 1. Summary
 
 | Part | Decision |
 |---|---|
-| Stack | Vue 3, Vuetify 3, vue-router 4, `d3-scale`, `d3-axis`, `d3-selection`, `d3-shape`. Same versions as gnl `package.json:13-26`. No Pinia. |
+| Stack | Vue 3, Vuetify 3, vue-router 4, `d3-scale`, `d3-axis`, `d3-selection`, `d3-shape`. Same versions as gnl `package.json:13-26`. `@fontsource/alegreya`, `alegreya-sans`, `noto-sans-kr`, `noto-sans-sc` 5.3.0 (6.3). No Pinia. |
 | Routes | `/search`, `/openers`, `/stats`, `/replays/:id`. History mode. `/` redirects to `/search`. |
-| Shell | The gnl shell: `v-app-bar` with title and inline nav links, a `v-navigation-drawer` below md (gnl: `src/App.vue:147-148, 214`). |
+| Shell | The gnl shell: `v-app-bar` with title, inline nav links and the theme menu, a `v-navigation-drawer` below md (gnl: `src/App.vue:150-151, 205-214, 217`). |
 | State | The route query holds every filter, step, sort, page and selection. A pasted link gives the same result. |
 | Server data | Fetched per page from `/api/...`. The HTTP cache (api.md 2.7) serves repeats. No client store. |
-| Look | The GNL stone-and-bronze style, light only (section 6). Every colour is a named token. No colour or font outside the tokens, except one `ground` in `index.html` (6.2). |
+| Look | The GNL stone-and-bronze theme in light and dark, approved 2026-09-11 (D1-D15, section 6). A theme menu: Light, Dark, System, as in gnl. Every colour is a theme token. No colour outside the theme block, except the two `background` values in the pre-paint script (6.2). |
 | The one bold element | Build orders render as rows of Warcraft III command-card icons: the picker, the step list, the opener trail and the timeline. Everything else stays quiet (6.4). |
 | Orders | Replays record commands, not outcomes. Every screen that shows orders or counts says "ordered". Flagged repeats (`is_repeat = 1`, PR 2) never show and never count. |
 | Names | `{name} {race}` until the dims loader lands (after the four pages). No flag, no MMR, no season or team filter. |
@@ -28,32 +28,32 @@ PR 10 moves `frontend/index.html` (1046 lines, CDN Vue) to `frontend/public/lega
 
 ```
 frontend/
-  index.html               Vite entry. Google Fonts links and the `ground` style (6.2, 6.3).
+  index.html               Vite entry. The pre-paint script (6.2).
   package.json             deps as section 1. "test": node --test "src/**/*.test.mjs" (gnl: package.json:8).
   package-lock.json        committed; npm ci needs it (section 14)
   vite.config.js           @ alias, /api proxy with rewrite (14.2)
   public/icons/            the 530 command-card PNGs, moved from frontend/icons/ unchanged
   public/legacy/           the old page, PR 10 to PR 14
   src/
-    main.js                createVuetify with the theme block (6.2), router, global components
+    main.js                createVuetify with the light and dark theme blocks (6.2), the @fontsource imports (6.3), router, global components
     App.vue                app bar, nav links, drawer below md, <router-view>
     router.js              flat routes (section 3)
     api.js                 fetch client (section 5)
     query.js               URL codec (section 4)
     query.test.mjs         the one test file (4.4)
     format.js              fmtPct, m:ss format and parse, WIN_RATE_FLOOR (section 13)
-    tokens.js              the colour tokens (6.1)
+    theme.js               light, dark or system in localStorage (6.2; gnl src/helpers/theme.js)
     races.js               gnl: src/helpers/races.js, keyed by H O N U R
     objects.js             /mappings cache, icons.json lookup, code -> event_type
     icons.json             moved from frontend/icons.json, imported as a module
     assets/base.css        gnl: src/assets/base.css, verbatim
-    assets/style.css       fonts, type classes, field and ghost-button borders (6.2, 6.3)
+    assets/style.css       the Vuetify font overrides and type classes (6.3)
     assets/raceIcons/*.png moved from frontend/race-icons/ (same 5 files as gnl)
     components/
       PlayerName.vue  RaceIcon.vue  RaceSelect.vue  GroupedTable.vue   (copied, section 7)
       FilterRow.vue  ObjectIcon.vue  ObjectPicker.vue  StepList.vue (one slot's steps)  ReplayTable.vue  StateBlock.vue
       charts/useWidth.js   ResizeObserver width ref (gnl: DivisionBracketing.vue:121-122, 130)
-      charts/ChartTooltip.vue  ColumnChart.vue  BarList.vue  DivergingBars.vue  ApmLine.vue  BuildTimeline.vue
+      charts/ChartTooltip.vue  ColumnChart.vue  BarList.vue  WinRateBars.vue  ApmLine.vue  BuildTimeline.vue
     views/
       SearchView.vue  OpenersView.vue  StatsView.vue  ReplayView.vue  NotFoundView.vue
 infrastructure/docker/
@@ -79,8 +79,8 @@ infrastructure/docker/
 
 | Width | Shell (gnl `src/App.vue`) |
 |---|---|
-| md and up | `v-app-bar` (line 147). `v-app-bar-title` "GNL replays", a link to `/search`. Links Search, Openers, Stats in the append slot (lines 153-174, the `!smAndDown` branch). |
-| below md | The same bar with a `v-app-bar-nav-icon` (line 148). It opens a `temporary` `v-navigation-drawer` with the three links (line 214). |
+| md and up | `v-app-bar` (line 150). `v-app-bar-title` "GNL replays", a link to `/search`. Links Search, Openers, Stats in the append slot (lines 157-178, the `!smAndDown` branch), then the theme menu (lines 205-214, 6.2). |
+| below md | The same bar with a `v-app-bar-nav-icon` (line 151) and the theme menu. The icon opens a `temporary` `v-navigation-drawer` with the three links (line 217). |
 
 - The title shows at every width.
 - Nav links keep the shared keys, so a filter set follows the reader.
@@ -198,91 +198,111 @@ without=eden                      no Ancient of Wonders ordered, up to 3 codes (
 
 ## 6. Visual system
 
-- Light only. The incoming GNL app style (Daniel, 2026-09-11) replaces stock Vuetify blue and Roboto.
-- Reference: `scratch/gnl-front-door/` in the gym root. `_head.txt` holds the component CSS. `gnl-front-door.html` is the built page, rendered and checked 2026-09-11.
-- The mockups link `design/mockups/tokens.css`: the tokens as CSS custom properties, the font import, base type and shared classes. Where it and this section differ, this section wins.
-- No dark theme and no theme control ship (section 16, question 2).
+- The GNL stone-and-bronze theme, light and dark, approved by Daniel 2026-09-11 (gym `PLAN.md`, "THEME DECISIONS", D1-D15). It replaces stock Vuetify blue and Roboto. The warehouse takes the GNL theme block as it is and adds three chart colours (6.5).
+- Reference: `scratch/theme-proposal/stone-bronze-theme.html` in the gym root: the token table, contrast, and sample screens in both modes.
+- The mockups link `design/mockups/tokens.css` (light by default, dark under `<html data-theme="dark">`) and `design/mockups/theme.js` (the 6.2 block fed from `tokens.css`, and the theme menu). `?theme=dark` renders a mockup dark. Where they and this section differ, this section wins.
 
 ### 6.1 Tokens
 
-`src/tokens.js` holds every colour as a named token. The Vuetify theme reads it (6.2). `tokens.css` copies it with the same names (`--line` in a mockup is `rgb(var(--v-theme-line))` in the app). No component holds a colour.
+Every colour is a Vuetify theme colour. Components name tokens (`color="primary"`, `text-win`, `rgb(var(--v-theme-win))`), never hex.
 
-| Token | Value | Use | Vuetify colour |
+| Token | Light | Dark | Use |
 |---|---|---|---|
-| `ground` | `#E8E9E3` | page ground | `background` |
-| `surface` | `#F4F5F1` | app bar, panels, fields, chart surface | `surface` |
-| `fill` | `#E1E4DD` | read-only fields, row hover, disabled buttons | |
-| `tag` | `#DCE1D8` | tag fill | |
-| `ink` | `#1A241E` | text, headings, numbers | `on-background`, `on-surface` |
-| `ink-2` | `#3F4C43` | secondary text, tag and chip text | `secondary`, `on-tag` |
-| `muted` | `#5F6B61` | labels, meta, column heads, axis text, numbers under the win-rate floor | |
-| `faint` | `#6E7A70` | disabled and read-only text, placeholders. Never data text. | |
-| `line` | `#CBD1C7` | 1 px dividers, panel borders, grid and axis lines, chart tracks | the `border-color` variable |
-| `field-line` | `#B9C1B6` | field and chip borders | |
-| `field-line-strong` | `#A7B1A4` | field hover, ghost-button border | |
-| `bronze` | `#9A5B18` | the accent: primary button, active nav underline, selected row bar, selected chip border, focus ring | `primary` |
-| `bronze-ink` | `#7C4912` | bronze text: links, quiet buttons, selected chip text | |
-| `on-bronze` | `#FBF7F1` | text on `bronze` | `on-primary` |
-| `band` | `#1C2420` | the dark band: tooltips | `surface-variant` |
-| `on-band` | `#F2F4ED` | text on `band` | `on-surface-variant` |
-| `on-band-muted` | `#B9C4B6` | muted text on `band` | |
-| `danger` | `#8C3B2A` | error text, error alert, busy and offline state | `error` |
-| `series-1` | `#2A6496` | player 1 mark (lower `player_id`) | |
-| `series-2` | `#C0721C` | player 2 mark | |
-| `win` | `#2A6496` | win mark, above 50 % | |
-| `loss` | `#B5452F` | loss mark, below 50 % | |
-| `magnitude` | `#7D877E` | one-series bars and columns | |
+| **Vuetify colours** | | | |
+| `background` | `#E8E9E3` | `#151B17` | page ground |
+| `surface` | `#F4F5F1` | `#1E2620` | app bar, cards, tables, the chart surface |
+| `surface-bright` | `#FAFBF8` | `#29322B` | menus over cards |
+| `surface-light` | `#E1E4DD` | `#273029` | filled fields, row hover |
+| `surface-variant` | `#1C2420` | `#D5DBD1` | tooltips (Vuetify's default) |
+| `on-surface-variant` | `#F2F4ED` | `#1A241E` | tooltip text |
+| `on-background`, `on-surface` | `#1A241E` | `#E7EBE3` | text, headings, numbers |
+| `primary` | `#9A5B18` | `#D08B3C` | bronze: primary button, card title bars, active nav underline, selected row bar, selected chip border, focus ring |
+| `primary-darken-1` | `#7C4912` | `#B57430` | pressed and hover bronze |
+| `on-primary` | `#FBF7F1` | `#1A140C` | text on bronze |
+| `secondary` | `#3F4C43` | `#C3CCC1` | secondary text, chip text |
+| `secondary-darken-1` | `#2E3931` | `#A7B1A4` | pressed slate |
+| `on-secondary` | `#F2F4ED` | `#1A241E` | text on slate |
+| `error` | `#8C3B2A` | `#E8836A` | error alert, field errors, offline and busy states. Never a data colour (D4). |
+| `warning` | `#A65200` | `#F0A04B` | deep orange, never amber (D9). No warehouse view uses it. |
+| `info` | `#2F6690` | `#7FB0DA` | neutral notices, an "In progress" chip (D12). No warehouse view uses it. |
+| `success` | `#3D7A4A` | `#6DB37A` | labelled states only, never a data colour. No warehouse view uses it. |
+| **GNL custom colours** | | | |
+| `primary-text` | `#7C4912` | `#E3A45F` | bronze as text: links, quiet buttons, selected chip text |
+| `band` | `#1C2420` | `#0E1210` | the dark band: the replay page header |
+| `on-band` | `#F2F4ED` | `#F2F4ED` | text on `band` |
+| `band-muted` | `#B9C4B6` | `#B9C4B6` | muted text on `band` |
+| `tag` | `#DCE1D8` | `#2C362F` | read-only tag fill |
+| `on-tag` | `#3F4C43` | `#C3CCC1` | tag text |
+| `win` | `#1F63A6` | `#4F95D8` | won-game dot, win-rate bars |
+| `loss` | `#B8432C` | `#DE6E52` | lost-game dot |
+| `draw` | `#5F6B61` | `#9DA89E` | a tied score in gnl. No warehouse view uses it: a replay has one winner or none. |
+| **Warehouse chart colours** | | | |
+| `series-1` | `#1F63A6` | `#4F95D8` | player 1 (lower `player_id`) on the replay page |
+| `series-2` | `#B03A7A` | `#C95E98` | player 2 |
+| `magnitude` | `#7D877E` | `#67726A` | one-series bars and columns |
+| **Theme variables** | | | |
+| `border-color` | `#1A241E` | `#E7EBE3` | every line: dividers, card borders, grid and axis lines, chart tracks. The ink colour at `border-opacity`. |
+| `border-opacity` | 0.20 | 0.12 | about `#C8CBC7` / `#363E37` on `surface` |
+| `medium-emphasis-opacity` | 0.70 | 0.70 | `text-medium-emphasis`: labels, meta, column heads, axis text. About `#5B635D` / `#ABB0A8` on `surface`. |
 
-- Two tints derive from tokens and are not tokens: `bronze` at 12 % (selected row, selected chip, accent tag) and `danger` at 14 % (danger tag). App: `rgba(var(--v-theme-bronze), 0.12)`. Mockups: `color-mix(in srgb, var(--bronze) 12%, transparent)`.
-- The chart tokens are proposals. The GNL theme PR picks the final pairs (section 16, question 3).
-- Text contrast (WCAG, computed 2026-09-11):
+- Faint: `#6E7A70` light, `#85918A` dark (proposal `contrast.mjs:10, 15`). Only disabled text and off rows, never data. The app gets it from Vuetify's disabled state; `tokens.css` names it `--faint`.
+- Two tints derive from tokens: `primary` at 12 % (selected chip, accent tag, selected row) and `error` at 14 % (error tag). App: `rgba(var(--v-theme-primary), 0.12)`. Mockups: `color-mix(in srgb, var(--primary) 12%, transparent)`.
+- `error` and `loss` stay separate (D4): `error` is a state of the page, `loss` a game result.
+- Text contrast (WCAG, the validator's `contrast`, computed 2026-09-11; light / dark):
 
-| Text | On `surface` | On `ground` | On `fill` |
+| Text | On `surface` | On `background` | On `surface-light` |
 |---|---|---|---|
-| `ink` | 14.58:1 | 13.08:1 | 12.43:1 |
-| `ink-2` | 8.24:1 | 7.39:1 | 7.03:1 |
-| `muted` | 5.10:1 | 4.57:1 | 4.34:1 (below 4.5:1) |
-| `faint` | 4.10:1 (below 4.5:1) | 3.67:1 | 3.49:1 |
-| `bronze-ink` | 6.80:1 | 6.10:1 | 5.80:1 |
-| `danger` | 6.91:1 | 6.20:1 | 5.89:1 |
+| `on-surface` | 14.58 / 12.85 | 13.08 / 14.48 | 12.43 / 11.28 |
+| `secondary` | 8.24 / 9.40 | 7.39 / 10.60 | 7.03 / 8.26 |
+| medium emphasis (0.70) | 5.66 / 7.03 | 5.38 / 7.65 | 5.21 / 6.37 |
+| `primary-text` | 6.80 / 7.20 | 6.10 / 8.11 | 5.80 / 6.32 |
+| `error` | 6.91 / 5.83 | 6.20 / 6.57 | 5.89 / 5.12 |
+| faint (disabled only) | 4.10 / 4.74 | 3.67 / 5.34 | 3.49 / 4.16 |
 
-- `on-bronze` on `bronze` 5.07:1. `on-band` on `band` 14.32:1. `on-band-muted` on `band` 8.80:1. `ink-2` on `tag` 6.79:1.
-- So: no `muted` text on `fill`, no data text in `faint` or `text-disabled`, and `ink-2` is the tag text.
+- `on-primary` on `primary` 5.07 / 6.47. `primary-text` on `on-primary` (the selected chip in a title bar) 6.98 / 8.48. `on-band` on `band` 14.32 / 17.02. `band-muted` on `band` 8.80 / 10.46. `on-tag` on `tag` 6.79 / 7.59. `on-surface-variant` on `surface-variant` 14.32 / 11.32.
+- So every text pair passes AA (4.5:1) in both modes. Faint falls below 4.5:1 in light and stays for disabled text only.
 
-### 6.2 Vuetify theme
+### 6.2 Vuetify theme and theme choice
 
 ```js
-// src/tokens.js: the one colour source. Light only.
-export const tokens = {
-  ground: '#E8E9E3', surface: '#F4F5F1', fill: '#E1E4DD', tag: '#DCE1D8',
-  ink: '#1A241E', 'ink-2': '#3F4C43', muted: '#5F6B61', faint: '#6E7A70',
-  line: '#CBD1C7', 'field-line': '#B9C1B6', 'field-line-strong': '#A7B1A4',
-  bronze: '#9A5B18', 'bronze-ink': '#7C4912', 'on-bronze': '#FBF7F1',
-  band: '#1C2420', 'on-band': '#F2F4ED', 'on-band-muted': '#B9C4B6',
-  danger: '#8C3B2A',
-  'series-1': '#2A6496', 'series-2': '#C0721C', win: '#2A6496', loss: '#B5452F', magnitude: '#7D877E',
-}
-```
+// src/main.js: the GNL theme block (D1-D15) plus the three warehouse chart colours
+import { activeTheme } from './theme.js'
 
-```js
-// src/main.js
-import { tokens as t } from './tokens.js'
+const FIELD = { variant: 'filled', bgColor: 'surface-light', density: 'compact', rounded: 'sm', color: 'primary' }
 
 createVuetify({
   theme: {
-    defaultTheme: 'light',
+    defaultTheme: activeTheme(),  // the stored choice, so the first paint is right (gnl src/main.js:35)
     themes: {
       light: {
         dark: false,
         colors: {
-          ...t,
-          background: t.ground, 'on-background': t.ink, 'on-surface': t.ink,
-          primary: t.bronze, 'on-primary': t['on-bronze'],
-          secondary: t['ink-2'], error: t.danger,
-          'surface-variant': t.band, 'on-surface-variant': t['on-band'],
-          'on-tag': t['ink-2'],
+          background: '#E8E9E3', surface: '#F4F5F1', 'surface-bright': '#FAFBF8', 'surface-light': '#E1E4DD',
+          'surface-variant': '#1C2420', 'on-surface-variant': '#F2F4ED',
+          'on-background': '#1A241E', 'on-surface': '#1A241E',
+          primary: '#9A5B18', 'primary-darken-1': '#7C4912', 'on-primary': '#FBF7F1',
+          secondary: '#3F4C43', 'secondary-darken-1': '#2E3931', 'on-secondary': '#F2F4ED',
+          error: '#8C3B2A', warning: '#A65200', info: '#2F6690', success: '#3D7A4A',
+          'primary-text': '#7C4912', band: '#1C2420', 'on-band': '#F2F4ED', 'band-muted': '#B9C4B6',
+          tag: '#DCE1D8', 'on-tag': '#3F4C43', win: '#1F63A6', loss: '#B8432C', draw: '#5F6B61',
+          'series-1': '#1F63A6', 'series-2': '#B03A7A', magnitude: '#7D877E',
         },
-        variables: { 'border-color': t.line, 'border-opacity': 1 },
+        variables: { 'border-color': '#1A241E', 'border-opacity': 0.2, 'medium-emphasis-opacity': 0.7 },
+      },
+      dark: {
+        dark: true,
+        colors: {
+          background: '#151B17', surface: '#1E2620', 'surface-bright': '#29322B', 'surface-light': '#273029',
+          'surface-variant': '#D5DBD1', 'on-surface-variant': '#1A241E',
+          'on-background': '#E7EBE3', 'on-surface': '#E7EBE3',
+          primary: '#D08B3C', 'primary-darken-1': '#B57430', 'on-primary': '#1A140C',
+          secondary: '#C3CCC1', 'secondary-darken-1': '#A7B1A4', 'on-secondary': '#1A241E',
+          error: '#E8836A', warning: '#F0A04B', info: '#7FB0DA', success: '#6DB37A',
+          'primary-text': '#E3A45F', band: '#0E1210', 'on-band': '#F2F4ED', 'band-muted': '#B9C4B6',
+          tag: '#2C362F', 'on-tag': '#C3CCC1', win: '#4F95D8', loss: '#DE6E52', draw: '#9DA89E',
+          'series-1': '#4F95D8', 'series-2': '#C95E98', magnitude: '#67726A',
+        },
+        variables: { 'border-color': '#E7EBE3', 'border-opacity': 0.12, 'medium-emphasis-opacity': 0.7 },
       },
     },
   },
@@ -290,45 +310,57 @@ createVuetify({
     VTooltip: { openOnClick: true },
     VAppBar: { flat: true, border: 'b', color: 'surface' },
     VCard: { variant: 'flat', border: true, rounded: 'sm' },
-    VBtn: { variant: 'flat', rounded: 'sm' },
+    VBtn: { rounded: 'sm' },
     VChip: { rounded: 'sm' },
-    VTextField: { variant: 'outlined', density: 'compact', rounded: 'sm', color: 'primary' },
-    VAutocomplete: { variant: 'outlined', density: 'compact', rounded: 'sm', color: 'primary' },
-    VSelect: { variant: 'outlined', density: 'compact', rounded: 'sm', color: 'primary' },
+    VTextField: FIELD, VSelect: FIELD, VAutocomplete: FIELD,
   },
 })
 ```
 
-- `...t` makes every token a theme colour. Vuetify emits `--v-theme-<name>` as an `r,g,b` triplet and the `.text-<name>`, `.bg-<name>`, `.border-<name>` classes (vuetify: `composables/theme.js:176-180, 279-282`). A key that starts with `on-` gets only a `.<name>` class.
-- `variables['border-color']` is parsed from hex (theme.js:287-290). With `border-opacity` 1, every Vuetify border draws in `line`.
-- `rounded: 'sm'` is 2 px, the reference radius.
-- `success`, `info` and `warning` keep Vuetify's values. No view uses them.
-- Components use tokens only: props (`color="primary"`, `color="win"`), classes (`text-muted`, `text-ink-2`, `bg-fill`; `text-muted` replaces `text-medium-emphasis`, because the opacity class blends differently on each ground), and CSS/SVG (`rgb(var(--v-theme-line))`, `fill: rgb(var(--v-theme-magnitude))`, `rgba(var(--v-theme-bronze), 0.12)`).
-- `assets/base.css` from gnl stays verbatim: no upper-case buttons, sort-icon states, table scroll shadows. `assets/style.css` holds the font rules and type classes (6.3) and two border rules:
+- The GNL theme PR (D15) puts the same light and dark colours in gnl `src/main.js`. The three chart colours are the warehouse's only addition; a page moved into gnl brings them along.
+- Vuetify emits each colour as `--v-theme-<name>` (an `r,g,b` triplet) and the `.text-<name>`, `.bg-<name>`, `.border-<name>` classes (vuetify: `composables/theme.js:176-180, 279-282`). A key that starts with `on-` gets only a `.<name>` class. `border-color` is parsed from hex (theme.js:287-290).
+- Sentence-case buttons (D13): gnl `src/assets/base.css:53-57` sets `.v-btn { text-transform: none; letter-spacing: normal; }`, and the warehouse copies `base.css` verbatim. No extra default.
+- Filled fields use `surface-light`. Vuetify's `filled` variant paints only a 4 % `currentColor` overlay (vuetify.css `.v-field--variant-filled .v-field__overlay`), so the defaults pass `bgColor: 'surface-light'`. The bottom line turns `primary` on focus and `error` on an error. `style.css` holds no field rules.
+- Card title bars are bronze (D5): `<v-card-title class="bg-primary">`, text in `on-primary`. Which cards have one: 6.4.
+- Lines: Vuetify borders use `border-color` at `border-opacity`. Custom CSS and SVG use `rgba(var(--v-theme-on-surface), var(--v-border-opacity))`.
+- Muted text is `text-medium-emphasis`, as in gnl (the proposal turns gnl's `text-grey` into it). `rgb(var(--v-theme-magnitude))` and `rgb(var(--v-theme-win))` fill the chart marks.
+- Components use tokens only: props (`color="primary"`, `color="win"`), classes (`text-medium-emphasis`, `text-secondary`, `bg-surface-light`, `bg-primary`), and CSS/SVG (`rgb(var(--v-theme-win))`, `rgba(var(--v-theme-primary), 0.12)`).
 
-```css
-.v-field--variant-outlined .v-field__outline { color: rgb(var(--v-theme-field-line)); --v-field-border-opacity: 1; }
-.v-btn--variant-outlined { border-color: rgb(var(--v-theme-field-line-strong)); }  /* ghost buttons; Vuetify uses currentColor */
-```
+Theme choice (D1; the same three modes as gnl):
 
-- Removed: gnl's `theme.js`, the three-way theme menu and the pre-paint script (gnl: `index.html:15-24`). They exist only to choose light or dark.
-- The one colour outside `tokens.js`: `index.html` has `<style>html { background: #E8E9E3; }</style>` in its `<head>`. Vuetify injects the theme only when the JS runs, so a hard load would first paint white. It copies `ground`; a change to `ground` changes both.
+| Part | gnl source | Warehouse |
+|---|---|---|
+| `src/theme.js` | `src/helpers/theme.js` | Copied, without the `readonly` branch (the warehouse has no embedded page). `themeMode` is `light`, `dark` or `system`, kept in `localStorage` key `theme`. `activeTheme()` follows `prefers-color-scheme` under `system`. |
+| Menu | `src/App.vue:21-30, 205-214` | A text icon button at the end of the app bar opens a `v-menu`: Light (`mdi-white-balance-sunny`), Dark (`mdi-weather-night`), System (`mdi-theme-light-dark`). The button shows the current mode's icon. A `watchEffect` sets `useTheme().global.name` from `activeTheme()`. Shown at every width. |
+| Pre-paint | `index.html:15-25` | The same script, with the two `background` values: it paints `#E8E9E3` or `#151B17` before the app loads, so a hard load does not flash white or black. The only hex outside `main.js`; a change to `background` changes both. |
 
 ### 6.3 Type
 
-- Fonts load from Google Fonts. `index.html` has `<link rel="preconnect">` to `fonts.googleapis.com` and `fonts.gstatic.com` (crossorigin), then one stylesheet link:
+- Fonts are self-hosted with @fontsource 5.3.0 (D14). No third-party request. `main.js` imports the weights in use:
 
+```js
+import '@fontsource/alegreya/700.css'
+import '@fontsource/alegreya/800.css'
+import '@fontsource/alegreya-sans/400.css'
+import '@fontsource/alegreya-sans/500.css'
+import '@fontsource/alegreya-sans/700.css'
+import '@fontsource/noto-sans-kr/400.css'
+import '@fontsource/noto-sans-kr/500.css'
+import '@fontsource/noto-sans-kr/700.css'
+import '@fontsource/noto-sans-sc/400.css'
+import '@fontsource/noto-sans-sc/500.css'
+import '@fontsource/noto-sans-sc/700.css'
 ```
-https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap
-```
+
+- The mockups load the same families from Google Fonts (`tokens.css:4`).
 
 | Property | Stack | Weights | Use |
 |---|---|---|---|
-| `--font-display` | `"Alegreya", "Noto Sans KR", "Noto Sans SC", Georgia, serif` | 500, 700, 800 | app bar title, page title, panel titles, the hero figure |
+| `--font-display` | `"Alegreya", "Noto Sans KR", "Noto Sans SC", Georgia, serif` | 700, 800 | app bar title, page title, section headings, card title bars, the hero figure |
 | `--font-body` | `"Alegreya Sans", "Noto Sans KR", "Noto Sans SC", system-ui, sans-serif` | 400, 500, 700 | everything else |
 
 - Names in the data (2,401 distinct `w3g.replay_players.name`, measured 2026-09-11): 34 contain Hangul, 34 Han, 23 Cyrillic, 18 non-ASCII Latin, 0 kana, 0 other scripts.
-- Alegreya and Alegreya Sans carry Latin-ext and Cyrillic. Hangul falls to Noto Sans KR. Han falls to Noto Sans KR, else to Noto Sans SC (the render loaded SC, so KR lacks some of the Han). Google Fonts serves the Noto faces in `unicode-range` slices, so a page downloads only the slices its names use.
+- Alegreya and Alegreya Sans carry Latin-ext and Cyrillic. Hangul falls to Noto Sans KR. Han falls to Noto Sans KR, else to Noto Sans SC. The fontsource CSS declares the Noto faces in `unicode-range` slices, as Google Fonts does, so a page downloads only the slices its names use. The PR checks the bundle and the network panel before and after the fonts.
 - Render check, 2026-09-11: a `tokens.css` sample page with `풋사과의반쪽#3225`, `微醺騎士#323123`, `КаланчаВорон#2539`, `Maňásek#2552` showed no boxed glyphs.
 - Numerals: Alegreya defaults to old-style figures. `style.css` sets `lining-nums tabular-nums` on `html, body`.
 - Vuetify sets Roboto in 80 rules of `vuetify/dist/vuetify.css` (3.8.0): `html`, the 14 classes `.text-h1` to `.text-overline`, their breakpoint forms and `.v-badge__badge`. None uses `!important`. `style.css` loads after Vuetify and overrides them:
@@ -340,37 +372,39 @@ https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700;800&family=Alegre
 }
 html, body { font-family: var(--font-body); font-variant-numeric: lining-nums tabular-nums; }
 .text-subtitle-1, .text-subtitle-2, .text-body-1, .text-body-2, .text-button, .text-caption, .text-overline, .v-badge__badge { font-family: var(--font-body); }
-.h1, .h2, .h3, .figure, .v-app-bar-title { font-family: var(--font-display); }
+.h1, .h2, .h3, .figure, .v-app-bar-title, .v-card-title { font-family: var(--font-display); }
 ```
 
-- `body` is in the rule because Bootstrap 4.5.2 CSS (loaded by gnl, `index.html:10-11`) sets a `body` font. The rule then holds when pages move into gnl. Whether Bootstrap stays is the GNL theme PR's choice.
+- `body` is in the rule because Bootstrap 4.5.2 CSS (loaded by gnl, `index.html:10-11`) sets a `body` font. The rule then holds when pages move into gnl.
 - The breakpoint forms (`.text-md-h5`) keep Roboto. No view uses them (F14).
 - Type scale, the same classes in `style.css` and `tokens.css`. Views do not use Vuetify's `text-h*` classes.
 
 | Class | Face | Size, weight | Use |
 |---|---|---|---|
-| `.h1` | display | 30 px, 800 | page title (the replay map name) |
-| `.h2` | display | 21 px, 700 | panel titles |
-| `.h3` | display | 17 px, 700 | block titles in a panel (hero-pick races, timeline players) |
+| `.h1` | display | 40 px, 800; 28 px below sm | page title (the replay map name) |
+| `.h2` | display | 24 px, 700; 22 px below sm | section headings; 22 px in a card title bar |
+| `.h3` | display | 18 px, 700 | block titles in a card (hero-pick races, slot titles) |
 | `.figure` | display | 40 px, 700 | the hero figure (`/stats` games) |
-| body | body | 15 px, 400 | rows, fields, text |
-| `text-caption` | body | 12 px (Vuetify) | axis ticks, meta |
-| `.brand` | display | 21 px, 800 | the app bar title |
+| body | body | 16 px, 400 | rows, fields, text |
+| captions | body | 13-14 px, medium emphasis | axis ticks 13 px; column heads, meta and legends 14 px |
+| `.brand` | display | 22 px, 800 | the app bar title |
 
 ### 6.4 Shapes and icons
 
-| Part | Shape (reference `_head.txt`) |
+| Part | Shape |
 |---|---|
-| Radius | 2 px on buttons, fields, panels, tags, chips, tooltips and race icons |
-| Lines | 1 px `line`. Fields and chips: 1 px `field-line`, `field-line-strong` on hover. |
-| App bar | `surface`, 64 px, 1 px bottom `line`. Active nav link `ink` with a 2 px `bronze` underline; the others `muted`. |
-| Panel | `surface` on `ground`, 1 px `line` border, no shadow. Head and body split by 1 px `line`. |
-| Table | 1 px `line` row dividers, no zebra. Column heads 13 px `muted`. Hover `fill`. Selected row: bronze tint and a 3 px `bronze` bar at the left. |
-| Button | Primary: `bronze`, `on-bronze` text. Ghost: no fill, `field-line-strong` border, `ink` text. Quiet: `bronze-ink` text. Disabled: `fill`, `faint` text. |
-| Tag | Read-only label: `tag` fill, `ink-2` text. Accent: bronze tint, `bronze-ink`. Danger: danger tint, `danger`. |
-| Chip | A toggle: `surface`, `field-line` border, `ink-2` text. On: bronze tint, `bronze` border, `bronze-ink` text. |
-| Focus | 2 px `bronze` outline, 2 px offset |
-| Tooltip | `band`, `on-band` text, 13 px |
+| Radius | 2 px on buttons, fields, cards, tags, chips, tooltips and race icons |
+| Lines | 1 px in the border colour (6.1): dividers, card borders, chart tracks, grid |
+| App bar | `surface`, 64 px, bottom border. Active nav link in `on-surface` with a 2 px `primary` underline, the others medium emphasis. The theme menu at the end (6.2). |
+| Card | `surface` on `background`, border, no shadow |
+| Card title bar (D5) | `bg-primary`, text in `on-primary`, display face 22 px. Chips in the bar: an `on-primary` outline at 50 %; the selected chip is filled `on-primary` with `primary-text` text. Cards with a bar: the four `/stats` panels, "APM per minute", "Build orders" and "Chat". Cards with a plain head (a border below, no fill): the `/search` slot cards, the openers tree and panel, and the replay player cards, whose head carries the player's series key, which would be lost on bronze. |
+| Table | 1 px row dividers, no zebra. Bare-noun column heads, 14 px, medium emphasis. Numbers right-aligned. Hover `surface-light`. Selected row: `primary` tint and a 3 px `primary` bar at the left. |
+| Button | Sentence case (D13). Primary: `primary`, `on-primary` text. Ghost: Vuetify `outlined` (a `currentColor` border). Quiet: `variant="text"`, `color="primary-text"`. Disabled: Vuetify's. |
+| Field | `filled`, `surface-light`, compact (6.2) |
+| Tag | Read-only label: `tag` fill, `on-tag` text. Accent: `primary` tint, `primary-text`. Error: `error` tint, `error`. |
+| Chip | A toggle: `surface`, border colour, `secondary` text. On: `primary` tint, `primary` border, `primary-text` text. |
+| Focus | 2 px `primary` outline, 2 px offset |
+| Tooltip | Vuetify's default: `surface-variant`, `on-surface-variant` text, 13 px. Light on dark in the light theme, dark on light in the dark theme. |
 
 - Command-card icons are 64 x 64 PNGs (`file frontend/icons/btn3m1-result.png`). Sizes: 40 px in the picker and opener path tiles, 28 px in step lists and opener trails, 24 px in the timeline and skill trails, 20 px on phones. `rounded="sm"`, no border.
 - Decided: `ObjectIcon.vue` falls back to `mdi-help-box-outline` at the same size, name in the tooltip. Why: 3 of 649 named codes have no icon (`orbr` Reinforced Orc Burrow, `uzg1` Spirit Tower, `nits` Ice Troll Berserker).
@@ -379,34 +413,36 @@ html, body { font-family: var(--font-body); font-variant-numeric: lining-nums ta
 
 ### 6.5 Chart palette validation
 
-Charts sit on panels, so the surface is `surface` `#F4F5F1`. Command, from the `dataviz` skill's `scripts/` folder, run 2026-09-11 (Node 21 needs the flag, because the file is an ES module named `.js`):
+Charts sit on cards, so the surface is `surface`: `#F4F5F1` light, `#1E2620` dark. Command, from the `dataviz` skill's `scripts/` folder (the same file as the gym's `scratch/theme-proposal/vp/validate_palette.js`), run 2026-09-11:
 
 ```
-node --experimental-default-type=module validate_palette.js "<hexes>" --mode light --surface "#F4F5F1" [--pairs all]
+node validate_palette.js "<hexes>" --mode light --surface "#F4F5F1" [--pairs all]
+node validate_palette.js "<hexes>" --mode dark --surface "#1E2620" [--pairs all]
 ```
 
-Chosen (proposals until the GNL theme PR):
+Chosen:
 
-| Run | Colours | Result |
+| Run | Light | Dark |
 |---|---|---|
-| Players (`series-1`, `series-2`) | `#2A6496`, `#C0721C` | PASS all. CVD ΔE 21.1 (protan), tritan 26.6. Normal ΔE 27.1. Contrast ≥ 3:1. |
-| Win and loss (`win`, `loss`) | `#2A6496`, `#B5452F` | PASS all. CVD ΔE 15.7 (protan), tritan 28.0. Normal ΔE 24.5. Contrast ≥ 3:1. |
-| Share bar, win, loss (`--pairs all`) | `#7D877E`, `#2A6496`, `#B5452F` | Chroma FAIL on the grey-green (0.018): expected, a neutral is not a hue. CVD worst `#B5452F`↔`#7D877E` 10.4 (deutan), tritan 13.7. Normal worst `#2A6496`↔`#7D877E` 16.2. Contrast ≥ 3:1. |
+| Win and loss (`win`, `loss`) | `#1F63A6`, `#B8432C`: PASS all. CVD ΔE 18.7 (protan), tritan 28.7. Normal 27.1. Contrast ≥ 3:1. | `#4F95D8`, `#DE6E52`: PASS all. CVD 19.3 (protan), tritan 29.9. Normal 25.8. Contrast ≥ 3:1. |
+| Players (`series-1`, `series-2`) | `#1F63A6`, `#B03A7A`: PASS, with CVD WARN 7.4 (protan), tritan 26.0. Normal 22.8. Contrast ≥ 3:1. The WARN needs a second encoding: the legend and the line-end labels (12.4). | `#4F95D8`, `#C95E98`: PASS all. CVD 10.5 (deutan), tritan 26.7. Normal 21.1. Contrast ≥ 3:1. |
+| Magnitude beside win (the openers rows, `/stats`) | `#7D877E`, `#1F63A6`: Chroma FAIL on the grey (0.018), expected: a neutral is not a hue. CVD 15.6 (protan), tritan 13.0. Normal 17.7. Contrast ≥ 3:1. | `#67726A`, `#4F95D8`: Chroma FAIL (0.018), expected. CVD 16.4 (deutan), tritan 15.1. Normal 17.0. Contrast ≥ 3:1. |
+| Magnitude, win, loss (`--pairs all`) | Chroma FAIL (expected). CVD worst `#B8432C`↔`#7D877E` 10.5 (deutan). Normal worst 17.7. | Chroma FAIL (expected). CVD WARN `#DE6E52`↔`#67726A` 7.8 (protan). Normal worst 17.0. `loss` shows only as a dot beside the word "Lost", never next to a magnitude bar. |
 
-Other runs (inputs to the win/loss question, section 16):
+Rejected:
 
-| Run | Colours | Result | Note |
-|---|---|---|---|
-| Vuetify blue, Material red | `#1867C0`, `#F44336` | PASS all. CVD 22.1 (protan), normal 36.5. | Stock colours, no link to bronze. A valid fallback. |
-| dataviz slots 1 and 2 | `#2A78D6`, `#EB6834` | PASS, contrast WARN: `#EB6834` 2.92:1 | Needs relief labels |
-| Loss as `danger` | `#2A6496`, `#8C3B2A` | PASS all. CVD 16.9 (deutan), normal 20.8. | `danger` is UI state, `loss` a data mark. The GNL theme PR can merge them. |
-| Deeper pair | `#2E6A9E`, `#B8541F` | PASS all. CVD 18.4 (protan), normal 24.9. | A close alternative |
-| Teal and brick | `#1F6E8C`, `#B5452F` | Chroma FAIL: `#1F6E8C` 0.087 | Reads grey |
-| Magnitude as `faint` | `#6E7A70`, `#2A6496`, `#B5452F` | Normal FAIL: 13.1 against win | Too close to the blue |
-| Lighter magnitude | `#8A938A`, `#2A6496`, `#B5452F` | Contrast WARN: 2.9:1 | Below 3:1 |
+| Candidate | Result | Why not |
+|---|---|---|
+| `series-2` orange `#C0721C` (the earlier pick) | PASS with blue (CVD 23.4). Against light `primary` `#9A5B18`: normal ΔE 9.5 | Reads as bronze. Its dark step would sit on dark bronze. |
+| `series-2` gold `#AE7C00` / `#BE8A00` (gnl tier 4) | PASS with blue in both modes (CVD 24.2 / 24.0). Against dark `primary` `#D08B3C`: normal ΔE 4.5, CVD 2.4 | The dark accent's own colour |
+| `series-2` teal `#008F99` / `#16A3A6` (gnl tier 5) | Normal FAIL against blue: 13.8 / 10.2 | Too close to blue |
+| `series-2` purple `#8B48CF` / `#A574E6` (gnl tier 6) | Dark: CVD FAIL 2.0 (deutan), normal 13.5 | Blue under deutan |
+| Dark `magnitude` `#7E897F`, `#838E84`, `#8A958B` | Normal FAIL against `win`: 13.3, 13.0, 12.8 | Same lightness as the dark `win` |
+| Dark `magnitude` `#636E66` | Contrast WARN 2.92:1 | Below 3:1 |
+| gnl today: `text-green` / `text-red` (`#4CAF50`, `#F44336`) | CVD FAIL 3.6 (deutan), in the proposal | Why gnl moves to `win` and `loss` (D3) |
 
-- Green and red is not a candidate. The style brief rules it out.
-- `series-2` `#C0721C` is near `bronze` `#9A5B18`. They never share a job: `bronze` marks controls and selection, `series-2` a player's data. On the replay page the selected kind chips are bronze tint with a `bronze` border, and player 2's key is a 2 px `series-2` line beside the name.
+- `series-2` against `primary`: normal ΔE 16.7 light, 18.6 dark. Magenta never shares a job with bronze: bronze marks controls, `series-2` a player's line.
+- Dark mode is its own set of steps, validated on the dark surface, not a flip of the light values (dataviz step 6).
 
 ### 6.6 Colour jobs
 
@@ -414,15 +450,15 @@ Other runs (inputs to the win/loss question, section 16):
 |---|---|---|
 | Opener share bars, hero-pick bars, histogram columns | one series, magnitude | `magnitude` |
 | Replay APM lines, timeline player keys | identity of two players | `series-1` (lower `player_id`), `series-2` |
-| Win-rate marks (openers, matchups) | polarity around 50 % | `win` above, `loss` below |
+| Win-rate bars (openers, matchups) | a share, from 0 to 100 % | `win` only (D10). No diverging, threshold or traffic-light colours. |
 | Won and Lost in tables | state of one game | text in ink plus an 8 px dot in `win` or `loss` |
-| Won on the replay page | state of one game | `mdi-trophy` plus "Won" in ink. No colour. |
+| Won on the replay page | state of one game | `mdi-trophy` plus "Won" in an accent tag. No data colour. |
 
-- One hue means one thing per screen. Blue is `win` on search, openers and stats, and player 1 on the replay page, which shows no win colour.
-- Decided: one-series magnitude takes `magnitude`, not `series-1` (F12). Why: `series-1` and `win` share a hex, and three screens show magnitude beside win and loss. This departs from dataviz `color-formula.md:22`.
+- One hue, one job per screen. Blue is `win` on search, openers and stats, and player 1 on the replay page, which shows no win colour.
+- Decided: one-series magnitude takes `magnitude`, not `series-1` (F12). Why: `series-1` equals `win`, and the openers and stats pages show magnitude beside win. This departs from dataviz `color-formula.md:22`.
 - Text never wears a data colour (dataviz `marks-and-anatomy.md`). The old page colours result and win-rate text (`index.html:303, 415, 969-975`); the new app keeps text in ink and puts the colour on a mark.
-- Win is blue, loss is red: the old page's pair swapped (`index.html:443-444`). gnl uses `success` and `error` (F9).
-- Below the win-rate floor (section 13) the number is `text-muted` and no mark is drawn (`index.html:446, 969-975`).
+- Win is blue, loss is red: the old page's pair swapped (`index.html:443-444`). gnl moves from `success` and `error` to `win` and `loss` in its theme PR (D3).
+- Below the win-rate floor (section 13) the number is medium emphasis and no bar is drawn (`index.html:446, 969-975`).
 
 ## 7. Components copied from wc3-gym-frontend
 
@@ -433,14 +469,16 @@ Other runs (inputs to the win/loss question, section 16):
 | `src/components/RaceSelect.vue` | same | `items` from the new `races.js`, `item-value` the letter, `defineModel()` (line 30) kept |
 | `src/helpers/races.js` | `races.js` | Ids `H O N U R`, not `HU OC UD NE RANDOM` (api.md A5). Same five PNGs. |
 | `src/components/GroupedTable.vue` | same, verbatim | Stats table views. `col.align === 'right'` drives number columns (line 13). |
-| `src/App.vue:147-148, 153-174, 214` | the shell (section 3) | Three links, no groups, no avatar menu, no theme menu, no auth |
+| `src/App.vue:21-30, 150-151, 157-178, 205-214, 217` | the shell (section 3) | Three links and the theme menu. No groups, no avatar menu, no auth. |
+| `src/helpers/theme.js` | `theme.js` | Drop the `readonly` branch: no warehouse page is embedded (6.2) |
+| `index.html:15-25` | the pre-paint script | The two `background` values (6.2) |
 | `src/assets/base.css` | same, verbatim | none |
 | `src/helpers/fetch-wrapper.js` | `api.js` | 5.1 |
 | `src/components/DivisionBracketing.vue:121-122, 130, 136, 178-180` | `charts/useWidth.js` and the axis `watchEffect` | The pattern, not the component |
 | `src/views/FantasyBetsView.vue:43-46` | `ReplayTable.vue` | `v-data-table-server` with `items-length` from `X-Total-Count` |
 
 - `PlayerName`, `RaceIcon`, `RaceSelect` register globally, as gnl. Every player name on every screen is one `PlayerName`.
-- A page moved into gnl needs only: the five chart tokens (unless the GNL theme PR adds them), `objects.js`, `format.js`, `ObjectIcon`, `ObjectPicker` and `public/icons/`.
+- A page moved into gnl needs only: the three chart colours (`series-1`, `series-2`, `magnitude`) in both gnl theme blocks, `objects.js`, `format.js`, `ObjectIcon`, `ObjectPicker` and `public/icons/`. `win`, `loss` and `draw` come with the GNL theme (D6).
 
 ## 8. Shared parts
 
@@ -556,11 +594,11 @@ PR 15 adds the API fields (api.md 3.4). PR 16 adds these controls. The codec is 
 
 md and up: the tree (7 of 12 columns) and the selection panel (5 of 12, `position: sticky`) side by side. The sort toggle ("Most played", "Best win rate") sits right of the filter row.
 
-- Tree: "{total} player-games", then columns Opener, Games (share bar), Win rate (header shows the domain ends), Avg min, replay button. A "Stopped here" row closes each open level.
+- Tree: "{total} player-games", then columns Opener, Games (share bar), Win rate (win bar), Avg min, replay button. A "Stopped here" row closes each open level.
 - Panel: path tiles, figures, then the replay list (10.3).
 - Dev-set example, Night Elf: root 2,730; `eate` 2,503 (92%, 50%, 15.3 min); `eaom` 2,294 (92%, 50%, 15.4); `etoa` 872 (38%, 51%, 16.1, 21 stopped); `eden` 816 (48%, 15.8); 59 stopped at `eaom`.
 
-- An opener is a player's first six non-supply building orders (api.md 3.5), flagged repeats skipped. The column header reads "Opener (first building orders)".
+- An opener is a player's first six non-supply building orders (api.md 3.5), flagged repeats skipped. The column header reads "Opener"; its tooltip says "First six building orders".
 - One `v-table`, not nested tables. Children splice in under their parent; closing a row removes its descendants (`index.html:949-967`). Sibling paths do not move.
 - Each level is one `GET /openers?prefix=...` (api.md 3.5). Answers cache in a `Map` keyed by prefix for the life of the filter set.
 - On load, every `open` prefix and every parent of `sel` loads in depth order, so a shared link rebuilds the same tree and panel.
@@ -577,7 +615,7 @@ md and up: the tree (7 of 12 columns) and the selection panel (5 of 12, `positio
 | Row click | sets `sel`. When `branches > 0`, also adds or removes the prefix in `open`. Depth stops at 6 (api.md 3.5, `index.html:448`). |
 | Opener cell | Prefix icons (not text) at 28 px and 0.38 opacity, then the row's icon, its name, and a `v-chip size="x-small"` with `branches` (`index.html:370-372`). Indent 16 px per depth. Selected row: 3 px `primary` inset bar. |
 | Games | `rows[].games`, plus the share bar (10.4) |
-| Win rate | `wins / games` through `fmtPct`, plus the diverging mark (10.4). Below `WIN_RATE_FLOOR`: `text-muted`, no mark. The header shows the domain ends. |
+| Win rate | `wins / games` through `fmtPct`, plus the win bar (10.4). Below `WIN_RATE_FLOOR`: `text-medium-emphasis`, no bar. |
 | Avg min | `avg_minutes`, one decimal |
 | Replay button (`mdi-play-box-multiple`, `aria-label` "Show games") | sets `sel`, moves focus to the panel's replay list; on phones scrolls to it |
 | "Stopped here" row | `stopped`, shown when above 0. Children plus stopped sum to the parent (api.md A7). |
@@ -586,7 +624,7 @@ md and up: the tree (7 of 12 columns) and the selection panel (5 of 12, `positio
 
 | Part | Fields | Source |
 |---|---|---|
-| Path tiles | Root tile: 40 px race icon, race name, `total`, "100%". One tile per code in `sel`: 40 px icon, name, `games`, share of its parent level's `total` via `fmtPct`. The last tile has the bronze tint. A tile click sets `sel` to that prefix. | cached level answers |
+| Path tiles | Root tile: 40 px race icon, race name, `total`, "100%". One tile per code in `sel`: 40 px icon, name, `games`, share of its parent level's `total` via `fmtPct`. The last tile has the `primary` tint. A tile click sets `sel` to that prefix. | cached level answers |
 | Figures | `games` labelled "player-games"; win rate via `fmtPct` with the 10.4 mark (muted, no mark under the floor); `avg_minutes` labelled "avg minutes"; "stopped here". | the selected row. "Stopped here" is `stopped` of `GET /openers?prefix=<sel>` when `branches > 0`, else the row's `games`. |
 | Replay list | Header: prefix icons at 20 px and "{n} player-games", n from `X-Total-Count`. `ReplayTable` compact form, 25 rows, paged by `page`. Focus player: the opener's owner. | `GET /openers/replays?prefix=<sel>` (api.md 3.6) |
 
@@ -598,10 +636,10 @@ md and up: the tree (7 of 12 columns) and the selection panel (5 of 12, `positio
 | Mark | Form | Scale | Palette | Tooltip |
 |---|---|---|---|---|
 | Share bar | Bar, magnitude down the whole column | `scaleLinear([0, root.total], [0, 64])` px, `root.total` = level-0 `total` | `magnitude` | "872 of 2,294 ordered Tree of Ages after Ancient of War (38%)" |
-| Win-rate mark | Diverging bar from a 50 % centre tick | The shared win-rate domain (section 13) over every drawn row, mapped to `[0, 56]` px, centre 28. Header labels show the ends, e.g. "40%" and "60%". | `win` above 50 %, `loss` below | "3 wins of 5 games" |
+| Win bar | Bar from 0, a 1 px tick at 50 % | `scaleLinear([0, 1], [0, 64])` px, the same in every row | `win` only (D10) | "3 wins of 5 games" |
 
-- Both 6 px high, 2 px radius. Track: 1 px `rgb(var(--v-theme-line))`.
-- The domain re-fits when rows open or close; the header labels change with it.
+- Both 6 px high, 2 px radius, 64 px long. Track: 1 px in the border colour, `rgba(var(--v-theme-on-surface), var(--v-border-opacity))`.
+- Decided (D10): the win bar has one colour and starts at 0. No diverging or threshold colours, no fitted domain. The dev-set rows sit between 30 % and 69 %; the number beside the bar carries the precision.
 - The number stays in ink next to the mark.
 - Decided: one share scale on `root.total`, not the parent. Why: on `[0, parent.total]`, Altar of Elders (2,503) and Ancient of War (2,294) draw the same length (each 92 % of its parent). Equal length must mean an equal count.
 
@@ -637,13 +675,13 @@ One `GET /stats` feeds the page (api.md 3.7, A8). Every panel shows the same coh
 
 | Panel | Form | Axes and scales | Palette | Tooltip |
 |---|---|---|---|---|
-| Matchups | Diverging bar, one row per unordered race pair ("Night Elf v Orc"). Not a 5 x 5 heatmap: the API sends each pair twice, and the palette has no red ramp. | y: `scaleBand` over pairs, rows 28 px. x: the shared win-rate domain over non-mirror rows at or above the floor, centre line at 0.5. `axisBottom` ticks at both ends, at 50 % and every 5 points, thinned by the density rule; labels via `fmtPct`. Race icons name the sides. Value label at the bar tip, `fmtPct(x, 1)`. | `win` when the first race is above 50 %, `loss` below. `decided` under 10: no bar, muted label. Mirror rows below a gap: games only (`wins` null), muted. | "Night Elf won 2 of 2 decided games v Orc. 2 games." Focusable rows. |
+| Matchups | Horizontal bar from 0, one row per unordered race pair ("Night Elf v Orc"). Not a 5 x 5 heatmap: the API sends each pair twice, and a heatmap needs a diverging ramp (D10). | y: `scaleBand` over pairs, rows 28 px. x: `scaleLinear([0, 1])`, a reference line at 50 %. `axisBottom` ticks at 0, 25, 50, 75 and 100 % (0, 50 and 100 % below 480 px); labels via `fmtPct`. Race icons name the sides. Value label at the bar tip, `fmtPct(x, 1)`. | `win` only (D10). `decided` under 10: no bar, muted label. Mirror rows below a gap: games only (`wins` null), muted. | "Night Elf won 2 of 2 decided games v Orc. 2 games." Focusable rows. |
 | Hero picks | Horizontal bar list, one block per race (small multiples), Random included. Shares pass 100 % (1-3 heroes per player, api.md 3.7), so no pie or stack. | Per block: rows 24 px with a 20 px hero icon and name. x: `scaleLinear([0, 1])` in every block. No tick axis: value at the tip via `fmtPct`. Block title: race icon and "{player_games} player-games". | `magnitude` | "Demon Hunter: 3 of 3 Night Elf player-games (100%)". Top 8 per race, then "Show all". |
 | Game length | Column chart over ordered buckets | x: `scaleBand` over bucket index, labels "0-5" … "60+" (last bucket folds, api.md 3.7). y: `scaleLinear([0, max]).nice()`, integer ticks only. Every k-th bucket labelled, k from width. | `magnitude` | "5-10 min: 2 games". Hit area: full band height. |
 | APM | Same component. Up to 21 buckets (width 25, cap 500). | Labels "0", "25" … "500+" | `magnitude` | "75-100 APM: 1 player-game" |
 
-- Mark specs (dataviz `marks-and-anatomy.md`): bars at most 24 px thick, 4 px rounded at the data end, square at the baseline; 2 px surface gap; hairline grid in `line`; axis text `text-caption text-muted` with lining tabular digits.
-- Decided: a symmetric win-rate domain. Why: the dev-set matchups run 45.3 % to 53.2 %. On `[0, 1]` at a 358 px plot, 53.2 % sits about 11 px from the centre; on 0.5 ± 0.1, about 57 px.
+- Mark specs (dataviz `marks-and-anatomy.md`): bars at most 24 px thick, 4 px rounded at the data end, square at the baseline; 2 px surface gap; hairline grid in the border colour; axis text 13 px, medium emphasis, lining tabular digits.
+- Decided (D10): matchup bars start at 0 on `[0, 1]`. The dev-set matchups run 45.3 % to 53.2 %: 28 px apart on a 358 px plot, and the label at each tip carries the rest.
 
 ### 11.3 States
 
@@ -700,7 +738,7 @@ Chart (`BuildTimeline.vue`), a swimlane:
 | Form | One block per player, lower `player_id` first. One lane per kind: Buildings, Units, Upgrades, Heroes, Items. A lane whose chip is off is not drawn. The Heroes lane holds `hero_trained`, `hero_skill`, `hero_retrained` (api.md 3.8). |
 | Block header | 2 px key in `series-1` or `series-2` and `PlayerName` |
 | x | Game minute, `scaleLinear([0, duration_ms / 60000], [gutter, width - 88])`. The same `gutter` as the APM chart. `axisBottom` on whole minutes as `m:00`, thinned by the density rule. A hairline grid line per tick. |
-| Lane label | Kind name, `text-caption text-muted`, in the gutter |
+| Lane label | Kind name, 13 px, medium emphasis, in the gutter |
 | Marks | The event's 24 px command-card icon, centred on its time |
 | Stacking | First fit per lane: an icon takes the first row whose last icon ends at least 1 px before its left edge, else a new row. Row pitch 24 + 3 px. Lane height = rows × 27 + 5 px, at least one row. A hairline separates lanes. |
 | Hit targets | The icon: 24 px, `tabindex="0"`, `alt` = "{name} ordered at m:ss" |
@@ -719,7 +757,7 @@ List (the table view):
 | Form | Line chart, two series: change over time for two players |
 | Axes | x: game minute, `scaleLinear([0, n - 1])`, `ticks(max(2, round(width / 90)))`. Left edge at the timeline's `gutter`. y: `scaleLinear([0, max]).nice()`, 4 ticks, hairline grid. |
 | Marks | `d3-shape` `line()`, 2 px, round join and cap. 8 px end dot with a 2 px surface ring. |
-| Identity | Legend above the plot: 2 px line key and `PlayerName`. Direct labels at the line ends; they drop when the end values sit within 16 px. |
+| Identity | Legend above the plot, in the card body (the title bar holds only the title and the view toggle): 2 px line key and `PlayerName`. Direct labels at the line ends; they drop when the end values sit within 16 px. |
 | Palette | `series-1` for the lower `player_id`, `series-2` for the other |
 | Tooltip | A vertical crosshair snaps to the nearest minute. One tooltip lists both APMs, value first. The plot is focusable; Left and Right move the crosshair. |
 | Size | 200 px plot plus a 28 px x-axis band. Width from `useWidth`. |
@@ -748,12 +786,12 @@ List (the table view):
 | Vue owns marks | `v-for` against `computed` scales (gnl: `DivisionBracketing.vue:136`) |
 | d3-axis owns one `<g>` | `watchEffect(() => select(g).call(axisLeft(y)...))` (gnl: `DivisionBracketing.vue:178-180`). Axis colours from CSS on `.axis` with tokens. |
 | Tick density | `max(2, round(width / 90))` ticks (gnl: `DivisionBracketing.vue:180`) |
-| Win-rate domain | `[0.5 - d, 0.5 + d]`, `m` = the largest `abs(rate - 0.5)` over drawn marks (at or above the floor), `d = min(0.5, max(0.1, ceil(m / 0.05) * 0.05))` (`stats.html:196-197`). The ends are always labelled. |
+| Win-rate scale | `[0, 1]`. Bars from 0 in `win`, a 50 % tick or reference line (D10). No fitted domain. |
 | Percent format | `fmtPct(x, digits = 0)` in `format.js`: `new Intl.NumberFormat('en', { style: 'percent', minimumFractionDigits: digits, maximumFractionDigits: digits }).format(x)`. "50%", "53.2%", no space. One decimal only on stats matchup value labels. |
-| Win-rate floor | One exported constant, `WIN_RATE_FLOOR = 10`, in `format.js`. Neither it nor the server literal is on the wire (api.md 3.5). Under it, openers rows, the selection panel and matchup rows show a muted number and no mark. Decided: keep it in two places, the server literal in the `/openers` `winrate` sort (api.md 3.5, queries.md 3.5) and this constant, pinned by a golden and by `query.test.mjs`. |
+| Win-rate floor | One exported constant, `WIN_RATE_FLOOR = 10`, in `format.js`. Neither it nor the server literal is on the wire (api.md 3.5). Under it, openers rows, the selection panel and matchup rows show a medium-emphasis number and no bar. Decided: keep it in two places, the server literal in the `/openers` `winrate` sort (api.md 3.5, queries.md 3.5) and this constant, pinned by a golden and by `query.test.mjs`. |
 | Order wording | Any count or time of an order reads "ordered" / "orders". Flagged repeats are skipped in every count and hidden on the timeline. |
 | Container height | Plot height plus the axis band, so labels never cause a nested scroll |
-| Tooltip | One `ChartTooltip.vue`: an absolutely placed `v-sheet` in the chart box. Text via interpolation. Opens on `pointermove` and `focus`; a tap opens it on a phone, a tap outside closes it. |
+| Tooltip | One `ChartTooltip.vue`: an absolutely placed `v-sheet` in `surface-variant` in the chart box. Text via interpolation. Opens on `pointermove` and `focus`; a tap opens it on a phone, a tap outside closes it. |
 | Hit targets | A transparent rect over each bar's whole band, at least 24 px |
 | Keyboard | Bars and rows take `tabindex="0"` and an `aria-label` with the tooltip text |
 | Table view | Every chart has one (story 3) |
@@ -832,7 +870,7 @@ ui-build:
 ```
 
 - rust.md 16's `test` recipe gains `npm --prefix frontend test`, so `just test` runs every test.
-- stories.md "Review" step 2 reads: `just api` and `just ui`.
+- stories.md "Review" step 1 reads: `just fixtures::api` (or `just api`) and `just ui`. Both stay on the host; only ClickHouse runs in a container.
 
 ### 14.3 CI
 
@@ -864,36 +902,36 @@ All decided.
 
 | # | Choice | Decided | Why |
 |---|---|---|---|
-| F1 | Colours | The GNL style as named tokens, validated chart tokens (6.1, 6.5) | Daniel set the style 2026-09-11. Cost: `tokens.js`, the theme block, `style.css`. |
+| F1 | Colours | The approved GNL theme, light and dark, plus three validated chart colours (6.1, 6.2, 6.5) | Daniel approved it 2026-09-11 (D1-D15). Cost: the two theme blocks, `theme.js`, the menu, the pre-paint script, `style.css`. |
 | F2 | Step codec | Readable keys per field and a short step grammar (4.2), not base64 JSON | A link pasted in Discord stays legible. The keys equal the API names. One parser, one test file. |
-| F3 | Win-rate display | Ink number plus a diverging mark on a symmetric domain (10.4, 11.2, 13) | Coloured text fails contrast and the dataviz text rule. On `[0, 1]` over 56 px one point is about 0.56 px. |
+| F3 | Win-rate display | Ink number plus a `win` bar from 0 (10.4, 11.2, 13) | D10. Coloured text fails the dataviz text rule. The bar gives the share at a glance; the number gives the precision. |
 | F4 | Picker | Command-card grid with kind tabs and name search (9.3) | Players know the icons better than the names. Cost: grid keyboard focus, about 40 lines. |
 | F5 | Replay timeline | Swimlane on the APM chart's minute axis, the list as its table view (12.3) | Shows tempo and idle stretches; an APM spike lines up with a build. Cost: first-fit stacking (about 30 lines), a scroll box under 760 px. |
 | F6 | Openers state | `open` and `sel` keys (4.3) | A shared link is useful only with its path open. Cost: up to 6 requests in sequence, each cached 60 s. |
 | F7 | Server data cache | The browser HTTP cache (api.md 2.7) plus a per-page `Map` for opener levels. No Pinia. | A store duplicates the tiers and adds staleness rules. |
 | F8 | Icon map | Module import of `icons.json` (646 entries) | One less request, no empty-icon frame |
-| F9 | Win and loss colours | Proposed `win` `#2A6496`, `loss` `#B5452F`; final pair open (section 16, question 3) | Passes every check on `surface` (6.5). gnl's `success`/`error` (gnl: `HeadToHead.vue:83`, `FantasyBetsView.vue:466-467`, `MatchDetailsView.vue:274`) is green and red, which the brief rules out; `#4CAF50` has 2.78:1 on white. |
+| F9 | Win and loss colours | The GNL `win` `#1F63A6` / `#4F95D8` and `loss` `#B8432C` / `#DE6E52` (D3); `error` stays separate (D4) | PASS all in both modes (6.5). gnl's `text-green` / `text-red` fail the CVD check at ΔE 3.6. |
 | F10 | App shell | The gnl shell (section 3) | Copied pages land in the same frame. The title stays at 390 px. |
 | F11 | Openers replays | Selection panel beside the tree with `sel` (10.3), not a dialog | The tree stays in view; path tiles show the share at each step. |
-| F12 | One-series magnitude | `magnitude` `#7D877E` (6.6) | `series-1` equals `win`. Passes against win and loss: CVD ΔE 10.4, normal 16.2. |
+| F12 | One-series magnitude | `magnitude` `#7D877E` / `#67726A` (6.6) | `series-1` equals `win`. Against `win`: normal ΔE 17.7 / 17.0 (6.5). |
 | F13 | Shipping | Multi-stage `Dockerfile.ui` built in CI, pushed to ghcr (14.1, 14.3) | The box needs no Node and no manual build. CI proves the build. |
+| F15 | Theme choice | Light, dark and system, stored in `localStorage`, the gnl menu and pre-paint script (6.2) | Parity with gnl (D1). A player who picked dark in gnl gets dark here. |
+| F16 | Player colours | `series-1` blue, `series-2` magenta `#B03A7A` / `#C95E98` (6.5) | Orange and gold read as bronze, teal and purple fail against blue (6.5). |
 | F14 | Fonts in Vuetify | CSS overrides in `style.css` (6.3), not Vuetify SASS settings | Three rules, no `sass` or `vite-plugin-vuetify` (gnl has neither). Ceiling: the breakpoint type classes keep Roboto; change when a view needs them. |
 
 Also decided (one line each): race ids are the letters `H O N U R` (api.md A5); `R` is a fifth race; private chat hidden; `m:ss` timing; empty `/search` lists every game; phone table tries the Vuetify `mobile` prop (8.2); fallback glyph for the 3 icon-less codes (6.4); win-rate floor in two places pinned by tests (13); legacy page at `/legacy/` until PR 14 (section 2); page PR shots replace the mockups (section 17); GNL series as text (12.2); D2 (URL holds state) and D3 (two Review bases) confirmed.
 
 ## 16. Open questions
 
-Only these stay open.
+Only this stays open. Closed 2026-09-11 by the theme decisions: the dark theme (D1, D2) and the win/loss pair (D3).
 
 | # | Question | Options | Recommend | Decide at |
 |---|---|---|---|---|
 | 1 | Public ingress, GNL backend search path, hosting | Ingress: tunnel to ClickHouse 8123 with a password; or tunnel to the `ui` nginx. Backend search: the backend calls ClickHouse; or the API's `POST /search`. Hosting: the box through nginx; or pages copied into gnl (gnl's base path and history fallback). | Tunnel to the `ui` nginx with one Cloudflare rate-limit rule per IP on `/api/*` (the plan's rule limits not checked). The backend uses `POST /search`, because 8123 is then not public. Host on the box first; copy pages into gnl later. Today the tunnel reaches ClickHouse only (`infrastructure/cloudflared/config.yml.example`, `compose.yaml:116-119`). | PR 10 |
-| 2 | When to design a dark theme | With the GNL theme PR; or later | With the GNL theme PR. It then needs a `dark` theme block with its own steps, the 6.5 runs on the dark surface, a pre-paint script and a theme control in the app bar. | GNL theme PR |
-| 3 | The final win/loss pair (and `series-1`, `series-2`) | Proposed `#2A6496` / `#B5452F` (players `#2A6496` / `#C0721C`); the 6.5 alternates; or merge `loss` into `danger` | The proposed pair. Propose it to gnl as app-wide; until then copied pages show a blue win beside gnl's green `success` chips. | GNL theme PR |
 
 ## 17. Mockups against this file
 
-Decided: each page PR's Playwright shots (light only) replace the mockups for Review (plan.md). Where a mockup and this file differ, this file wins. The page PRs must close these gaps in their shots:
+Decided: each page PR's Playwright shots (light and dark, 1440 and 390 px) replace the mockups for Review (plan.md). Where a mockup and this file differ, this file wins. The page PRs must close these gaps in their shots:
 
 | Mockup | Gap | Closed by | Section |
 |---|---|---|---|

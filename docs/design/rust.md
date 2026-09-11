@@ -1,9 +1,9 @@
 # Warehouse API: Rust service design
 
-- Written 2026-09-11, condensed the same day. Data: the local ClickHouse 26.9.1.1204: 6,567 replays (6,564 from `gs://w3warehouse-05b6-replays/w3g/gnl/` plus the 3 fixtures), 13,134 `replay_players`, 950,132 `replay_events` rows (M16). Debugging only. The org deploy holds only app-reported GNL replays.
+- Written 2026-09-11, condensed the same day. Data: the host-binary ClickHouse 26.9.1.1204, before the move to Docker (plan.md §4): 6,567 replays (6,564 from `gs://w3warehouse-05b6-replays/w3g/gnl/` plus the 3 fixtures), 13,134 `replay_players`, 950,132 `replay_events` rows (M16). Debugging only. The org deploy holds only app-reported GNL replays.
 - Scope: how the `api.md` service is built, configured, shipped and tested. The HTTP contract lives in `api.md`.
 - Paths are relative to this repo. `axum:` is the axum 0.8.9 source in the local cargo registry. Rule names come from the `clickhouse-best-practices` skill.
-- Server version: PR 2 pins `compose.yaml:12`, `compose.yaml:43` and `infrastructure/ci.yml:26` to `clickhouse/clickhouse-server:26.8` (26.8 LTS; 26.8.2 is the newest tag; today 24.10). Every M-fact (section 11) was measured on 26.9. PR 2 re-runs them on a 26.8 server before it lands.
+- Server version: PR 2 pins `compose.yaml:12`, `compose.yaml:43` and `infrastructure/ci.yml:26` to `clickhouse/clickhouse-server:26.8` (26.8 LTS; 26.8.2 is the newest tag; today 24.10). Every M-fact (section 11) was measured on 26.9 (host binary). PR 2 re-runs them in the 26.8 container before it lands.
 
 ## 1. Summary
 
@@ -148,7 +148,7 @@ Decide by the `X-ClickHouse-Exception-Code` header, never the HTTP status (M3: 1
 Decided: `tokio::sync::OnceCell::get_or_try_init` on first use. Why: same size as a startup load; ClickHouse down at start gives a 503 and a retry, not an exit loop.
 
 - A failed init leaves the cell empty; the next request tries again. `/health` does not read the cache.
-- After `just mappings`, restart the API (the table changes only on a parser bump, justfile:31-35). No TTL reload: add it when mappings change without a restart.
+- After `just local::mappings` or `just box::mappings`, restart the API (the table changes only on a parser bump, section 16). No TTL reload: add it when mappings change without a restart.
 - `Mappings`: `code -> {name, kind, hero, is_supply_building}` from `w3g.mappings` where `kind != 'unknown' AND name != ''` (api.md 3.2). Orc Burrow (`otrb`) is `is_supply_building = 1`, set in the w3grs fork mapping export.
 - The object-race rule (api.md 3.2): one function, one unit test over `eaom`, `Edem`, `Recb`, `Rwdm`, `AEmb`, `AHfa`, `ankh`.
 
@@ -199,8 +199,8 @@ New file `infrastructure/docker/clickhouse/api-user.xml`, mounted into `users.d`
     <users>
         <warehouse_api>
             <password from_env="CLICKHOUSE_API_PASSWORD"/>
-            <!-- loopback (host-native server) and the compose chapi network only; the tunnel's network is not here -->
-            <networks><ip>127.0.0.1</ip><ip>::1</ip><ip>172.30.87.0/24</ip></networks>
+            <!-- loopback (clients in the container) and chapi only: .87 local and box, .88 the fixtures project; not the tunnel's network -->
+            <networks><ip>127.0.0.1</ip><ip>::1</ip><ip>172.30.87.0/24</ip><ip>172.30.88.0/24</ip></networks>
             <profile>api</profile>
             <quota>default</quota>
             <access_management>0</access_management>
@@ -221,7 +221,7 @@ All values are starting values. Decided: measure them after PR 2 (the rebuild on
 | `max_memory_usage_for_user` 2 GB | Caps all API queries. Box 4 GB (PLAN.md:74), server 80% (tuning.xml:16) = 3.2 GB. Ingest, refresh and merges run as `default`: M15 270 MiB insert, 159 MiB refresh. tuning.xml:14-15 defers a per-query cap "until one fat query starts starving others"; public input is that case. Rule after PR 2: server cap minus that peak, minus merge headroom. |
 | `max_concurrent_queries_for_user` 8 | Two `/stats` loads (about 4 queries each). Overflow: 202 (6.2). Watch the 503 rate. |
 | `quota` `default` | M14: every limit NULL. On purpose: one shared user, so a quota would lock out everyone. Per-visitor limits belong at Cloudflare. |
-| `networks` | Loopback (as infrastructure/local/config/users.xml:19-22) and `chapi` (only `clickhouse`, `api`, `ui`). The tunnel on `default` cannot log in. |
+| `networks` | Loopback (a `clickhouse-client` inside the container) and `chapi` (only `clickhouse`, `api`, `ui`): `172.30.87.0/24` in the local project and on the box, `172.30.88.0/24` in the `wh-fixtures` project (section 16). Two compose projects cannot share one subnet. The tunnel on `default` cannot log in. Not checked: the source address of a host call through the published port (PR 4 gate). |
 | Not set: `timeout_before_checking_execution_speed` | M13 (26.9): a 2 s limit fired at 2.0 s with 10 and with 0. The live 159 check covers 26.8. |
 | `output_format_json_quote_64bit_integers` 0 | M6: 26.9 defaults to 0. The pin keeps `u64` parseable whatever 26.8 does. |
 | `max_result_rows` scope | M5: the final result only, not the `/search` slot sets. |
@@ -233,10 +233,10 @@ Wiring:
 | Where | Change |
 |---|---|
 | compose `clickhouse` | Volume `./infrastructure/docker/clickhouse/api-user.xml:/etc/clickhouse-server/users.d/api-user.xml:ro`; env `CLICKHOUSE_API_PASSWORD: "${CLICKHOUSE_API_PASSWORD:-}"`; networks `default`, `chapi` |
-| compose top level | `networks: { default: {}, chapi: { ipam: { config: [ { subnet: 172.30.87.0/24 } ] } } }` (must match the XML; not checked against other Docker networks on the box) |
+| compose top level | `networks: { default: {}, chapi: { ipam: { config: [ { subnet: "${CHAPI_SUBNET:-172.30.87.0/24}" } ] } } }` (must match the XML; not checked against other Docker networks on the box) |
 | compose `api` / `ui` | `networks: [chapi]` / `[default, chapi]` |
 | compose `cloudflared`, `infrastructure/cloudflared/config.yml.example` | Only if the tunnel moves (section 20): drop `network_mode: "service:clickhouse"` (compose.yaml:128); service `http://ui:80` (lines 9-11 have `http://clickhouse:8123`; the comment at lines 4-5 follows) |
-| Host-native server | `infrastructure/local/server.sh` copies the file into `config/users.d/` (as tuning.xml, server.sh:62-63). PR 4 confirms the merge. |
+| `just/fixtures.just` | `export CHAPI_SUBNET := '172.30.88.0/24'` (section 16) |
 | `.env.example` | `CLICKHOUSE_API_PASSWORD=` (empty locally) |
 
 ### 8.1 Exposure
@@ -252,7 +252,7 @@ Wiring:
 | Variable | Default | Meaning |
 |---|---|---|
 | `API_BIND` | `127.0.0.1:8000` | Container: `0.0.0.0:8000` |
-| `CLICKHOUSE_URL` | `http://127.0.0.1:8123` | compose: `http://clickhouse:8123`; fixture server: `http://127.0.0.1:8124` |
+| `CLICKHOUSE_URL` | `http://127.0.0.1:8123` | compose: `http://clickhouse:8123`; the fixtures project: `http://127.0.0.1:8124` (`just fixtures::api` sets it) |
 | `CLICKHOUSE_API_USER` | `warehouse_api` | Section 8 |
 | `CLICKHOUSE_API_PASSWORD` | empty | Section 8 |
 | `DOWNLOAD_BASE_URL` | empty | The public R2 base URL |
@@ -276,7 +276,7 @@ No tower `TimeoutLayer`. Slow-header clients: not handled; the proxy and Cloudfl
 
 ## 11. Measured facts
 
-Measured on 26.9 (local 26.9.1.1204) or the local cargo, 2026-09-11, read-only `SELECT`s over HTTP as `default`. PR 2 re-runs M3-M6 and M11-M14 on 26.8.
+Measured on 26.9 (host binary 26.9.1.1204) or the local cargo, 2026-09-11, read-only `SELECT`s over HTTP as `default`. PR 2 re-runs M3-M6 and M11-M14 in the 26.8 container.
 
 | # | Fact | How |
 |---|---|---|
@@ -394,12 +394,45 @@ CMD ["warehouse-api"]
 
 ## 16. just recipes
 
-Added next to the existing recipes (`test` is justfile:61-62). `client` gains `${CLICKHOUSE_PORT:+--port=$CLICKHOUSE_PORT}`, so every recipe can target the fixture server.
+Docker first (plan.md §4, Daniel, 2026-09-11). The rules:
+
+- The place is a just module, not an argument. A place that cannot be reached has no module.
+- Recipes drive compose. Nobody types a `docker` command by hand.
+- Nested calls use `{{ just_executable() }}`, never bare `just`.
+- A module sets `working-directory := '..'` and uses relative paths. It never uses `justfile_directory()`: inside a module that returns the root's directory (a just bug).
+- No `scripts/` files. An operational step is a recipe.
+- Secrets come from `.env`, never from a recipe. The root's `set dotenv-load` loads `.env` for module recipes too.
+- Checked on just 1.58.0: a root alias to a module recipe, `working-directory := '..'` in a module, and a module `export` that reaches a nested call.
+
+| Module | File | Lands | Place |
+|---|---|---|---|
+| root | `justfile` | today | No ClickHouse: cargo, npm, the module list |
+| `local` | `just/local.just` | PR 1 | Compose project `wc3-gym-warehouse` (compose.yaml:7). ClickHouse on `127.0.0.1:8123`. Holds the full load. |
+| `fixtures` | `just/fixtures.just` | PR 1 | Compose project `wh-fixtures`: own volumes, ClickHouse on `127.0.0.1:8124`, `chapi` `172.30.88.0/24`. Holds the 3 fixtures, or the PR 1b battle set. |
+| `box` | `just/box.just` | The box PR (PLAN.md build order step 3), not before | The Hetzner box, over ssh |
+
+`justfile` (root):
 
 ```just
+# wc3-gym-warehouse: ClickHouse, the parse drain, the API and the pages.
+# Secrets come from .env (see .env.example), never from a recipe.
+set dotenv-load
+
+mod local 'just/local.just'
+mod fixtures 'just/fixtures.just'
+# mod box 'just/box.just'        # lands with the box
+
+alias up := local::up
+alias down := local::down
+alias ch := local::ch
+
+manifest := 'pipeline/parse-rs/Cargo.toml'
 api_manifest := 'services/api/Cargo.toml'
 
-# run the API against CLICKHOUSE_URL on API_BIND
+_default:
+    @{{ just_executable() }} --list --list-submodules
+
+# run the API against CLICKHOUSE_URL (default: the local project) on API_BIND
 api:
     cargo run --manifest-path {{api_manifest}}
 
@@ -417,41 +450,147 @@ api-lint:
     cargo fmt --check --manifest-path {{api_manifest}}
     cargo clippy --locked --manifest-path {{api_manifest}} --all-targets -- -D warnings
 
-# the live suite on CLICKHOUSE_URL: search parity, story numbers, user and profile checks
+# the live suite on CLICKHOUSE_URL (default: the local project): parity, story numbers, user checks
 api-parity:
     cargo test --locked --manifest-path {{api_manifest}} --test live -- --ignored
+```
 
-# load the 3 parser goldens into w3g.replays_raw, no bucket needed (run `just mappings` first)
+`just/local.just` (PR 1). `mappings`, `backfill` and `backfill-bucket` move from justfile:30-58 with two changes: the new `client`, and `backfill-bucket` calls `local::backfill`.
+
+```just
+# The local compose project: ClickHouse on 127.0.0.1:8123, the drain, the ui.
+set working-directory := '..'
+
+manifest := 'pipeline/parse-rs/Cargo.toml'
+# Must match PARSE_VERSION in pipeline/parse-rs/src/lib.rs.
+parse_version := '2'
+# clickhouse-client in the container, SQL on stdin. $CLICKHOUSE_PASSWORD expands in the container.
+client := "docker compose exec -T clickhouse sh -c 'exec clickhouse-client ${CLICKHOUSE_PASSWORD:+--password=\"$CLICKHOUSE_PASSWORD\"} \"$@\"' client"
+
+# build and start clickhouse, the schema one-shot, the drain and the ui
+up:
+    docker compose up -d --build
+
+# stop the project; its volumes and the full load stay
+down:
+    docker compose down
+
+# an interactive clickhouse-client
+ch:
+    docker compose exec clickhouse sh -c 'exec clickhouse-client ${CLICKHOUSE_PASSWORD:+--password="$CLICKHOUSE_PASSWORD"}'
+
+# apply tables.sql then views.sql: the compose one-shot, which starts clickhouse
+schema:
+    docker compose run --rm schema
+
+# load the 3 parser goldens into w3g.replays_raw, no bucket needed (run mappings first)
 fixtures:
     for f in pipeline/parse-rs/tests/goldens/*.json; do {{client}} --query "INSERT INTO w3g.replays_raw (replay_id, doc) SELECT JSONExtractString(doc, 'id'), doc FROM input('doc String') WHERE JSONExtractString(doc, 'id') NOT IN (SELECT replay_id FROM w3g.replays_raw) FORMAT JSONAsString" < "$f"; done
     {{client}} --query 'SYSTEM REFRESH VIEW w3g.refresh__openers'
 
-# a second host-native ClickHouse: own state dir, HTTP 8124, TCP 9004 (`name` picks the state dir)
-fixture-server name='fixtures':
-    W3WAREHOUSE_CH_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/wc3-gym-warehouse/clickhouse-{{name}}" \
-      W3WAREHOUSE_CH_HTTP_PORT=8124 W3WAREHOUSE_CH_TCP_PORT=9004 bash infrastructure/local/server.sh
+# load parsed docs from the mounted data/ in one INSERT … FROM file(), then refresh
+load glob='data/parsed/gnl/*.json':
+    {{client}} --param_glob='{{glob}}' --query "INSERT INTO w3g.replays_raw (replay_id, doc) SELECT JSONExtractString(doc, 'id') AS replay_id, doc FROM file({glob:String}, 'JSONAsString', 'doc String') WHERE replay_id != '' AND replay_id NOT IN (SELECT replay_id FROM w3g.replays_raw) LIMIT 1 BY replay_id"
+    {{client}} --query 'SYSTEM REFRESH VIEW w3g.refresh__openers'
 
-# PR 1b: push raw .w3g files through local MinIO, the drain and backfill-bucket (never R2)
-battle-test dir:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    export MINIO_API_PORT=9100 MINIO_CONSOLE_PORT=9101 W3WAREHOUSE_S3_ENDPOINT=localhost:9100 W3WAREHOUSE_S3_SECURE=false \
-      W3WAREHOUSE_S3_ACCESS_KEY=minioadmin W3WAREHOUSE_S3_SECRET_KEY=minioadmin W3WAREHOUSE_S3_BUCKET=warehouse W3WAREHOUSE_S3_PREFIX=dev
-    mc=~/.local/bin/mc
-    bash infrastructure/local/minio.sh up
-    for f in {{dir}}/*.w3g; do "$mc" cp -q "$f" "wc3gym/warehouse/dev/replays/$(basename "$f" .w3g)/game1.w3g"; done
-    {{just_executable()}} drain-once
-    {{just_executable()}} backfill-bucket
-    "$mc" find wc3gym/warehouse/dev/status --name '*.json' --exec "$mc cat {}" | grep '"failed"' || true
+# parse every new or changed replay in the bucket once, with the drain image
+drain-once:
+    docker compose run --rm --build drain drain --once
 ```
 
-- `fixtures`: the 3 parser goldens are the 3 fixture replays (M8); the `replay_id` gate copies backfill.sql:22-23. PR 1 adds it with today's target `w3g.refresh__opener_rollup`; PR 2 (S2) renames it and justfile:47 to `w3g.refresh__openers`. PR 1 checks that the `input()` + `JSONAsString` insert works and that `SYSTEM REFRESH VIEW` has finished before the recipe returns (add `SYSTEM WAIT VIEW` if the refresh is async).
-- `fixture-server` (PR 1, plan choice P1): `server.sh` reads `W3WAREHOUSE_CH_HTTP_PORT` and `W3WAREHOUSE_CH_TCP_PORT` (default 8123, 9000; the template has them fixed at lines 24-25) and renders `config.xml`, `users.xml` and `config.d/` under `$STATE_DIR/config/`, so two servers never share one rendered file and `stop` matches the right one. Use: `just fixture-server`; `CLICKHOUSE_PORT=9004 just schema mappings fixtures`; `CLICKHOUSE_URL=http://127.0.0.1:8124 just api`.
-- `battle-test` (PR 1b, `chore/drain-battle-test`) runs the bulk set through the real path, on an empty server: `just fixture-server battle`; `CLICKHOUSE_PORT=9004 just schema mappings`; `CLICKHOUSE_PORT=9004 just battle-test <main clone>/data/deploy/gnl` (6,564 files, 1.4 GB). MinIO moves to 9100: the local ClickHouse holds TCP 9000. The stems are numeric, so the drain key parser (drain.rs:113-120) accepts `dev/replays/<stem>/game1.w3g`; the stem becomes a fake `gnl_series_id`. The recipe sets every S3 variable, so `.env` R2 values never apply.
-- PR 1b gates: the `replays FINAL` count and `replay_id` set equal the `file()` load of the same 6,564 files (the local server minus the 3 fixtures). A second `just drain-once` parses 0 files. Every failure is listed with its reason (the `"failed"` breadcrumbs: key, error). The `dev/` prefix and its fake series ids never reach the org deploy: the recipe writes only to local MinIO and the battle state dir; after PR 3, `countIf(startsWith(source_key, 'dev/'))` is 0 there.
-- `load-local <glob>` (PR 1, plan.md) loads parsed docs in one `INSERT … FROM file()`, with the backfill.sql:22-23 gate and `LIMIT 1 BY replay_id`. PR 2 rebuilds the local server with it.
+`just/fixtures.just` (PR 1; `battle-test` PR 1b; `api`, `parity` PR 5):
+
+```just
+# The fixtures project: an empty ClickHouse on 127.0.0.1:8124 with the 3 parser goldens.
+# It reuses the local recipes; compose reads these three values from the environment.
+set working-directory := '..'
+
+export COMPOSE_PROJECT_NAME := 'wh-fixtures'
+export CLICKHOUSE_HTTP_PORT := '8124'
+export CHAPI_SUBNET := '172.30.88.0/24'
+
+# drop the project and rebuild it from nothing: schema, mappings, the 3 fixtures
+up: down
+    {{ just_executable() }} local::schema local::mappings local::fixtures
+
+# remove the project and its volumes
+down:
+    docker compose --profile local down -v
+
+# an interactive clickhouse-client on this project
+ch:
+    {{ just_executable() }} local::ch
+
+# the API on this project
+api:
+    CLICKHOUSE_URL=http://127.0.0.1:8124 {{ just_executable() }} api
+
+# the live suite on this project
+parity:
+    CLICKHOUSE_URL=http://127.0.0.1:8124 {{ just_executable() }} api-parity
+
+# PR 1b: the raw .w3g files through compose MinIO, the drain image and backfill-bucket (never R2)
+battle-test: down
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # The public MinIO defaults, not secrets. Every S3 variable is set, so .env R2 values never apply.
+    export W3WAREHOUSE_S3_ENDPOINT=minio:9000 W3WAREHOUSE_S3_SECURE=false W3WAREHOUSE_S3_ACCESS_KEY=minioadmin \
+      W3WAREHOUSE_S3_SECRET_KEY=minioadmin W3WAREHOUSE_S3_BUCKET=warehouse W3WAREHOUSE_S3_PREFIX=dev
+    raw="$(realpath "${W3WAREHOUSE_DATA_DIR:-data}")/deploy/gnl"
+    mc='mc alias set -q l http://minio:9000 minioadmin minioadmin'
+    {{ just_executable() }} local::schema local::mappings
+    docker compose --profile local run --rm -v "$raw:/in:ro" --entrypoint sh minio-setup -c \
+      "$mc && mc mb -q --ignore-existing l/warehouse && for f in /in/*.w3g; do s=\$(basename \"\$f\" .w3g); mc cp -q \"\$f\" l/warehouse/dev/replays/\$s/game1.w3g; done"
+    {{ just_executable() }} local::drain-once
+    {{ just_executable() }} local::drain-once    # the gate: this pass parses 0 files
+    {{ just_executable() }} local::backfill-bucket
+    docker compose --profile local run --rm --entrypoint sh minio-setup -c \
+      "$mc && mc find l/warehouse/dev/status --name '*.json' --exec 'mc cat {}'" | grep '"failed"' || true
+```
+
+`just/box.just` (the box PR, not before). `WAREHOUSE_BOX` (`user@host`) and `WAREHOUSE_BOX_DIR` come from `.env`. The box PR checks the quoting.
+
+```just
+# The Hetzner box, over ssh. The box's own .env holds its secrets and never leaves the box.
+set working-directory := '..'
+
+ssh := 'ssh "$WAREHOUSE_BOX" cd "$WAREHOUSE_BOX_DIR" "&&"'
+# The box's clickhouse-client, SQL on stdin. Two quote layers: $CLICKHOUSE_PASSWORD expands in the container.
+client := ssh + ' ' + '''docker compose exec -T clickhouse sh -c "'exec clickhouse-client \${CLICKHOUSE_PASSWORD:+--password=\"\$CLICKHOUSE_PASSWORD\"} \"\$@\"'" client'''
+
+# copy compose.yaml, db/ and the ClickHouse config; pull the CI images; restart what changed
+deploy:
+    rsync -a --relative compose.yaml db/ infrastructure/docker/clickhouse/ "$WAREHOUSE_BOX:$WAREHOUSE_BOX_DIR/"
+    {{ssh}} docker compose --profile prod pull
+    {{ssh}} docker compose --profile prod up -d
+
+# apply tables.sql then views.sql on the box: the compose one-shot
+schema:
+    {{ssh}} docker compose run --rm schema
+
+# rebuild w3g.mappings from the deployed drain image's export-mappings, then the custom-map seed
+mappings:
+    {{ssh}} docker compose run --rm --no-deps -T drain sh -c "'export-mappings /tmp/m.json >&2 && cat /tmp/m.json'" > /tmp/box-mappings.json
+    {{client}} --query "'TRUNCATE TABLE w3g.mappings'"
+    {{client}} --query "'INSERT INTO w3g.mappings (code, name, kind, race, hero, is_supply_building) FORMAT JSONEachRow'" < /tmp/box-mappings.json
+    {{client}} --query "'INSERT INTO w3g.mappings (code, name, kind, category) FORMAT JSONEachRow'" < db/w3g/seed/custom_object_names.ndjson
+
+# an interactive clickhouse-client on the box
+ch:
+    ssh -t "$WAREHOUSE_BOX" cd "$WAREHOUSE_BOX_DIR" "&&" docker compose exec clickhouse sh -c "'exec clickhouse-client \${CLICKHOUSE_PASSWORD:+--password=\"\$CLICKHOUSE_PASSWORD\"}'"
+```
+
+- `client` (PR 1) has one path: the container. Today's fallback (justfile:5-8) runs a host `clickhouse-client` when one is on PATH. That binary connects to native port 9000, which compose does not publish, so on such a machine every recipe misses the container.
+- `fixtures`: the 3 parser goldens are the 3 fixture replays (M8); the `replay_id` gate copies backfill.sql:22-23. PR 1 adds it with today's target `w3g.refresh__opener_rollup`; PR 2 (S2) renames it, and the `backfill` and `load` refreshes, to `w3g.refresh__openers`. PR 1 checks that the `input()` + `JSONAsString` insert works and that `SYSTEM REFRESH VIEW` has finished before the recipe returns (add `SYSTEM WAIT VIEW` if the refresh is async).
+- `load` (PR 1) loads parsed docs in one `INSERT … FROM file()` (`insert-batch-size`), with the backfill.sql:22-23 gate and `LIMIT 1 BY replay_id`. `file()` is chrooted to `user_files_path` `/app/` (user-files.xml). Compose mounts `${W3WAREHOUSE_DATA_DIR:-./data}` read-only at `/app/data`, so the glob reads as a repo-relative path. A worktree has no `data/`: its `.env` sets `W3WAREHOUSE_DATA_DIR` to the main clone's `data/`. PR 2 rebuilds the local project with `load`.
+- `fixtures::up` drops its volumes first, so the base is the same every time (D3). No recipe removes the local project's volumes.
+- The `fixtures` module exports `COMPOSE_PROJECT_NAME`, `CLICKHOUSE_HTTP_PORT` and `CHAPI_SUBNET`, then calls the `local` recipes. Compose takes these from the shell before `.env`. The project starts only `clickhouse` (through `schema`) and, in `battle-test`, MinIO and the drain; `ui` (8080) and `api` (8000) run only in the local project.
+- `battle-test` (PR 1b, `chore/drain-battle-test`) runs the bulk set through the real path, in containers only: 6,564 files, 1.4 GB, from `data/deploy/gnl/`. No host MinIO and no host port: the drain and ClickHouse reach `minio:9000` on the project network. The stems are numeric, so the drain key parser (drain.rs:113-120) accepts `dev/replays/<stem>/game1.w3g`; the stem becomes a fake `gnl_series_id`. `just fixtures::up` restores the fixture base after.
+- Memory: each ClickHouse container may take 80% of RAM (tuning.xml:16). Record the local project's oracle numbers first, then `just down` if the machine is short during the battle test.
+- PR 1b gates: in `wh-fixtures`, the `replays FINAL` count and `sum(cityHash64(replay_id))` equal the local project's `file()` load of the same 6,564 files (the 3 fixtures excluded). The second `drain-once` parses 0 files. Every failure is listed with its reason (the `"failed"` breadcrumbs: key, error). The `dev/` prefix and its fake series ids stay in the `wh-fixtures` volumes and never reach the org deploy; after PR 3, `countIf(startsWith(source_key, 'dev/'))` is 0 on the box.
+- `box` (the box PR): `deploy` copies only tracked files and pulls the CI images. Compose gains `image: ghcr.io/warcraft-gym/wc3-gym-warehouse-<drain|api|ui>:latest` beside each `build:`, so `pull` has something to pull. `mappings` uses the deployed drain image (Dockerfile.drain ships `export-mappings`), so the table matches the running parser. `backfill-bucket` (PLAN.md:105, "rebuild from nothing") builds the URL and keys inside the box's `clickhouse` container from the `W3WAREHOUSE_S3_*` values compose passes in; nothing secret crosses ssh. A rollback deploys a `:<sha>` tag; add a tag argument when the first rollback happens.
 - PR 3 re-stages the staging bucket the same way: the drain re-runs with the breadcrumbs cleared, so each doc carries its raw key.
-- `test` stays one command. frontend.md adds `npm --prefix frontend test` to it.
+- `test` stays one command. frontend.md adds `npm --prefix frontend test` to it. `ui` and `ui-build` (frontend.md 14.2) sit in the root: they touch no ClickHouse.
 
 ## 17. Testing
 
@@ -553,18 +692,19 @@ Decided: the stub is a small axum app in the test (about 25 lines). Why: same po
             pipeline/parse-rs
             services/api
       - uses: extractions/setup-just@v2
-      - run: docker compose run --rm schema
-      - run: just mappings fixtures
+      - run: just local::schema
+      - run: just local::mappings local::fixtures
       - run: just api-parity
         env:
           CLICKHOUSE_URL: http://127.0.0.1:8123
 ```
 
-- `docker compose run --rm schema` starts ClickHouse through `depends_on` (compose.yaml:56-58) and applies both SQL files.
+- `just local::schema` runs the compose `schema` one-shot. It starts ClickHouse through `depends_on` (compose.yaml:56-58) and applies both SQL files. The job runs the same `clickhouse/clickhouse-server:26.8` image as the local project and the box.
 - Network check (PR 4 gate): `docker run --rm --network wc3-gym-warehouse_default curlimages/curl` to `http://clickhouse:8123/?query=SELECT+1` with the `warehouse_api` headers gives code 516 `AUTHENTICATION_FAILED`, with the right password and with an empty one.
 - If ClickHouse sees the runner's calls on 8123 from the `default` gateway, the job runs the suite in a container on `chapi`.
-- The runner has no `clickhouse-client`; the justfile falls back to `docker compose exec` (justfile:8).
+- Every recipe reaches ClickHouse through `docker compose exec`, so the runner needs no `clickhouse-client`.
 - `image` job: a second `docker/build-push-action` step for `Dockerfile.api`, tags `ghcr.io/warcraft-gym/wc3-gym-warehouse-api:latest` and `:${{ github.sha }}` (as ci.yml:58-65).
+- Deploy: CI builds and pushes the images; `just box::deploy` pulls them on the box (section 16). A CI deploy step (PLAN.md:98) needs an ssh key secret; it waits until the box exists.
 
 ## 19. Design choices
 

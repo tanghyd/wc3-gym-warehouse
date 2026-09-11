@@ -1,10 +1,10 @@
 # Warehouse queries
 
 - Written 2026-09-11. Condensed 2026-09-11 with the final decisions. This file gives the exact SQL for each route in `docs/design/api.md`, the build-order compiler, the schema changes, the order-repeat flag and the SQL goldens.
-- **Data: the local ClickHouse 26.9.1.1204, read 2026-09-11 17:47 to 21:30.** 6,567 replays: 6,564 from `gs://w3warehouse-05b6-replays/w3g/gnl/` plus the 3 fixtures. Claude loaded them 2026-09-11 with the parse bin plus `INSERT … FROM file()`. The parsed docs are at the main clone `data/parsed/gnl/` (git-ignored). This set is for debugging only. It is not the "about 1,000" set. The org deploy (Warcraft-Gym/wc3-gym-warehouse) holds only app-reported GNL replays.
+- **Data: the host-binary ClickHouse 26.9.1.1204, read 2026-09-11 17:47 to 21:30.** From PR 1 the local compose project holds this load (plan.md §4). 6,567 replays: 6,564 from `gs://w3warehouse-05b6-replays/w3g/gnl/` plus the 3 fixtures. Claude loaded them 2026-09-11 with the parse bin plus `INSERT … FROM file()`. The parsed docs are at the main clone `data/parsed/gnl/` (git-ignored). This set is for debugging only. It is not the "about 1,000" set. The org deploy (Warcraft-Gym/wc3-gym-warehouse) holds only app-reported GNL replays.
 - The load has 13,134 players and 950,132 `replay_events` rows. All replays are `type = '1on1'` with `gnl_series_id = 0`. 6,496 have events and 71 have none (§8 item 6).
-- Review bases (stories.md D3): the 3 fixtures on an empty server decide pass or fail. This full load is a dated scale check. `api.md` examples come from the fixtures.
-- **Server version.** PR 2 pins compose.yaml:12, compose.yaml:43 and infrastructure/ci.yml:26 to `clickhouse/clickhouse-server:26.8` (the 26.8 LTS line; 26.8.2 is the newest tag; today 24.10). Every plan and M-fact here was measured on 26.9. PR 2 re-runs them on a 26.8 server before it lands (§5 S4).
+- Review bases (stories.md D3): the 3 fixtures in the empty `wh-fixtures` compose project decide pass or fail. This full load is a dated scale check. `api.md` examples come from the fixtures.
+- **Server version.** PR 2 pins compose.yaml:12, compose.yaml:43 and infrastructure/ci.yml:26 to `clickhouse/clickhouse-server:26.8` (the 26.8 LTS line; 26.8.2 is the newest tag; today 24.10). Every plan and M-fact here was measured on 26.9 (host binary). PR 2 re-runs them in the 26.8 container before it lands (§5 S4).
 - Paths are relative to this repo. Rule names come from the `clickhouse-best-practices` skill.
 
 ## 0. How this was measured
@@ -509,9 +509,9 @@ Decided (stories.md D4): minimum count, "without" and first hero are in, as PRs 
 
 Five changes: S1-S3 and S5 change tables; S4 pins the image. S1, S2 and S5 land in PR 2; S3 in PR 3.
 
-**How they land: a rebuild.** ClickHouse is derived state (PLAN.md:105): edit tables.sql and views.sql, `DROP DATABASE w3g`, then `just schema`, `just mappings`, and a reload: `just backfill-bucket` on the box (justfile:26-58), `just load-local` and `just fixtures` on the local server (plan.md PR 1, PR 2). No hand `EXCHANGE`, MV re-point or `DROP`.
+**How they land: a rebuild.** ClickHouse is derived state (PLAN.md:105): edit tables.sql and views.sql, `DROP DATABASE w3g`, then schema, mappings and a reload: `just box::schema box::mappings box::backfill-bucket` on the box; `just local::schema local::mappings local::load local::fixtures` and `just fixtures::up` locally (plan.md PR 1, PR 2; rust.md §16). No hand `EXCHANGE`, MV re-point or `DROP`.
 
-- `backfill-bucket` reloads only what the bucket holds. The dev set reaches a bucket through PR 1b (`chore/drain-battle-test`, `just battle-test`, rust.md §16): local MinIO (infrastructure/local/minio.sh), the 6,564 files at `dev/replays/<file stem>/game1.w3g` (`W3WAREHOUSE_S3_PREFIX=dev`), the drain `--once`, then `just backfill-bucket`. Gates: plan.md PR 1b. The `dev/` prefix and its fake series ids never reach the org deploy.
+- `backfill-bucket` reloads only what the bucket holds. The dev set reaches a bucket through PR 1b (`chore/drain-battle-test`, `just fixtures::battle-test`, rust.md §16), in containers only: the compose MinIO (`local` profile), the 6,564 files at `dev/replays/<file stem>/game1.w3g` (`W3WAREHOUSE_S3_PREFIX=dev`), the drain image `--once`, then `backfill-bucket`. Gates: plan.md PR 1b. The `dev/` prefix and its fake series ids never reach the org deploy.
 - backfill.sql:17-23 gains `LIMIT 1 BY replay_id`, so one glob cannot stage a replay twice. C8's `DISTINCT` covers two concurrent runs.
 
 ### S1. `replay_events` ORDER BY → `(race, event_type, subject_code, replay_id, player_id, time_ms, seq)`
@@ -540,7 +540,7 @@ Five changes: S1-S3 and S5 change tables; S4 pins the image. S1, S2 and S5 land 
 
 - **Rules:** `query-mv-refreshable`, `query-join-filter-before`, `schema-types-lowcardinality`.
 - **Access path:** every `/openers` click and `/openers/replays` page runs the view: a full `replay_events` scan (118/118), `replay_players FINAL` twice, `replays FINAL` twice, the map regex on every replay. `opener_rollup` cannot serve the player filter (tables.sql:241-254), and nothing reads it (schema.md; clickhouse-audit finding 3).
-- **Launch condition.** `/openers` and `/openers/replays` go public only after S2: each click reads 991,101 rows and 155.14 MiB today, on a 2 vCPU box (PLAN.md:78-81). The local server runs `max_threads = auto(16)`. api.md 3.5 states the same condition. Fallback only if launch must come first: `max_threads = 1` in the api profile (rust.md §8); cost: every route then runs single-threaded.
+- **Launch condition.** `/openers` and `/openers/replays` go public only after S2: each click reads 991,101 rows and 155.14 MiB today, on a 2 vCPU box (PLAN.md:78-81). The 26.9 host binary ran `max_threads = auto(16)`; a container sees the same host cores unless compose caps its CPUs. api.md 3.5 states the same condition. Fallback only if launch must come first: `max_threads = 1` in the api profile (rust.md §8); cost: every route then runs single-threaded.
 
 ```sql
 CREATE TABLE IF NOT EXISTS w3g.openers
@@ -591,7 +591,7 @@ SETTINGS max_bytes_before_external_group_by = 1500000000;
 - `is_repeat = 0` changes 0 of the 12,881 `seq` arrays on the full load (emulated flag; `arrayCompact` already drops the adjacent twin). O1-O4 and R1 keep their totals.
 - **Memory at 6,567 replays:** the view peaks at 155.14 MiB; this body at 122.58 MiB (-21%). Both read about 990,000 rows. If memory grows linearly: ~19 MiB at 1,000 replays, ~1.9 GB at 100,000; the box has 4 GB, capped at 80% (tuning.xml:16). S2 must ship before ~20,000 replays. Decided: PR 2 re-measures the refresh peak.
 - The `SETTINGS` guard stays (views.sql:467-470). It spills the inner `GROUP BY` to disk past 1.5 GB. It does not cover the joins; join spill is not checked. The refresh runs as the MV definer, not the `readonly` user.
-- Cadence: `REFRESH EVERY 1 DAY` as a safety net. Data enters only through `just backfill` (backfill.sql:1-3; the drain writes to the bucket, not ClickHouse: drain.rs:1-4), so a shorter timer adds cost and no freshness (`query-mv-refreshable`). `just backfill` refreshes after every load (justfile:47, renamed to `SYSTEM REFRESH VIEW w3g.refresh__openers`).
+- Cadence: `REFRESH EVERY 1 DAY` as a safety net. Data enters only through `backfill` and `load` (backfill.sql:1-3; the drain writes to the bucket, not ClickHouse: drain.rs:1-4), so a shorter timer adds cost and no freshness (`query-mv-refreshable`). Both recipes refresh after every load (justfile:47, moved to `just/local.just` in PR 1, renamed to `SYSTEM REFRESH VIEW w3g.refresh__openers`).
 - After (local): 12,881 rows (6,467 replays), `Keys: race`, `Granules: 1/2`, `binary search`. Key follows `schema-pk-cardinality-order`: race (5) < opponent_race (5) < map (14) < replay_id. With S1, the refresh reads 32 granules, not 116.
 - **Change:** add both statements; change justfile:47; point 3.5 and 3.6 at `w3g.openers`; delete views.sql:433-470 and tables.sql:237-254; the `replay_openers` view (views.sql:45-88) goes once nothing reads it.
 
@@ -609,7 +609,7 @@ Decided (stories.md D1, C10): the drain writes the raw R2 object key into each d
 
 ### S4. Pin the ClickHouse image to 26.8
 
-Decided: PR 2 pins compose.yaml:12, compose.yaml:43 and infrastructure/ci.yml:26 to `clickhouse/clickhouse-server:26.8` (26.8 LTS; 26.8.2 newest; today 24.10). Why: the plans in 3.4 and 3.6 skip a pre-join filter on `replays` because the server adds a runtime join filter, on by default from 26.2 (`query-join-filter-before`). Every plan and M-fact here was measured on 26.9; PR 2 re-runs them on 26.8 before it lands.
+Decided: PR 2 pins compose.yaml:12, compose.yaml:43 and infrastructure/ci.yml:26 to `clickhouse/clickhouse-server:26.8` (26.8 LTS; 26.8.2 newest; today 24.10). Why: the plans in 3.4 and 3.6 skip a pre-join filter on `replays` because the server adds a runtime join filter, on by default from 26.2 (`query-join-filter-before`). Every plan and M-fact here was measured on 26.9 (host binary); PR 2 re-runs them in the 26.8 container before it lands. The local project, the fixtures project, CI and the box all run this one image (plan.md §4).
 
 ### S5. `is_repeat` on order rows
 
@@ -1140,7 +1140,7 @@ ARRAY JOIN
 
 - `mv__order_upgrade` and `mv__order_unknown` take the same `WITH` and `is_repeat` lines, with `'upgrades'` and `'unknown'` for `'buildings'`. `mv__order_unit` and `mv__order_item` are unchanged; their rows take `DEFAULT 0`.
 - `arrayExists` over an earlier same-code order within 1000 ms equals "gap to the previous same-code order < 1000 ms", because the arrays are time-sorted (9.1). Cost is O(n²) per player bucket.
-- `hero_codes` reads `mappings`, which `just mappings` loads before any backfill (`mv_events__order` already joins it).
+- `hero_codes` reads `mappings`, which `just local::mappings` (or `box::mappings`) loads before any backfill (`mv_events__order` already joins it).
 - `mv_events__order` (views.sql:358-378) adds `e.is_repeat AS is_repeat`. The hero MVs write `DEFAULT 0`: `hero_trained` comes from ability events, not orders.
 - Checked (26.9, `clickhouse local`, the 6,564 `data/parsed/gnl/` docs through these MVs): 19,467 flags (building 4,390, upgrade 3,633, unknown 11,444). A window-function recount of the rule gives 0 mismatches. F1's 19,472 adds the 5 flags of the 3 fixtures (server, 26.9, re-read 2026-09-11). An `arrayLastIndex(…) AS k` alias inside the lambda gave wrong flags (9,805 mismatches), so do not use it. PR 2 re-runs this check on 26.8.
 

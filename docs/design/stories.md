@@ -9,11 +9,11 @@ Every Review line gives two numbers. Only the fixture number decides pass or fai
 
 | Base | What | How | Use |
 |---|---|---|---|
-| **Fixtures** | The 3 parser goldens: 3 replays, 6 players, 323 `replay_events` rows. | A second, empty local server (`just fixture-server`: its own `STATE_DIR` and ports; `CLICKHOUSE_URL` points the API at it). Then `just schema`, `just mappings`, `just fixtures`. plan.md PR 1 adds `fixtures` (rust.md §16; not in justfile:1-68 today). | Pass or fail. The numbers never change. |
-| **Full load** | The local dev server, measured on 26.9 (26.9.1.1204), re-read 2026-09-11 evening. 6,567 replays = 6,564 from `gs://w3warehouse-05b6-replays/w3g/gnl/` + the 3 fixtures. 13,134 players, 950,132 `replay_events` rows. Ingested 16:47:52 to 17:27:57 (`replays.ingested_at`). All `type = '1on1'`, all `gnl_series_id = 0` (queries.md header). | Claude loaded it 2026-09-11: the parse bin, then `INSERT … FROM file()`. Parsed docs: main clone `data/parsed/gnl/` (git-ignored). PR 1b reloads the same set through the real drain path (plan.md). | Scale check: grey rule, sums, page speed. Re-measure and re-date after each load. Debugging only: the org deploy holds only app-reported GNL replays. |
+| **Fixtures** | The 3 parser goldens: 3 replays, 6 players, 323 `replay_events` rows. | Its own compose project, `wh-fixtures`: own volumes, ClickHouse on `127.0.0.1:8124` (plan.md P1). `just fixtures::up` rebuilds it from nothing: schema, mappings, the 3 fixtures. plan.md PR 1 adds the module (rust.md §16; not in justfile:1-68 today). | Pass or fail. The numbers never change. |
+| **Full load** | Measured on 26.9 (host binary 26.9.1.1204), re-read 2026-09-11 evening. From PR 1 the local compose project holds it; PR 2 re-measures it on 26.8. 6,567 replays = 6,564 from `gs://w3warehouse-05b6-replays/w3g/gnl/` + the 3 fixtures. 13,134 players, 950,132 `replay_events` rows. Ingested 16:47:52 to 17:27:57 (`replays.ingested_at`). All `type = '1on1'`, all `gnl_series_id = 0` (queries.md header). | Claude loaded it 2026-09-11: the parse bin, then `INSERT … FROM file()`. Parsed docs: main clone `data/parsed/gnl/` (git-ignored). PR 1 loads them into the local project (`just local::load`; compose mounts `data/` read-only). PR 1b reloads the same set through the real drain path (plan.md). | Scale check: grey rule, sums, page speed. Re-measure and re-date after each load. Debugging only: the org deploy holds only app-reported GNL replays. |
 
 Then:
-1. Start the Rust API (`just api`) and the Vite dev server (`just ui`). plan.md names the PR that adds each recipe.
+1. Start the Rust API on the fixtures (`just fixtures::api`) or on the full load (`just api`), and the Vite dev server (`just ui`). plan.md names the PR that adds each recipe.
 2. Open the dev server URL plus the route in the Review line.
 
 The 3 fixtures (short ids). The full load contains them too. None has a GNL series link (`gnl_series_id = 0`).
@@ -139,7 +139,7 @@ Out of scope: stat-events, playback, hotkeys, resource transfers.
 | Empty state | Says what to change, e.g. "No game matches. Drop a step or widen the filters." (index.html:289). |
 | Error state | Shows the API `{"error": "<text>"}` text. ClickHouse down shows "Warehouse offline" and a retry button. A bad input names the field. |
 | Loading | The content keeps its place and shows a progress bar. Buttons do not double-submit. |
-| Theme and size | Light only, in the GNL stone-and-bronze style: the colour tokens, Alegreya and Alegreya Sans of frontend.md section 6 (`design/mockups/tokens.css`). No dark theme and no theme menu. Every page works at 400 px wide. Open for Daniel (the GNL theme PR): when to design a dark theme, and the final win/loss pair. |
+| Theme and size | The GNL stone-and-bronze theme in light and dark, approved 2026-09-11 (D1-D15): the tokens, Alegreya and Alegreya Sans of frontend.md section 6 (`design/mockups/tokens.css`). A theme menu with Light, Dark and System, as in gnl. Every page works at 400 px wide in both modes. |
 
 ## Decisions
 
