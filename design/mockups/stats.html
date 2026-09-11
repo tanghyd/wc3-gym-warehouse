@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GNL replays stats</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@3.8.0/dist/vuetify.min.css">
+<link rel="stylesheet" href="./tokens.css">
+<script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@3.8.0/dist/vuetify.min.js"></script>
+<script src="./theme.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<style>
+  /* gnl base.css: no upper-case buttons; style.css (frontend.md 6.3): fonts. Colours come from the theme (theme.js) */
+  html, body { font-family: var(--font-body); font-variant-numeric: lining-nums tabular-nums; }
+  .v-application, .v-btn, .v-field, .v-list-item-title, .v-list-item-subtitle, .v-badge__badge, .v-overlay__content { font-family: var(--font-body); letter-spacing: normal; }
+  .v-btn { text-transform: none; }
+  .v-tooltip > .v-overlay__content { border-radius: var(--radius); font-size: 13px; }
+  .v-expansion-panels, .v-expansion-panel { border-radius: var(--radius) !important; }
+  .v-expansion-panel { border: 1px solid var(--border); }
+  .chart-box { position: relative; }
+  .chart-box svg { display: block; overflow: visible; }
+  .ink { fill: var(--on-surface); font-size: 14px; }
+  .ink-muted { fill: var(--muted); font-size: 13px; }
+  .centre { stroke: var(--muted); }
+  .hit { fill: transparent; outline: none; cursor: default; }
+  .hit:focus-visible { fill: color-mix(in srgb, var(--on-surface) 6%, transparent); }
+  .chart-tip { max-width: 240px; transform: translate(-50%, calc(-100% - 10px)); white-space: nowrap; }
+  .chart-tip b { font-size: 15px; font-weight: 700; }
+  .page { width: 100%; max-width: 1440px; margin: 0 auto; padding: 24px; box-sizing: border-box; }
+  .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 24px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .panels { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .panels .stack { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+  .panels .wide { grid-column: 1 / -1; }
+  .panel-head .h2 { flex: 1; }
+  .chips.seg { gap: 0; }
+  .chips.seg .chip { padding: 0 8px; }
+  .chips.seg .chip + .chip { margin-left: -1px; }
+  .chip .v-icon { font-size: 18px; }
+  .hero-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 28px 32px; }
+  .hero-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .hero-head .v-avatar { align-self: center; }
+  .hero-row { display: grid; grid-template-columns: 20px minmax(0, 12em) 1fr; align-items: center; gap: 8px; height: 26px; border-radius: var(--radius); outline: none; }
+  .hero-row:focus-visible { background: var(--surface-light); }
+  .hero-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 13px; }
+  .hbar { height: 12px; border-radius: 0 4px 4px 0; background: var(--magnitude); flex: none; }
+  .obj-icon { width: 20px; height: 20px; border-radius: var(--radius); display: block; }
+  .count { margin-bottom: 24px; display: flex; align-items: baseline; gap: 10px; }
+  .state { text-align: center; padding: 48px 16px; }
+  @media (max-width: 959px) { .panels { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 600px) { .page { padding: 16px; } .count { margin-bottom: 16px; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const { createApp, ref, computed, watchEffect, onMounted, onBeforeUnmount, reactive } = Vue
+const { useDisplay } = Vuetify
+
+// mockup-only state switch: ?state=empty | offline (frontend.md 11.3, 5.2)
+const STATE = new URLSearchParams(location.search).get('state')
+// ---- data: GET /stats, no filter (w3g on 127.0.0.1, 6,567 replays)
+const STATS = {
+  games: 6567,
+  matchups: [
+    ['HU','HU',305,305,null],['HU','NE',672,672,351],['HU','OC',859,859,389],['HU','RANDOM',222,222,116],['HU','UD',691,691,343],
+    ['NE','HU',672,672,321],['NE','NE',293,293,null],['NE','OC',707,707,366],['NE','RANDOM',186,186,99],['NE','UD',636,636,319],
+    ['OC','HU',859,859,470],['OC','NE',707,707,341],['OC','OC',461,461,null],['OC','RANDOM',262,262,129],['OC','UD',698,698,340],
+    ['RANDOM','HU',222,222,106],['RANDOM','NE',186,186,87],['RANDOM','OC',262,262,133],['RANDOM','RANDOM',43,43,null],['RANDOM','UD',248,248,120],
+    ['UD','HU',691,691,348],['UD','NE',636,636,317],['UD','OC',698,698,358],['UD','RANDOM',248,248,128],['UD','UD',284,284,null],
+  ].map(([race, opponent_race, games, decided, wins]) => ({ race, opponent_race, games, decided, wins })),
+  heroes: [
+    ['HU', 3054, 'Hamg:2183,Hmkg:1716,Hpal:845,Hblm:315,Ntin:283,Nfir:113,Nbrn:75,Nbst:71,Nngs:67,Nalc:53,Nplh:32,Npbm:29'],
+    ['NE', 2787, 'Edem:1605,Ekee:927,Nngs:824,Emoo:452,Ewar:230,Nplh:177,Npbm:174,Nbrn:139,Nalc:137,Nfir:109,Nbst:103,Ntin:82'],
+    ['OC', 3448, 'Oshd:1942,Obla:1843,Ofar:1436,Otch:1061,Nfir:319,Nngs:139,Nplh:69,Npbm:30,Ntin:26,Nbrn:22,Nalc:20,Nbst:9'],
+    ['UD', 2841, 'Udea:2062,Ulic:1806,Ucrl:921,Nbrn:471,Udre:326,Nngs:268,Nplh:258,Nalc:39,Nfir:22,Ntin:18,Npbm:11,Nbst:9'],
+    ['RANDOM', 1004, 'Hamg:154,Udea:143,Hmkg:139,Edem:137,Nngs:127,Ulic:117,Ucrl:106,Ofar:105,Oshd:100,Obla:95,Hpal:76,Otch:71,Ekee:67,Nbrn:54,Udre:48,Nfir:47,Emoo:39,Hblm:38,Nplh:34,Ntin:19,Nalc:18,Ewar:14,Npbm:14,Nbst:11'],
+  ].map(([race, player_games, s]) => ({ race, player_games,
+    picks: s.split(',').map(p => { const [code, n] = p.split(':'); return { code, player_games: +n } }) })),
+  durations: { width_minutes: 5, cap_minutes: 60, counts: [439,1129,1890,1666,929,342,95,44,15,6,2,1,9] },
+  apm: { width: 25, cap: 500, counts: [135,243,1458,2789,2380,1790,1311,1168,732,393,333,243,90,36,16,8,2,0,0,2,5] },
+}
+const FILTERS = {
+  maps: [['Tidehunters 1.2',897],['Northern Isles 1.3',780],['Autumn Leaves 2.0',755],['Last Refuge 1.5',729],['Hammerfall',630],['Springtime 1.4',622],['Shallow Grave 1.5',553],['Fading Autumn 1.3',500],['Echo Isles 2.2',497],['Scrimmage 1.1',220],['Turtle Rock 2.0',218],['Twisted Meadows 1.9',163]],
+  players: ['GonzoTramer#2346','Itsjustagame#11493','marcko1a299#2211','React#21633','Expertvain#1819','MadPad09#11213','Mafu#1845','Kaccel#2863','ahahahaUTER#2608','fourthAge#1445','tikknee#3238','ZiGouNeT#2303'],
+}
+const HERO_NAMES = { Edem:'Demon Hunter',Ekee:'Keeper of the Grove',Emoo:'Priestess of the Moon',Ewar:'Warden',Hamg:'Archmage',Hblm:'Blood Mage',Hmkg:'Mountain King',Hpal:'Paladin',Nalc:'Goblin Alchemist',Nbrn:'Dark Ranger',Nbst:'Beastmaster',Nfir:'Firelord',Nngs:'Naga Sea Witch',Npbm:'Pandaren Brewmaster',Nplh:'Pit Lord',Ntin:'Goblin Tinker',Obla:'Blademaster',Ofar:'Far Seer',Oshd:'Shadow Hunter',Otch:'Tauren Chieftain',Ucrl:'Crypt Lord',Udea:'Death Knight',Udre:'Dreadlord',Ulic:'Lich' }
+
+// ---- races.js, the GNL ids (gnl backend app/models/enums.py:4-9)
+const RACES = [
+  { id: 'HU', name: 'Human', file: 'HUMAN' }, { id: 'OC', name: 'Orc', file: 'ORC' },
+  { id: 'UD', name: 'Undead', file: 'UNDEAD' }, { id: 'NE', name: 'Night Elf', file: 'NIGHT_ELF' },
+  { id: 'RANDOM', name: 'Random', file: 'RANDOM' },
+]
+const race = id => RACES.find(r => r.id === id)
+const raceIcon = id => `../../frontend/race-icons/${race(id).file}.png`
+
+// ---- objects.js: icons.json lookup
+const ICONS = ref({})
+fetch('../../frontend/icons.json').then(r => r.json()).then(j => { ICONS.value = j }).catch(() => {})
+
+const fmtInt = d3.format(',')
+const fmtPct1 = d3.format('.1%')
+const fmtPct0 = d3.format('.0%')
+
+// ---- charts/useWidth.js
+function useWidth(el) {
+  const w = ref(0); let ro
+  onMounted(() => { ro = new ResizeObserver(([e]) => { w.value = Math.max(280, Math.floor(e.contentRect.width)) }); ro.observe(el.value) })
+  onBeforeUnmount(() => ro && ro.disconnect())
+  return w
+}
+function colPath(x, y, w, h, r) {
+  r = Math.min(r, w / 2, h)
+  return `M${x},${y + h}V${y + r}A${r},${r} 0 0 1 ${x + r},${y}H${x + w - r}A${r},${r} 0 0 1 ${x + w},${y + r}V${y + h}Z`
+}
+function hbarPath(x0, x1, y, h, r) {
+  r = Math.min(r, h / 2, Math.abs(x1 - x0))
+  return x1 >= x0
+    ? `M${x0},${y}H${x1 - r}A${r},${r} 0 0 1 ${x1},${y + r}V${y + h - r}A${r},${r} 0 0 1 ${x1 - r},${y + h}H${x0}Z`
+    : `M${x0},${y}H${x1 + r}A${r},${r} 0 0 0 ${x1},${y + r}V${y + h - r}A${r},${r} 0 0 0 ${x1 + r},${y + h}H${x0}Z`
+}
+function tipAt(box, W, e, fallback) {
+  if (e && e.clientX != null) { const b = box.getBoundingClientRect(); return { x: Math.min(Math.max(e.clientX - b.left, 110), W - 110), y: e.clientY - b.top } }
+  return { x: Math.min(Math.max(fallback.x, 110), W - 110), y: fallback.y }
+}
+
+const ChartTip = {
+  props: { tip: Object },
+  template: `<div v-if="tip" class="tip chart-tip" :style="{ left: tip.x + 'px', top: tip.y + 'px' }"><b>{{ tip.value }}</b><br>{{ tip.text }}</div>`,
+}
+
+const ObjectIcon = {
+  props: { code: String },
+  setup(p) { return { file: computed(() => ICONS.value[p.code]), name: computed(() => HERO_NAMES[p.code] || p.code) } },
+  template: `<img v-if="file" class="obj-icon" :src="'../../frontend/icons/' + file" :alt="name"><v-icon v-else icon="mdi-help-box-outline" size="20"></v-icon>`,
+}
+
+const RaceIcon = {
+  props: { raceIdentifier: String, size: { type: [String, Number], default: '1.4em' } },
+  setup(p) { return { r: computed(() => race(p.raceIdentifier)), src: computed(() => raceIcon(p.raceIdentifier)) } },
+  template: `<v-tooltip v-if="r" location="top" :text="r.name"><template #activator="{ props }"><v-avatar v-bind="props" rounded="sm" :size="size"><img :src="src" :alt="r.name" width="100%" height="100%"></v-avatar></template></v-tooltip>`,
+}
+
+// ---- charts/ColumnChart.vue: ordered buckets
+const ColumnChart = {
+  components: { ChartTip },
+  props: { counts: Array, labels: Array, tipLabels: Array, unit: String },
+  setup(props) {
+    const box = ref(null), gx = ref(null), gy = ref(null), tip = ref(null)
+    const W = useWidth(box)
+    const m = { l: 48, r: 8, t: 22, b: 28 }, H = 176
+    const x = computed(() => d3.scaleBand().domain(d3.range(props.counts.length)).range([m.l, W.value - m.r]))
+    const y = computed(() => d3.scaleLinear([0, d3.max(props.counts) || 1], [m.t + H, m.t]).nice())
+    const peak = computed(() => props.counts.indexOf(d3.max(props.counts)))
+    const cols = computed(() => {
+      const bw = Math.min(24, x.value.bandwidth() - 2)
+      return props.counts.map((c, i) => {
+        const cx = x.value(i) + x.value.bandwidth() / 2, yy = y.value(c)
+        return { i, c, cx, band: x.value(i), bandW: x.value.bandwidth(), d: c ? colPath(cx - bw / 2, yy, bw, y.value(0) - yy, 4) : '', top: yy,
+          label: `${props.tipLabels[i]}: ${fmtInt(c)} ${c === 1 ? props.unit.replace(/s$/, '') : props.unit}` }
+      })
+    })
+    watchEffect(() => {
+      if (!W.value || !gx.value) return
+      const n = props.counts.length, plotW = W.value - m.l - m.r
+      const t = Math.max(2, Math.round(plotW / 90)), need = (n - 1) / (t - 1)
+      let k = 1; while ((n - 1) % k || k < need) k++
+      d3.select(gx.value).call(d3.axisBottom(x.value).tickValues(d3.range(0, n, k)).tickFormat(i => props.labels[i]).tickSize(0).tickPadding(10))
+        .call(g => g.select('.domain').remove())
+      d3.select(gy.value).call(d3.axisLeft(y.value).tickValues(y.value.ticks(4).filter(Number.isInteger)).tickFormat(fmtInt).tickSize(-plotW).tickPadding(8))
+        .call(g => g.select('.domain').remove())
+    })
+    const show = (col, e) => { const p = tipAt(box.value, W.value, e, { x: col.cx, y: col.top }); tip.value = { ...p, value: fmtInt(col.c), text: col.label } }
+    return { box, gx, gy, W, m, H, cols, peak, tip, show, fmtInt }
+  },
+  template: `
+  <div ref="box" class="chart-box" @pointerleave="tip = null">
+    <svg v-if="W" :width="W" :height="m.t + H + m.b" role="img">
+      <g ref="gy" class="axis" :transform="'translate(' + m.l + ',0)'"></g>
+      <g ref="gx" class="axis" :transform="'translate(0,' + (m.t + H) + ')'"></g>
+      <path v-for="c in cols" :key="c.i" :d="c.d" fill="var(--magnitude)"></path>
+      <text v-if="cols[peak]" class="ink num" :x="cols[peak].cx" :y="cols[peak].top - 6" text-anchor="middle">{{ fmtInt(cols[peak].c) }}</text>
+      <rect v-for="c in cols" :key="'h' + c.i" class="hit" :x="c.band" :y="m.t" :width="c.bandW" :height="H" tabindex="0" :aria-label="c.label"
+        @pointermove="show(c, $event)" @focus="show(c)" @blur="tip = null"></rect>
+    </svg>
+    <chart-tip :tip="tip"></chart-tip>
+  </div>`,
+}
+
+// ---- charts/WinRateBars.vue: matchups, win rate on [0, 1] in the win colour only (D10), a 50 % reference line
+const WinRateBars = {
+  components: { ChartTip },
+  props: { pairs: Array, mirrors: Array },
+  setup(props) {
+    const box = ref(null), gx = ref(null), tip = ref(null)
+    const W = useWidth(box)
+    const rowH = 28, top = 22, gap = 12, axisH = 28
+    const narrow = computed(() => W.value < 480)
+    const labelW = computed(() => narrow.value ? 64 : 180)
+    const rightW = computed(() => narrow.value ? 100 : 60)
+    const x = computed(() => d3.scaleLinear([0, 1], [labelW.value, W.value - rightW.value - (narrow.value ? 6 : 48)]))
+    const plotBottom = computed(() => top + props.pairs.length * rowH + (props.mirrors.length ? gap + props.mirrors.length * rowH : 0))
+    const rows = computed(() => {
+      const x0 = x.value(0)
+      const a = props.pairs.map((p, i) => {
+        const y = top + i * rowH, tipX = x.value(p.rate)
+        return { ...p, key: p.a + p.b, y, cy: y + rowH / 2, tipX, d: hbarPath(x0, tipX, y + 7, 14, 4),
+          value: fmtPct1(p.rate), label: `${race(p.a).name} won ${fmtInt(p.wins)} of ${fmtInt(p.decided)} decided games v ${race(p.b).name}. ${fmtInt(p.games)} games.` }
+      })
+      const y0 = top + props.pairs.length * rowH + gap
+      const b = props.mirrors.map((mr, i) => { const y = y0 + i * rowH
+        return { ...mr, key: mr.a + mr.b, mirror: true, y, cy: y + rowH / 2, tipX: x.value(0.5), label: `${race(mr.a).name} v ${race(mr.b).name}: ${fmtInt(mr.games)} games` } })
+      return [...a, ...b]
+    })
+    watchEffect(() => {
+      if (!W.value || !gx.value) return
+      d3.select(gx.value).call(d3.axisBottom(x.value).tickValues(narrow.value ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1]).tickFormat(fmtPct0).tickSize(-(plotBottom.value - top)).tickPadding(8))
+        .call(g => g.select('.domain').remove())
+    })
+    const show = (r, e) => { const p = tipAt(box.value, W.value, e, { x: r.tipX, y: r.y }); tip.value = { ...p, value: r.mirror ? fmtInt(r.games) + ' games' : r.value, text: r.label } }
+    return { box, gx, W, x, rows, top, rowH, axisH, plotBottom, narrow, labelW, rightW, tip, show, raceIcon, race, fmtInt }
+  },
+  template: `
+  <div ref="box" class="chart-box" @pointerleave="tip = null">
+    <svg v-if="W" :width="W" :height="plotBottom + axisH" role="img">
+      <text v-if="narrow" class="ink-muted" :x="W - 50" :y="12" text-anchor="end">Win %</text>
+      <text class="ink-muted" :x="W" :y="12" text-anchor="end">Games</text>
+      <g ref="gx" class="axis" :transform="'translate(0,' + plotBottom + ')'"></g>
+      <line class="centre" :x1="x(0.5)" :x2="x(0.5)" :y1="top" :y2="plotBottom"></line>
+      <g v-for="r in rows" :key="r.key">
+        <template v-if="narrow">
+          <image :href="raceIcon(r.a)" x="0" :y="r.cy - 9" width="18" height="18"></image>
+          <text class="ink-muted" x="24" :y="r.cy + 4">v</text>
+          <image :href="raceIcon(r.b)" x="36" :y="r.cy - 9" width="18" height="18"></image>
+        </template>
+        <template v-else>
+          <image :href="raceIcon(r.a)" x="0" :y="r.cy - 9" width="18" height="18"></image>
+          <text :class="r.mirror ? 'ink-muted' : 'ink'" x="26" :y="r.cy + 4">{{ race(r.a).name }} v {{ race(r.b).name }}</text>
+        </template>
+        <path v-if="!r.mirror" :d="r.d" fill="var(--win)"></path>
+        <text v-if="!r.mirror && !narrow" class="ink num" :x="r.tipX + 6" :y="r.cy + 4">{{ r.value }}</text>
+        <text v-if="narrow && !r.mirror" class="ink num" :x="W - 50" :y="r.cy + 4" text-anchor="end">{{ r.value }}</text>
+        <text class="ink-muted" :x="W" :y="r.cy + 4" text-anchor="end">{{ fmtInt(r.games) }}</text>
+        <rect class="hit" x="0" :y="r.y" :width="W" :height="rowH" tabindex="0" :aria-label="r.label"
+          @pointermove="show(r, $event)" @focus="show(r)" @blur="tip = null"></rect>
+      </g>
+    </svg>
+    <chart-tip :tip="tip"></chart-tip>
+  </div>`,
+}
+
+// ---- charts/BarList.vue: hero picks, one block per race
+const HeroPicks = {
+  components: { ObjectIcon, RaceIcon },
+  props: { heroes: Array },
+  setup() {
+    const x = d3.scaleLinear([0, 1], [0, 1])  // the same domain in every block
+    const open = reactive({})
+    return { x, open, race, fmtInt, fmtPct0, name: c => HERO_NAMES[c] || c }
+  },
+  template: `
+  <div class="hero-grid">
+    <div v-for="h in heroes" :key="h.race">
+      <div class="hero-head">
+        <race-icon :race-identifier="h.race" size="24"></race-icon>
+        <h3>{{ race(h.race).name }}</h3>
+        <span class="small muted">{{ fmtInt(h.player_games) }} player-games</span>
+      </div>
+      <v-tooltip v-for="p in (open[h.race] ? h.picks : h.picks.slice(0, 8))" :key="p.code" location="top"
+        :text="name(p.code) + ': ' + fmtInt(p.player_games) + ' of ' + fmtInt(h.player_games) + ' ' + race(h.race).name + ' player-games (' + fmtPct0(p.player_games / h.player_games) + ')'">
+        <template #activator="{ props }">
+          <div v-bind="props" class="hero-row" tabindex="0">
+            <object-icon :code="p.code"></object-icon>
+            <span class="hero-name">{{ name(p.code) }}</span>
+            <div class="track">
+              <div class="hbar" :style="{ width: 'calc((100% - 40px) * ' + x(p.player_games / h.player_games) + ')' }"></div>
+              <span>{{ fmtPct0(p.player_games / h.player_games) }}</span>
+            </div>
+          </div>
+        </template>
+      </v-tooltip>
+      <button v-if="h.picks.length > 8" class="btn quiet sm" style="margin-top: 6px" @click="open[h.race] = !open[h.race]">
+        {{ open[h.race] ? 'Show top 8' : 'Show all ' + h.picks.length }}
+      </button>
+    </div>
+  </div>`,
+}
+
+const Panel = {
+  props: { title: String },
+  setup() { return { view: ref('chart') } },
+  template: `
+  <section class="panel">
+    <div class="panel-head">
+      <h2 class="h2">{{ title }}</h2>
+      <div class="chips seg" role="group">
+        <button v-for="v in ['chart', 'table']" :key="v" class="chip" :class="{ on: view === v }" :aria-pressed="view === v" :aria-label="title + ' ' + v" @click="view = v">
+          <v-icon :icon="v === 'chart' ? 'mdi-chart-bar' : 'mdi-table'"></v-icon>
+        </button>
+      </div>
+    </div>
+    <div class="panel-body">
+      <slot v-if="view === 'chart'" name="chart"></slot>
+      <div v-else class="scroll-x"><slot name="table"></slot></div>
+    </div>
+  </section>`,
+}
+
+const App = {
+  components: { Panel, ColumnChart, WinRateBars, HeroPicks, RaceIcon },
+  setup() {
+    const display = useDisplay()
+    const f = reactive({ race: null, opponent_race: null, map: null, player: null, min_minutes: '', max_minutes: '' })
+    const setCount = computed(() => Object.values(f).filter(v => v !== null && v !== '').length)
+    const clear = () => Object.assign(f, { race: null, opponent_race: null, map: null, player: null, min_minutes: '', max_minutes: '' })
+
+    const ORDER = ['HU', 'NE', 'OC', 'UD', 'RANDOM']
+    const byPair = Object.fromEntries(STATS.matchups.map(r => [r.race + r.opponent_race, r]))
+    const pairs = [], mirrors = []
+    ORDER.forEach((a, i) => ORDER.slice(i).forEach(b => {
+      const r = byPair[a + b]; if (!r) return
+      if (a === b) mirrors.push({ a, b, games: r.games })
+      else pairs.push({ a, b, games: r.games, decided: r.decided, wins: r.wins, rate: r.wins / r.decided })
+    }))
+    pairs.sort((p, q) => q.rate - p.rate)
+
+    const d = STATS.durations, a = STATS.apm
+    const capD = d.cap_minutes / d.width_minutes, capA = a.cap / a.width
+    const durLabels = d.counts.map((_, i) => i === capD ? `${d.cap_minutes}+` : `${i * 5}-${i * 5 + 5}`)
+    const durTips = durLabels.map(l => l + ' min')
+    const apmLabels = a.counts.map((_, i) => i === capA ? `${a.cap}+` : `${i * a.width}`)
+    const apmTips = a.counts.map((_, i) => i === capA ? `${a.cap}+ APM` : `${i * a.width}-${(i + 1) * a.width} APM`)
+    const raceItems = RACES.map(r => ({ value: r.id, title: r.name }))
+    const mapItems = FILTERS.maps.map(([m, n]) => ({ value: m, title: m, subtitle: fmtInt(n) + ' games' }))
+    const heroRows = STATS.heroes.flatMap(h => h.picks.map(p => ({ race: race(h.race).name, hero: HERO_NAMES[p.code], n: p.player_games, share: p.player_games / h.player_games })))
+    if (STATE === 'empty') f.max_minutes = '1'
+    return { STATE, display, f, setCount, clear, raceItems, mapItems, players: FILTERS.players, STATS, pairs, mirrors,
+      durLabels, durTips, apmLabels, apmTips, heroRows, race, raceIcon, fmtInt, fmtPct0, fmtPct1, panel: ref([]) }
+  },
+  template: `
+  <v-app>
+    <header class="bar">
+      <a class="brand" href="#">GNL replays</a>
+      <nav class="chips" style="gap: 24px">
+        <a v-for="n in ['Search', 'Openers', 'Stats']" :key="n" class="navlink" :class="{ on: n === 'Stats' }" href="#">{{ n }}</a>
+      </nav>
+      <theme-menu class="push"></theme-menu>
+  </header>
+
+    <main class="page">
+        <v-expansion-panels v-if="display.smAndDown.value" v-model="panel" style="margin-bottom: 16px" variant="accordion">
+          <v-expansion-panel elevation="0" bg-color="surface">
+            <v-expansion-panel-title>
+              <span style="margin-right: 8px">Filters</span>
+              <v-badge v-if="setCount" :content="setCount" inline color="primary"></v-badge>
+            </v-expansion-panel-title>
+            <v-expansion-panel-text>
+              <div class="grid2">
+                <v-select v-model="f.race" :items="raceItems" label="Race" clearable></v-select>
+                <v-select v-model="f.opponent_race" :items="raceItems" label="Opponent race" clearable></v-select>
+                <v-autocomplete v-model="f.map" :items="mapItems" label="Map" clearable></v-autocomplete>
+                <v-autocomplete v-model="f.player" :items="players" label="Player" clearable></v-autocomplete>
+                <v-text-field v-model="f.min_minutes" type="number" label="Min min"></v-text-field>
+                <v-text-field v-model="f.max_minutes" type="number" label="Max min"></v-text-field>
+              </div>
+              <button v-if="setCount" class="btn quiet sm" style="margin-top: 8px" @click="clear">Clear</button>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
+        <div v-else class="filters">
+          <v-select v-model="f.race" :items="raceItems" label="Race" clearable style="flex: none; width: 200px">
+            <template #item="{ props, item }"><v-list-item v-bind="props"><template #prepend><v-avatar :image="raceIcon(item.value)" rounded="sm" size="20" style="margin-right: 8px"></v-avatar></template></v-list-item></template>
+          </v-select>
+          <v-select v-model="f.opponent_race" :items="raceItems" label="Opponent race" clearable style="flex: none; width: 200px">
+            <template #item="{ props, item }"><v-list-item v-bind="props"><template #prepend><v-avatar :image="raceIcon(item.value)" rounded="sm" size="20" style="margin-right: 8px"></v-avatar></template></v-list-item></template>
+          </v-select>
+          <v-autocomplete v-model="f.map" :items="mapItems" label="Map" clearable style="flex: none; width: 230px"></v-autocomplete>
+          <v-autocomplete v-model="f.player" :items="players" label="Player" clearable style="flex: none; width: 230px"></v-autocomplete>
+          <v-text-field v-model="f.min_minutes" type="number" label="Min min" style="flex: none; width: 150px"></v-text-field>
+          <v-text-field v-model="f.max_minutes" type="number" label="Max min" style="flex: none; width: 150px"></v-text-field>
+          <button v-if="setCount" class="btn quiet" @click="clear">Clear</button>
+        </div>
+
+        <section v-if="STATE === 'offline'" class="panel state">
+          <h3 style="color: var(--error); margin-bottom: 14px">Warehouse offline</h3>
+          <button class="btn ghost"><v-icon icon="mdi-refresh" size="18"></v-icon>Retry</button>
+        </section>
+        <section v-else-if="STATE === 'empty'" class="panel state">No game matches. Widen the filters.</section>
+        <template v-else>
+        <div class="count">
+          <div class="figure">{{ fmtInt(STATS.games) }}</div>
+          <div class="muted">games</div>
+        </div>
+
+        <div class="panels">
+          <panel title="Matchups">
+            <template #chart><win-rate-bars :pairs="pairs" :mirrors="mirrors"></win-rate-bars></template>
+            <template #table>
+              <table class="rows">
+                <thead><tr><th>Matchup</th><th class="num">Games</th><th class="num">Wins</th><th class="num">Win %</th></tr></thead>
+                <tbody>
+                  <tr v-for="p in pairs" :key="p.a + p.b"><td>{{ race(p.a).name }} v {{ race(p.b).name }}</td><td class="num">{{ fmtInt(p.games) }}</td><td class="num">{{ fmtInt(p.wins) }}</td><td class="num">{{ fmtPct1(p.rate) }}</td></tr>
+                  <tr v-for="p in mirrors" :key="p.a + p.b"><td class="muted">{{ race(p.a).name }} v {{ race(p.b).name }}</td><td class="num">{{ fmtInt(p.games) }}</td><td></td><td></td></tr>
+                </tbody>
+              </table>
+            </template>
+          </panel>
+          <div class="stack">
+            <panel title="Game length (minutes)">
+              <template #chart><column-chart :counts="STATS.durations.counts" :labels="durLabels" :tip-labels="durTips" unit="games"></column-chart></template>
+              <template #table>
+                <table class="rows"><thead><tr><th>Minutes</th><th class="num">Games</th></tr></thead>
+                  <tbody><tr v-for="(c, i) in STATS.durations.counts" :key="i"><td>{{ durLabels[i] }}</td><td class="num">{{ fmtInt(c) }}</td></tr></tbody></table>
+              </template>
+            </panel>
+            <panel title="APM">
+              <template #chart><column-chart :counts="STATS.apm.counts" :labels="apmLabels" :tip-labels="apmTips" unit="player-games"></column-chart></template>
+              <template #table>
+                <table class="rows"><thead><tr><th>APM</th><th class="num">Player-games</th></tr></thead>
+                  <tbody><tr v-for="(c, i) in STATS.apm.counts" :key="i"><td>{{ apmTips[i] }}</td><td class="num">{{ fmtInt(c) }}</td></tr></tbody></table>
+              </template>
+            </panel>
+          </div>
+          <div class="wide">
+            <panel title="Hero picks">
+              <template #chart><hero-picks :heroes="STATS.heroes"></hero-picks></template>
+              <template #table>
+                <table class="rows"><thead><tr><th>Race</th><th>Hero</th><th class="num">Player-games</th><th class="num">Share</th></tr></thead>
+                  <tbody><tr v-for="r in heroRows" :key="r.race + r.hero"><td>{{ r.race }}</td><td>{{ r.hero }}</td><td class="num">{{ fmtInt(r.n) }}</td><td class="num">{{ fmtPct0(r.share) }}</td></tr></tbody></table>
+              </template>
+            </panel>
+          </div>
+        </div>
+        </template>
+    </main>
+  </v-app>`,
+}
+
+createApp(App).component('ThemeMenu', gnlMockup.ThemeMenu).use(gnlMockup.vuetify()).mount('#app')
+</script>
+</body>
+</html>
