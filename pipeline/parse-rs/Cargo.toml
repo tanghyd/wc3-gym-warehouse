@@ -22,7 +22,8 @@ name = "drain"
 path = "src/bin/drain.rs"
 
 [dependencies]
-w3grs = "0.2.3"
+# Upstream w3grs plus one patch that keeps unknown object codes; see the fork's README.
+w3grs = { git = "https://github.com/tanghyd/w3grs", rev = "5241c88298e0d96bb78870c3cb0d836dd76fefcf" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # drain (S3 object-store worker) only:
@@ -36,9 +37,3 @@ chrono = { version = "0.4", default-features = false, features = ["clock"] }
 # Replay parsing is CPU-bound; let the optimiser go hard. lto=thin is the cheap
 # 90% of fat-lto.
 lto = "thin"
-
-# Vendored w3grs with one local patch: unknown (custom-map) rawcodes land in a
-# players[].unknown bucket instead of being silently dropped — the enabler for
-# custom-mode (Legion TD) build analytics. See vendor/README-PATCH.md.
-[patch.crates-io]
-w3grs = { path = "vendor/w3grs" }
