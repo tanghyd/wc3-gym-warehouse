@@ -239,7 +239,7 @@ Every colour is a Vuetify theme colour. Components name tokens (`color="primary"
 | **Warehouse chart colours** | | | |
 | `series-1` | `#1F63A6` | `#4F95D8` | player 1 (lower `player_id`) on the replay page |
 | `series-2` | `#B03A7A` | `#C95E98` | player 2 |
-| `magnitude` | `#7D877E` | `#67726A` | one-series bars and columns |
+| `magnitude` | `#1E8A6E` | `#38A583` | jade: one-series bars and columns. Replaced the grey `#7D877E` / `#67726A` (Daniel, 2026-09-11: too dull). |
 | **Theme variables** | | | |
 | `border-color` | `#1A241E` | `#E7EBE3` | every line: dividers, card borders, grid and axis lines, chart tracks. The ink colour at `border-opacity`. |
 | `border-opacity` | 0.20 | 0.12 | about `#C8CBC7` / `#363E37` on `surface` |
@@ -285,7 +285,7 @@ createVuetify({
           error: '#8C3B2A', warning: '#A65200', info: '#2F6690', success: '#3D7A4A',
           'primary-text': '#7C4912', band: '#1C2420', 'on-band': '#F2F4ED', 'band-muted': '#B9C4B6',
           tag: '#DCE1D8', 'on-tag': '#3F4C43', win: '#1F63A6', loss: '#B8432C', draw: '#5F6B61',
-          'series-1': '#1F63A6', 'series-2': '#B03A7A', magnitude: '#7D877E',
+          'series-1': '#1F63A6', 'series-2': '#B03A7A', magnitude: '#1E8A6E',
         },
         variables: { 'border-color': '#1A241E', 'border-opacity': 0.2, 'medium-emphasis-opacity': 0.7 },
       },
@@ -300,7 +300,7 @@ createVuetify({
           error: '#E8836A', warning: '#F0A04B', info: '#7FB0DA', success: '#6DB37A',
           'primary-text': '#E3A45F', band: '#0E1210', 'on-band': '#F2F4ED', 'band-muted': '#B9C4B6',
           tag: '#2C362F', 'on-tag': '#C3CCC1', win: '#4F95D8', loss: '#DE6E52', draw: '#9DA89E',
-          'series-1': '#4F95D8', 'series-2': '#C95E98', magnitude: '#67726A',
+          'series-1': '#4F95D8', 'series-2': '#C95E98', magnitude: '#38A583',
         },
         variables: { 'border-color': '#E7EBE3', 'border-opacity': 0.12, 'medium-emphasis-opacity': 0.7 },
       },
@@ -426,8 +426,9 @@ Chosen:
 |---|---|---|
 | Win and loss (`win`, `loss`) | `#1F63A6`, `#B8432C`: PASS all. CVD ΔE 18.7 (protan), tritan 28.7. Normal 27.1. Contrast ≥ 3:1. | `#4F95D8`, `#DE6E52`: PASS all. CVD 19.3 (protan), tritan 29.9. Normal 25.8. Contrast ≥ 3:1. |
 | Players (`series-1`, `series-2`) | `#1F63A6`, `#B03A7A`: PASS, with CVD WARN 7.4 (protan), tritan 26.0. Normal 22.8. Contrast ≥ 3:1. The WARN needs a second encoding: the legend and the line-end labels (12.4). | `#4F95D8`, `#C95E98`: PASS all. CVD 10.5 (deutan), tritan 26.7. Normal 21.1. Contrast ≥ 3:1. |
-| Magnitude beside win (the openers rows, `/stats`) | `#7D877E`, `#1F63A6`: Chroma FAIL on the grey (0.018), expected: a neutral is not a hue. CVD 15.6 (protan), tritan 13.0. Normal 17.7. Contrast ≥ 3:1. | `#67726A`, `#4F95D8`: Chroma FAIL (0.018), expected. CVD 16.4 (deutan), tritan 15.1. Normal 17.0. Contrast ≥ 3:1. |
-| Magnitude, win, loss (`--pairs all`) | Chroma FAIL (expected). CVD worst `#B8432C`↔`#7D877E` 10.5 (deutan). Normal worst 17.7. | Chroma FAIL (expected). CVD WARN `#DE6E52`↔`#67726A` 7.8 (protan). Normal worst 17.0. `loss` shows only as a dot beside the word "Lost", never next to a magnitude bar. |
+| Magnitude beside win (the openers rows, `/stats`) | `#1E8A6E`, `#1F63A6`: PASS all. CVD 16.2 (protan), tritan 7.4. Normal 16.8. Contrast ≥ 3:1. | `#38A583`, `#4F95D8`: PASS all. CVD 13.7 (deutan), tritan 2.8. Normal 15.2. Contrast ≥ 3:1. |
+| Magnitude, win, loss (`--pairs all`) | PASS all. CVD worst `#B8432C`↔`#1E8A6E` 8.7 (deutan). Normal worst 16.8. | PASS all. CVD worst `#DE6E52`↔`#38A583` 8.4 (deutan). Normal worst 15.2. `loss` shows only as a dot beside the word "Lost", never next to a magnitude bar. |
+| Magnitude beside `primary` (a jade bar under a bronze title bar) | `#1E8A6E`, `#9A5B18`: CVD 9.7 (deutan), normal 17.9. | `#38A583`, `#D08B3C`: CVD 8.5 (protan), normal 18.9. Bronze marks controls, never a mark. |
 
 Rejected:
 
@@ -437,11 +438,15 @@ Rejected:
 | `series-2` gold `#AE7C00` / `#BE8A00` (gnl tier 4) | PASS with blue in both modes (CVD 24.2 / 24.0). Against dark `primary` `#D08B3C`: normal ΔE 4.5, CVD 2.4 | The dark accent's own colour |
 | `series-2` teal `#008F99` / `#16A3A6` (gnl tier 5) | Normal FAIL against blue: 13.8 / 10.2 | Too close to blue |
 | `series-2` purple `#8B48CF` / `#A574E6` (gnl tier 6) | Dark: CVD FAIL 2.0 (deutan), normal 13.5 | Blue under deutan |
-| Dark `magnitude` `#7E897F`, `#838E84`, `#8A958B` | Normal FAIL against `win`: 13.3, 13.0, 12.8 | Same lightness as the dark `win` |
-| Dark `magnitude` `#636E66` | Contrast WARN 2.92:1 | Below 3:1 |
+| `magnitude` grey `#7D877E` / `#67726A` (the first pick) | Chroma FAIL 0.018 in both modes; dark CVD WARN 7.8 against `loss` | Reads as a dull grey-green (Daniel, 2026-09-11). A neutral does no identity work (`color-formula.md`, check 3). |
+| `magnitude` green `#3A8A4E`, `#2E7D4F`, `#3B7F3E` | CVD FAIL or WARN against `loss` under deutan: 4.4, 6.2, 3.7 | Red and green collapse |
+| `magnitude` teal `#1C8C8A` | Chroma 0.093; normal 14.2 against `win` | Too close to blue |
+| `magnitude` violet `#6A4FB8`, `#7A4EA8`, slate `#5B6FB8` | CVD FAIL against `win`: 2.9, 2.8, 5.3 | Blue under deutan or protan |
+| Dark `magnitude` `#3FAF8C`, `#4FAF72` | Lightness band FAIL: L 0.68 | Too light for the dark band |
 | gnl today: `text-green` / `text-red` (`#4CAF50`, `#F44336`) | CVD FAIL 3.6 (deutan), in the proposal | Why gnl moves to `win` and `loss` (D3) |
 
 - `series-2` against `primary`: normal ΔE 16.7 light, 18.6 dark. Magenta never shares a job with bronze: bronze marks controls, `series-2` a player's line.
+- `magnitude` against `success` (`#3D7A4A` / `#6DB37A`): normal ΔE 5.7 light, 6.6 dark. They collide, and that is allowed: no warehouse view uses `success`, and in gnl `success` ships with an icon and a label, never as a bar (dataviz: status is icon plus label).
 - Dark mode is its own set of steps, validated on the dark surface, not a flip of the light values (dataviz step 6).
 
 ### 6.6 Colour jobs
@@ -456,6 +461,7 @@ Rejected:
 
 - One hue, one job per screen. Blue is `win` on search, openers and stats, and player 1 on the replay page, which shows no win colour.
 - Decided: one-series magnitude takes `magnitude`, not `series-1` (F12). Why: `series-1` equals `win`, and the openers and stats pages show magnitude beside win. This departs from dataviz `color-formula.md:22`.
+- Decided (2026-09-11): `magnitude` is jade, a hue, not a grey. Why: the grey failed the chroma floor and read as dull; jade is the one family that passes against `win`, `loss` and `primary` in both modes (6.5). Jade next to bronze reads as patina.
 - Text never wears a data colour (dataviz `marks-and-anatomy.md`). The old page colours result and win-rate text (`index.html:303, 415, 969-975`); the new app keeps text in ink and puts the colour on a mark.
 - Win is blue, loss is red: the old page's pair swapped (`index.html:443-444`). gnl moves from `success` and `error` to `win` and `loss` in its theme PR (D3).
 - Below the win-rate floor (section 13) the number is medium emphasis and no bar is drawn (`index.html:446, 969-975`).
@@ -913,7 +919,7 @@ All decided.
 | F9 | Win and loss colours | The GNL `win` `#1F63A6` / `#4F95D8` and `loss` `#B8432C` / `#DE6E52` (D3); `error` stays separate (D4) | PASS all in both modes (6.5). gnl's `text-green` / `text-red` fail the CVD check at ΔE 3.6. |
 | F10 | App shell | The gnl shell (section 3) | Copied pages land in the same frame. The title stays at 390 px. |
 | F11 | Openers replays | Selection panel beside the tree with `sel` (10.3), not a dialog | The tree stays in view; path tiles show the share at each step. |
-| F12 | One-series magnitude | `magnitude` `#7D877E` / `#67726A` (6.6) | `series-1` equals `win`. Against `win`: normal ΔE 17.7 / 17.0 (6.5). |
+| F12 | One-series magnitude | `magnitude` jade `#1E8A6E` / `#38A583` (6.6) | `series-1` equals `win`. Against `win`: normal ΔE 16.8 / 15.2 (6.5). The first grey pick was dropped 2026-09-11. |
 | F13 | Shipping | Multi-stage `Dockerfile.ui` built in CI, pushed to ghcr (14.1, 14.3) | The box needs no Node and no manual build. CI proves the build. |
 | F15 | Theme choice | Light, dark and system, stored in `localStorage`, the gnl menu and pre-paint script (6.2) | Parity with gnl (D1). A player who picked dark in gnl gets dark here. |
 | F16 | Player colours | `series-1` blue, `series-2` magenta `#B03A7A` / `#C95E98` (6.5) | Orange and gold read as bronze, teal and purple fail against blue (6.5). |

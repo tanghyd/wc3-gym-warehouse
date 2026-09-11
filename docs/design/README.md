@@ -26,7 +26,8 @@ Written 2026-09-11. Numbers: 26.9 host binary, 6,567-replay dev load. PR 2 re-me
 | Orders | The UI says "ordered"; counts count orders |
 | Stack | Docker first: just modules `local`, `fixtures` (PR 1), `box` (with the box) |
 | ClickHouse | PR 2 pins 26.8 LTS (today 24.10) for local, CI and the box |
-| Style | GNL stone and bronze, light and dark, with the gnl theme menu |
+| Style | GNL stone and bronze, light and dark, with the gnl theme menu. Charts: `win` blue, `loss` red, player 2 magenta, one-series bars jade |
+| Hosting | None yet (Daniel, 2026-09-11). Local Docker deploys for now; later GCP, or Hetzner with Cloudflare R2. The box PR and the tunnel move wait for that. |
 | Names | `{name} {race}` until the dims loader |
 
 ## PR stack (bottom to top)
@@ -58,4 +59,4 @@ Later: `feature/dims-loader`; the box PR (`just/box.just`).
 
 | Question | Recommend | Decide at |
 |---|---|---|
-| Ingress, backend search path, hosting | Tunnel to the `ui` nginx, one per-IP rule on `/api/*`; backend calls `POST /search`; the box first | PR 10 |
+| Public ingress and the GNL backend search path | Tunnel to the `ui` nginx, one per-IP rule on `/api/*`; backend calls `POST /search` | With hosting, after PR 14 |

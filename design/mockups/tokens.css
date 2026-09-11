@@ -39,7 +39,7 @@
   /* warehouse chart colours (frontend.md 6.5) */
   --series-1: #1F63A6;
   --series-2: #B03A7A;
-  --magnitude: #7D877E;
+  --magnitude: #1E8A6E;
 
   /* theme variables and derived colours */
   --border-opacity: 0.20;
@@ -84,7 +84,7 @@
 
   --series-1: #4F95D8;
   --series-2: #C95E98;
-  --magnitude: #67726A;
+  --magnitude: #38A583;
 
   --border-opacity: 0.12;
   --border: color-mix(in srgb, var(--on-surface) 12%, transparent);

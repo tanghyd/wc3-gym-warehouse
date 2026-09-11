@@ -131,10 +131,10 @@ Needed: the full load came through parse + `file()`, not the real path.
 
 | | |
 |---|---|
-| Scope | The Vite frame: shell, router, API client, URL codec, the light and dark theme, theme.js, the theme menu and the pre-paint script (frontend.md §6, `design/mockups/tokens.css`), copied gnl components, `FilterRow`, `StateBlock`, `ReplayTable`, `ObjectIcon`, `NotFoundView`. nginx serving and the tunnel move (rust.md 8.1). |
+| Scope | The Vite frame: shell, router, API client, URL codec, the light and dark theme, theme.js, the theme menu and the pre-paint script (frontend.md §6, `design/mockups/tokens.css`), copied gnl components, `FilterRow`, `StateBlock`, `ReplayTable`, `ObjectIcon`, `NotFoundView`. nginx serving (rust.md 8.1). The tunnel move waits for hosting (§4). |
 | Files | `frontend/` per frontend.md §2; `infrastructure/docker/{Dockerfile.ui,nginx-ui.conf}`; compose `ui`; `infrastructure/cloudflared/config.yml.example` (`http://ui:80`); compose `cloudflared` (drop `network_mode`); `justfile` (`ui`, `ui-build`); `infrastructure/ci.yml` (`ui` job, image step). The old page moves to `frontend/public/legacy/index.html`. |
 | Gates | node test, build. The dataviz validator on the chart pairs, light and dark surfaces (frontend.md 6.5). Shots of the shell and `/nope`. `curl /api/health` through nginx gives 200. |
-| Daniel reviews | §4 ingress, search path and hosting |
+| Daniel reviews | Nothing. Ingress and the search path wait for hosting (§4). |
 
 ### PR 11: `feature/frontend-search`
 
@@ -202,6 +202,7 @@ Local stack and deploy (Daniel, 2026-09-11)
 - The place is a just module: `local` and `fixtures` (PR 1), `box` with the box. Root aliases `up`, `down`, `ch`.
 - The bulk dev load reads `file()` from `data/`, mounted read-only into the container. The fixture base is the `wh-fixtures` project (P1).
 - Images build in CI and go to GHCR; `just box::deploy` pulls them on the box.
+- Hosting (Daniel, 2026-09-11): none yet. Local Docker deploys are the deploy. Later GCP, or Hetzner with Cloudflare R2. The box PR, the tunnel move and the ingress question wait for that decision.
 - Facts stay dated "26.9 (host binary)"; PR 2 re-measures them in the 26.8 container. `infrastructure/local/` goes in PR 1 (P4).
 
 ClickHouse
@@ -218,6 +219,7 @@ API
 
 Frontend
 - Style: GNL stone-and-bronze theme, light and dark, with the gnl theme menu (frontend.md §6).
+- Chart colours (Daniel, 2026-09-11): player 2 magenta `#B03A7A` / `#C95E98`; one-series bars jade `#1E8A6E` / `#38A583`, not grey; the replay player cards keep a plain head, not a bronze bar (frontend.md 6.4, 6.5).
 - `m:ss` timing. An empty `/search` lists every game.
 - The phone table tries the Vuetify `mobile` prop first, in PR 10. The 3 icon-less codes get the fallback glyph.
 - The win-rate floor sits in two places, pinned by tests.
@@ -226,4 +228,4 @@ Frontend
 
 | Item | Options | Recommend | Decide at |
 |---|---|---|---|
-| Public ingress, GNL backend search path, hosting | Tunnel to ClickHouse 8123 with a password, or to the `ui` nginx (rust.md 8.1). Backend calls ClickHouse, or the API's `POST /search`. The box through nginx, or pages copied into gnl. | nginx, with one Cloudflare rate-limit rule per IP on `/api/*` (plan limits not checked). The backend calls `POST /search`: 8123 is not public after the move. The box first. | PR 10 |
+| Public ingress and the GNL backend search path | Tunnel to ClickHouse 8123 with a password, or to the `ui` nginx (rust.md 8.1). Backend calls ClickHouse, or the API's `POST /search`. | nginx, with one Cloudflare rate-limit rule per IP on `/api/*` (plan limits not checked). The backend calls `POST /search`: 8123 is not public after the move. | With hosting, after PR 14 |
