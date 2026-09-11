@@ -27,7 +27,7 @@
 | Fixture numbers | Every stories.md fixture number matches exactly (stories.md D3) | `just fixtures::up`, then the check (PR 1) |
 | Full-load numbers | Re-measured, dated, written into the PR. They inform; they do not fail a PR. | the local project, loaded by `just local::load` |
 | node test, vite build | `npm test` (`query.test.mjs`) and `npm run build` pass | `npm --prefix frontend test`, `just ui-build` |
-| Playwright shots | 1440 px and 390 px, light and dark, every state of the page. No horizontal page scroll. The author names what each shot checks. Shots go into the PR as an artifact. | the `design-shots/` harness pattern |
+| Playwright shots | 1440 px and 390 px, light and dark, every state of the page. No horizontal page scroll. The author names what each shot checks. Shots go into the PR as an artifact. | `just ui-shots` (PR 10 adds `frontend/shots.mjs`, the pattern of the gym's `scratch/mobile-render/drive.mjs`; PRs 11-14 reuse it) |
 
 ## 2. The PRs, bottom to top
 
@@ -41,7 +41,7 @@
 
 ### PR 1: `chore/dev-data-recipes`
 
-Needed: stories.md D3 needs a fixture base, and the recipes must drive compose (Docker first, §1). `just fixtures` does not exist (justfile:1-68). The justfile `client` runs a host `clickhouse-client` when one is on PATH (justfile:5-8); it then misses the container, which publishes no native port.
+Needed: stories.md D3 needs a fixture base, and the recipes must drive compose (Docker first, §1). `just fixtures` does not exist (justfile:1-68). The justfile `client` runs a host `clickhouse-client` when one is on PATH (justfile:5-9); it then misses the container, which publishes no native port.
 
 | | |
 |---|---|
@@ -64,11 +64,12 @@ Needed: the full load came through parse + `file()`, not the real path.
 
 | | |
 |---|---|
-| Scope | queries.md §5 S1 (the `replay_events` key), S2 (`w3g.openers`, built by a refreshable MV, replaces `opener_rollup`), S4 (pin `clickhouse/clickhouse-server:26.8`, the LTS line), the repeat flag |
-| Files | `db/w3g/tables.sql` (key at :213, comment :195-197; drop :237-254; add `openers`; `is_repeat UInt8 DEFAULT 0` on `player_order_events` and `replay_events`, `schema-types-minimize-bitwidth`, `schema-types-avoid-nullable`). `db/w3g/views.sql` (compute `is_repeat` in the order MVs, `mv__order_unknown` included, carry it through `mv_events__order`; add `refresh__openers`; drop :433-470). `just/local.just` (the `backfill`, `load` and `fixtures` refreshes become `w3g.refresh__openers`). `compose.yaml:12`, `:43`, `infrastructure/ci.yml:26` to `26.8` (today 24.10). |
+| Scope | queries.md §5 S1 (the `replay_events` key), S2 (`w3g.openers`, built by a refreshable MV, replaces `opener_rollup`), S4 (pin `clickhouse/clickhouse-server:26.8.2`, the 26.8 LTS line), the repeat flag |
+| Files | `db/w3g/tables.sql` (key at :213, comment :195-197; drop :237-254; add `openers`; `is_repeat UInt8 DEFAULT 0` on `player_order_events` and `replay_events`, `schema-types-minimize-bitwidth`, `schema-types-avoid-nullable`). `db/w3g/views.sql` (compute `is_repeat` in the order MVs, `mv__order_unknown` included, carry it through `mv_events__order`; add `refresh__openers`; drop :433-470). `just/local.just` (the `backfill`, `load` and `fixtures` refreshes switch from `w3g.refresh__opener_rollup`, the PR 1 name, to `w3g.refresh__openers`). `compose.yaml:12`, `:43`, `infrastructure/ci.yml:26` to `26.8.2` (today 24.10). |
+| Pin | The tag is the patch tag `26.8.2`, not `26.8`. A moving `26.8` tag lets local, CI and the box drift. A patch bump is a one-line commit. |
 | Repeat rule | Replays record commands, not outcomes, so repeats double-count. Flag, never delete, a same-code order by the same player less than 1000 ms after the previous same-code order. Only single-instance orders: tier halls `hkee hcas ostr ofrt unp1 unp2 etoa etoe`, research (codes starting `R`), hero training (hero codes, in the unknown bucket via `mv__order_unknown`). Code list, not `kind` (tier upgrades sit in the buildings bucket). Buildings and units stay raw. The first order keeps its time. The MV computes the flag from the one doc at load, so no `ALTER UPDATE` (`insert-mutation-avoid-update`). |
 | How it lands | ClickHouse is derived state (PLAN.md:105): `just up` (the 26.8 image), `DROP DATABASE w3g` in `just ch`, `just local::schema local::mappings local::load local::fixtures`, `just fixtures::up`. No `EXCHANGE`, no hand `DROP`. The box needs the same rebuild if live. |
-| Gates | Flag goldens: `ostr` at 0, 500, 1500 ms flags only 500; `hhou` at 0, 500 flags none; a hero code at 0, 300 flags the second. Full load: flagged rows by class (26.9: Stronghold 1,052 of 1,071 repeats under 1 s). EXPLAIN per queries.md §5 S1: G04 and G06 about 2 granules, G16 about 5, `Keys: race event_type subject_code` (`schema-pk-filter-on-orderby`, `schema-pk-prioritize-filters`). Openers: `Keys: race`, binary search, 1 granule; rows equal the view's in count and `sum(cityHash64(…))` (26.9: 12,881; `query-mv-refreshable`). The `/openers/replays` EXPLAIN (queries.md 3.6) runs on the real table. Refresh peak memory from `system.query_log` goes into queries.md §5 S2. Profile limits (rust.md §8): `max_rows_to_read` = 10 × the largest route read; the memory cap from the ingest and refresh peaks. The key changes no result. The flag does: re-measure every story number into stories.md. |
+| Gates | Flag goldens: `ostr` at 0, 500, 1500 ms flags only 500; `hhou` at 0, 500 flags none; a hero code at 0, 300 flags the second. The hero-flag golden runs through the real rebuild order (`schema`, `mappings`, `load`) in the container, not clickhouse-local, to prove the `hero_codes` subquery sees the loaded mappings. Full load: flagged rows by class (26.9: Stronghold 1,052 of 1,071 repeats under 1 s). EXPLAIN per queries.md §5 S1: G04 and G06 about 2 granules, G16 about 5, `Keys: race event_type subject_code` (`schema-pk-filter-on-orderby`, `schema-pk-prioritize-filters`). Openers: `Keys: race`, binary search, 1 granule; rows equal the view's in count and `sum(cityHash64(…))` (26.9: 12,881; `query-mv-refreshable`). The `/openers/replays` EXPLAIN (queries.md 3.6) runs on the real table. Refresh peak memory from `system.query_log` goes into queries.md §5 S2. Profile limits: PR 2 measures the two numbers and records them in rust.md §8, `max_rows_to_read` = 10 × the largest route read and the memory cap from the ingest and refresh peaks; PR 4 writes them into the profile. The key changes no result. The flag does: re-measure every story number into stories.md. |
 | 26.8 re-run | The facts were measured on the 26.9.1 host binary. After the rebuild above, both projects run the 26.8 container. Re-run every EXPLAIN in queries.md §5 and §7 and rust.md §11 M1-M7, M11-M14 through `just ch` and `just fixtures::ch`; date each "26.8 (container)". The runtime join filter needs 26.2+. |
 
 ### PR 3: `feature/replay-source-key`
@@ -94,7 +95,7 @@ Needed: the full load came through parse + `file()`, not the real path.
 | | |
 |---|---|
 | Scope | The crate at `services/api/`: config, the ClickHouse client (param encoding, 6-permit semaphore, error map), `ApiError`, the mappings cache with the object-race rule, `GET /health`, `/mappings`, `/filters` |
-| Files | `services/api/{Cargo.toml,Cargo.lock,src/*.rs}` (rust.md §3), `tests/http.rs`, `tests/goldens.rs` (`mappings`, `filters` cases), `tests/live.rs` (user checks, cancel on close), `infrastructure/docker/Dockerfile.api`, compose `api` service, `justfile` (`api`, `api-lint`, `api-bless`, `api-parity`, `test`), `just/fixtures.just` (`api`, `parity`), `infrastructure/ci.yml` (`rust` job, `live` job on the compose 26.8 image in place of `schema`, image step) |
+| Files | `services/api/{Cargo.toml,Cargo.lock,src/*.rs}` (rust.md §3), `tests/http.rs`, `tests/goldens.rs` (`mappings`, `filters` cases), `tests/live.rs` (user checks, cancel on close), `infrastructure/docker/Dockerfile.api`, compose `api` service, `justfile` (`api`, `api-lint`, `api-bless`, `api-parity`, `test`), `just/fixtures.just` (`api`, `parity`), `.env.example` (`DOWNLOAD_BASE_URL=`, read by compose and rust.md §9), `infrastructure/ci.yml` (`rust` job, `live` job on the compose 26.8 image in place of `schema`, image step) |
 | Gates | cargo. Stub tests: the rust.md 6.2 error map (158; 159 as 408; 160; 202; 241 as 503; 396; connect refused; broken body), `no-store` and the envelope on every answer; 413, 415, 405, 404; never more than 6 permits. Unit: M1, M2 param encoding; race of `eaom`, `Edem`, `Recb`, `Rwdm`, `AEmb`, `AHfa`, `ankh`. Live: `/mappings` 649 rows; `/filters` on fixtures 2 maps, 5 players. |
 
 ### PR 6: `feature/api-search`
@@ -102,15 +103,15 @@ Needed: the full load came through parse + `file()`, not the real path.
 | | |
 |---|---|
 | Scope | `POST /search`: `req::search`, `sql::search`, the hydrate; skips `is_repeat = 1` rows |
-| Files | `services/api/src/{req,sql,routes}.rs`, `tests/goldens/search/*` (G01-G18, rust.md 17.1 errors), `tests/parity/search/*.sql` (frozen from index.html:311-317; lands before PR 14 deletes the page) |
-| Gates | Goldens (queries.md §7). No request string in any SQL text. Parity on fixtures and full load (mirror difference excluded, rust.md 17.3). A@0, A@5 s, B@100 s with a 10 s gap gives 0. Equal-timestamp real-data golden (26.9: 1,605 of 1,605 in order). 7 × `ewsp` gives 400 `search too complex`. EXPLAIN: G06 `Keys: race event_type subject_code`; G10 runtime join filter on `replays` (`query-join-filter-before`, queries.md 3.4). Fixture 3, 2, 3 (stories.md story 1). Full load (26.9) 2,263, 654, 1,520. |
+| Files | `services/api/src/{req,sql,routes}.rs`, `tests/goldens/search/*` (G01-G18, rust.md 17.1 errors), `tests/parity/search/*.sql` (frozen from the page's SQL builder, `frontend/index.html:699-798`; lands before PR 14 deletes the page) |
+| Gates | Goldens (queries.md §7). No request string in any SQL text. Parity on fixtures and full load (mirror difference excluded, rust.md 17.3). A@0, A@5 s, B@100 s with a 10 s gap gives 0. Equal-timestamp real-data golden (26.9: 1,605 of 1,605 in order). 7 × `ewsp`: re-check under the split gap form; 400 `search too complex` if 160 still fires, else a plain golden (api.md 3.4). EXPLAIN: G06 `Keys: race event_type subject_code`; G10 runtime join filter on `replays` (`query-join-filter-before`, queries.md 3.4). Gap steps compile to one two-condition `sequenceMatch` each (queries.md rule 7): a 3-step search with a gap and an interleaved third-step code still matches; G08 is re-measured. Fixture 3, 2, 3 (stories.md story 1). Full load (26.9) 2,263, 654, 1,520. |
 
 ### PR 7: `feature/api-openers`
 
 | | |
 |---|---|
-| Scope | `GET /openers`, `GET /openers/replays` on `w3g.openers`, with the per-owner list (api.md 3.6). Needs the w3grs fork export with `otrb` `is_supply_building = 1`. |
-| Files | `services/api/src/*`, `tests/goldens/openers*/*` (O1-O4, R1, errors). Drop the `replay_openers` view (views.sql:45-88) when nothing reads it. |
+| Scope | `GET /openers`, `GET /openers/replays` on `w3g.openers`, with the per-owner list (api.md 3.6). Needs `otrb` exported with `is_supply_building = 1`. The supply code list lives in this repo, not in the w3grs fork. |
+| Files | `services/api/src/*`, `tests/goldens/openers*/*` (O1-O4, R1, errors). `pipeline/parse-rs/src/bin/export-mappings.rs:28`: `SUPPLY_BUILDING_CODES` gains `otrb`. `db/w3g/tables.sql:226-228`: the comment says `otrb` is flagged. Then `just local::mappings` re-runs the export and reloads `w3g.mappings`. |
 | Gates | Fixture: `eate` 3 games, grey; `eaom` 3; `etoa` 2, `eden` 1; Medusa 2. Full load (26.9): 2,503, 2,294, then 872, 816, 466; `stopped` 59 at `eate,eaom`. R1 `X-Total-Count` 816 (26.9), equal to the `eden` row. Every level: `sum(rows[].games) + stopped = total`. The win-rate floor (server literal + frontend constant) is pinned by a golden and a test. EXPLAIN: `Keys: race`, binary search. |
 
 ### PR 8: `feature/api-stats`
@@ -132,7 +133,7 @@ Needed: the full load came through parse + `file()`, not the real path.
 | | |
 |---|---|
 | Scope | The Vite frame: shell, router, API client, URL codec, the light and dark theme, theme.js, the theme menu and the pre-paint script (frontend.md §6, `design/mockups/tokens.css`), copied gnl components, `FilterRow`, `StateBlock`, `ReplayTable`, `ObjectIcon`, `NotFoundView`. nginx serving (rust.md 8.1). The tunnel move waits for hosting (§4). |
-| Files | `frontend/` per frontend.md §2; `infrastructure/docker/{Dockerfile.ui,nginx-ui.conf}`; compose `ui`; `infrastructure/cloudflared/config.yml.example` (`http://ui:80`); compose `cloudflared` (drop `network_mode`); `justfile` (`ui`, `ui-build`); `infrastructure/ci.yml` (`ui` job, image step). The old page moves to `frontend/public/legacy/index.html`. |
+| Files | `frontend/` per frontend.md §2; `infrastructure/docker/{Dockerfile.ui,nginx-ui.conf}`; compose `ui`; `infrastructure/cloudflared/config.yml.example` (`http://ui:80`); compose `cloudflared` (drop `network_mode`); `frontend/shots.mjs` (Playwright, the pattern of the gym's `scratch/mobile-render/drive.mjs`); `justfile` (`ui`, `ui-build`, `ui-shots`); `infrastructure/ci.yml` (`ui` job, image step). The old page moves to `frontend/public/legacy/index.html`. |
 | Gates | node test, build. The dataviz validator on the chart pairs, light and dark surfaces (frontend.md 6.5). Shots of the shell and `/nope`. `curl /api/health` through nginx gives 200. |
 | Daniel reviews | Nothing. Ingress and the search path wait for hosting (§4). |
 
@@ -161,7 +162,7 @@ Needed: the full load came through parse + `file()`, not the real path.
 
 | | |
 |---|---|
-| Scope | `ReplayView`, `BuildTimeline` (swimlane plus list, flagged repeats hidden), `ApmLine`; the GNL series as text; deletes the legacy page |
+| Scope | `ReplayView`, `BuildTimeline` (swimlane plus list, flagged repeats hidden), `ApmLine`; the GNL series as text; deletes the legacy page; drops the `replay_openers` view (views.sql:45-88), which the legacy page read (frontend/index.html:913, :919) |
 | Gates | Shots: desktop swimlane, phone tabs, hover tooltip, `/replays/nope`. A minute has the same x in the APM chart and the timeline. Under 760 px only the timeline box scrolls sideways. The `dcd3…` line through the UI. |
 
 ### PRs 15-16: `feature/search-count-without-first-hero` (API) and `…-ui`
@@ -195,10 +196,10 @@ Data and pipeline
 - Repeat orders: the `is_repeat` flag (PR 2). Why: calibration on 3 LAN stat-events games (`order-calibration.md`) fixed heroes exactly (14 orders to 8 = 8 starts); no time rule beat raw for buildings or units.
 - Reads skip flagged rows; the timeline hides them; the UI says "ordered".
 - List order stays fixed (a tie today: every `gnl_series_id = 0`); a play date rides the PR 3 re-stage if the drain can read the upload time.
-- 68 empty `hero_id` rows are dropped in reads; a parser fix is tracked in the w3grs fork. Orc Burrow is a supply building in the fork export (26.9: 3,386 of 3,396 Orc openers hold it).
+- 68 empty `hero_id` rows are dropped in reads; a parser fix is tracked in the w3grs fork. Orc Burrow becomes a supply building in this repo's mappings export (PR 7; 26.9: 3,386 of 3,396 Orc openers hold it).
 
 Local stack and deploy (Daniel, 2026-09-11)
-- Docker first: local, fixtures, CI and the box run `clickhouse/clickhouse-server:26.8` from compose (PR 2 pins it). Recipes drive compose; nobody types a `docker` command.
+- Docker first: local, fixtures, CI and the box run `clickhouse/clickhouse-server:26.8.2` from compose (PR 2 pins it). Recipes drive compose; nobody types a `docker` command.
 - The place is a just module: `local` and `fixtures` (PR 1), `box` with the box. Root aliases `up`, `down`, `ch`.
 - The bulk dev load reads `file()` from `data/`, mounted read-only into the container. The fixture base is the `wh-fixtures` project (P1).
 - Images build in CI and go to GHCR; `just box::deploy` pulls them on the box.
@@ -206,12 +207,13 @@ Local stack and deploy (Daniel, 2026-09-11)
 - Facts stay dated "26.9 (host binary)"; PR 2 re-measures them in the 26.8 container. `infrastructure/local/` goes in PR 1 (P4).
 
 ClickHouse
-- Pin 26.8 (LTS); PR 2 re-runs the 26.9 checks on it, in the container.
+- Pin the tag `clickhouse/clickhouse-server:26.8.2` on the 26.8 LTS line; PR 2 re-runs the 26.9 checks on it, in the container.
 - S1 key as proposed: `(race, event_type, subject_code, replay_id, …)`. S2 refresh size and the profile limits are measured in PR 2. S2 must land before about 20,000 replays.
 - `kind != 'unknown'` stays in SQL (26.9: 6 of 104 granules). Equal timestamps get a real-data golden.
 
 API
-- Race ids are `H O N U R`; `R` is a fifth race. Private chat is hidden (the route is public, cached 1 hour). `hero_trained` time is the first cast, not the training order: accepted, revisit with the fork.
+- Race ids (Daniel, 2026-09-11): the wire uses the GNL ids `HU OC NE UD RANDOM` (gnl `app/models/enums.py:4-9`), and `RANDOM` stays a fifth race; storage keeps the parser letters `H O N U R` in `replay_players.race` and the event tables, so nothing is re-parsed; the Rust API maps at its boundary, request parsing turns a GNL id into the letter before it reaches SQL and the hydrate step and `GET /mappings` map the letter back, an unknown id gives 400; SQL text, the goldens and their parameter values keep the letters; the frontend uses the GNL ids everywhere, so `RaceSelect`, `RaceIcon` and the icon file names copy from gnl unchanged.
+- Private chat is hidden (the route is public, cached 1 hour). `hero_trained` time is the first cast, not the training order: accepted, revisit with the fork.
 - Story 2 reads "children plus stopped sum to the parent".
 - Crate at `services/api/`; no compose healthcheck until something depends on the API; code 241 maps to 503.
 - PR 4 tests the empty password and `users.d`. clippy on parse-rs comes in a later `chore/` PR.

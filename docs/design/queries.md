@@ -4,7 +4,7 @@
 - **Data: the host-binary ClickHouse 26.9.1.1204, read 2026-09-11 17:47 to 21:30.** From PR 1 the local compose project holds this load (plan.md §4). 6,567 replays: 6,564 from `gs://w3warehouse-05b6-replays/w3g/gnl/` plus the 3 fixtures. Claude loaded them 2026-09-11 with the parse bin plus `INSERT … FROM file()`. The parsed docs are at the main clone `data/parsed/gnl/` (git-ignored). This set is for debugging only. It is not the "about 1,000" set. The org deploy (Warcraft-Gym/wc3-gym-warehouse) holds only app-reported GNL replays.
 - The load has 13,134 players and 950,132 `replay_events` rows. All replays are `type = '1on1'` with `gnl_series_id = 0`. 6,496 have events and 71 have none (§8 item 6).
 - Review bases (stories.md D3): the 3 fixtures in the empty `wh-fixtures` compose project decide pass or fail. This full load is a dated scale check. `api.md` examples come from the fixtures.
-- **Server version.** PR 2 pins compose.yaml:12, compose.yaml:43 and infrastructure/ci.yml:26 to `clickhouse/clickhouse-server:26.8` (the 26.8 LTS line; 26.8.2 is the newest tag; today 24.10). Every plan and M-fact here was measured on 26.9 (host binary). PR 2 re-runs them in the 26.8 container before it lands (§5 S4).
+- **Server version.** PR 2 pins compose.yaml:12, compose.yaml:43 and infrastructure/ci.yml:26 to `clickhouse/clickhouse-server:26.8.2` (the newest tag of the 26.8 LTS line; today 24.10). The patch tag is pinned, not `26.8`: `26.8` moves, and every measured plan here must run on one fixed server. A patch bump is a one-line commit. Every plan and M-fact here was measured on 26.9 (host binary). PR 2 re-runs them in the 26.8 container before it lands (§5 S4).
 - Paths are relative to this repo. Rule names come from the `clickhouse-best-practices` skill.
 
 ## 0. How this was measured
@@ -14,7 +14,7 @@
 | Server plans | `EXPLAIN indexes = 1` and `EXPLAIN ESTIMATE` over HTTP 8123 with `param_<name>` values, the Rust service's path. Read-only. |
 | Result counts | The same queries with the golden params. |
 | Memory | `system.query_log.memory_usage` for a tagged `query_id`, after `SYSTEM FLUSH LOGS`. |
-| "After" plans | `clickhouse local` in a scratch process copies server rows with `remote()` (a read) into tables with the new key. Local tables have 1 part (117 granules); server `replay_events` has 4 parts (118). Local granule counts run 1-3 lower. |
+| "After" plans | `clickhouse local` in a scratch process copies server rows with `remote()` (a read) into tables with the new key. Local tables have 1 part (116 granules); server `replay_events` has 4 parts (118). Local granule counts run 1-3 lower. |
 | MV checks | `clickhouse local` loads the 6,564 docs of `data/parsed/gnl/` through the proposed MV, then compares with a window-function recount. |
 | Goldens | A throwaway compiler generated each text. Each text ran on the server. |
 
@@ -214,7 +214,7 @@ ORDER BY games >= 10 DESC, wins / games DESC, games DESC, code            -- sor
 
 - `[…]` lines appear only when set. `depth = len(prefix)`, `next = depth + 1`, `after = depth + 2`. No `prefix` line at depth 0.
 - **`stopped`:** an opener that ends at `prefix` has `seq[next] = ''` (out-of-range index gives the default). Rust moves the `code = ''` row out of `rows`; `total = sum(games)`. At `prefix = eate,eaom`: `['', 59, 18, 3.8, 0]`. No clash: `seq` holds only mapped `building` codes (views.sql:68-69, S2 body).
-- **One pass** (C4). index.html:906-923 joins two copies of the view (`c`, `b`), so the view runs twice per click. `uniqExactIf` gives `branches` in the same pass (w3warehouse analytics.py:712-717 does the same). At depth 6, `length(seq) >= 7` is never true (`seq` holds at most 6, views.sql:63), so `branches = 0`.
+- **One pass** (C4). index.html:906-923 joins two copies of the view (`c`, `b`), so the view runs twice per click. `uniqExactIf` gives `branches` in the same pass (w3warehouse analytics.py:712-717 does the same). At depth 5 (`after = 7`), `length(seq) >= 7` is never true (`seq` holds at most 6, views.sql:63), so `branches = 0`.
 - The floor `10` is the server constant of api.md 3.5, pinned by tests here and in the UI.
 - Measured (race N): depth 0 gives 4 rows, `eate` 2,503 games. `prefix = eate,eaom`, `sort = winrate`: `edob 466`, `etoa 872`, `etol 67`, `eden 816`, `eate 14`, `'' 59`. `player = MEDUSA#31315`: 1 row, `eate`, 2 games.
 
@@ -359,7 +359,7 @@ GROUP BY race
 - A mirror row gets `wins = null` in Rust. `FINAL` on every read; `uniqExact` where a join can fan out. No plain `count()` over `replay_events` (clickhouse-audit finding 7).
 - Heroes: `hero_id != ''` drops the 68 empty rows; Rust reads the total from `is_total = 1`. Each race has exactly one `code = ''` row.
 - Stats read no order rows, so `is_repeat` does not touch them. An identical `IN (C)` is built once (plan shows `subquery1` twice).
-- Decided: race ids are `H O N U R`; `R` is a fifth race. No filter: `R` has 1,004 player-games, e.g. `['R', 'Ucrl', 106]`.
+- Decided: `H O N U R` are the storage values in `replay_players.race` and the event tables, and every race `{…:String}` param here takes a letter; the wire ids are the GNL ids `HU OC NE UD RANDOM`, and the Rust API maps each one to its letter before the SQL runs and back again when it hydrates. `R` is a fifth race. No filter: `R` has 1,004 player-games, e.g. `['R', 'Ucrl', 106]`.
 
 ```
 filtered durations: ReadFromMergeTree (w3g.replays) FINAL: 1
@@ -465,19 +465,23 @@ Input: the validated body of api.md 3.4, plus `limit` and `offset` (no `sort`, a
 | 2 | No slots | `SELECT r.replay_id AS replay_id, count() OVER () AS total FROM w3g.replays AS r FINAL WHERE <r> ORDER BY … LIMIT … OFFSET …`. No focus player (api.md 2.5). |
 | 3 | Slot set, 1 step | `SELECT replay_id, player_id FROM w3g.replay_events WHERE [race = {gI_race:String} AND] is_repeat = 0 AND <cond0> GROUP BY replay_id, player_id`. No `sequenceMatch` (it needs 2+ conditions; the `WHERE` is the whole test, index.html:720-721). No dedup step. |
 | 4 | Slot set, 2+ steps, filter | `[race = {gI_race:String} AND] is_repeat = 0 AND event_type IN {gI_types:Array(String)} AND subject_code IN {gI_codes:Array(String)}` (sorted distinct values, byte order). |
-| 5 | Slot set, 2+ steps, shape | `SELECT replay_id, player_id FROM (SELECT DISTINCT replay_id, player_id, time_ms, event_type, subject_code, seq FROM w3g.replay_events WHERE <rule 4>) GROUP BY replay_id, player_id HAVING sequenceMatch({gI_pat:String})(time_ms, <cond0>, …, <condN>)`. `DISTINCT` removes an unmerged duplicate and keeps `seq`, so real same-ms repeats survive (C8). |
+| 5 | Slot set, 2+ steps, shape | `SELECT replay_id, player_id FROM (SELECT DISTINCT replay_id, player_id, time_ms, event_type, subject_code, seq FROM w3g.replay_events WHERE <rule 4>) GROUP BY replay_id, player_id HAVING sequenceMatch({gI_pat:String})(time_ms, <cond0>, …, <condN>)`. `DISTINCT` removes an unmerged duplicate and keeps `seq`, so real same-ms repeats survive (C8). A gap step adds its own aggregate to the `HAVING` (rule 7). |
 | 6 | Step condition | `event_type = {gI_sK_type:String} AND subject_code = {gI_sK_code:String}`, plus `AND time_ms >= {gI_sK_from:UInt32}` and `AND time_ms <= {gI_sK_to:UInt32}` when set (s × 1000). |
-| 7 | Pattern | `(?1)`, then per step k ≥ 2: `(?t<={ms})(?k)` with `within_previous_seconds`, else `.*(?k)`. `ms` = s × 1000 (`time_ms` is milliseconds). Bound as a `String` param. Forbidden: `(?t<=N).*` (w3warehouse compiler.py:909), `.*(?t<=N)`, bare `(?1)(?2)` (demands adjacency, clickhouse-audit §6). Only this rule produces links. |
+| 7 | Patterns | The ordering pattern is `(?1)`, then `.*(?k)` per step k ≥ 2. It never carries `(?t…)`. Each step k with `within_previous_seconds` adds one more aggregate to the `HAVING`: `sequenceMatch({gI_sK_pat:String})(time_ms, <cond k-1>, <cond k>)`, pattern `(?1)(?t<={ms})(?2)`. Only that gap's two codes are conditions there, so no third step code can break it (§4.2). `ms` = s × 1000 (`time_ms` is milliseconds). Both patterns bind as `String` params. Forbidden: `(?t<=N).*` (w3warehouse compiler.py:909), `.*(?t<=N)`, bare `(?1)(?2)` (demands adjacency, clickhouse-audit §6), and any `(?t…)` in a pattern with 3 or more conditions. Only this rule produces links. |
 | 8 | Slot player `pI` | `SELECT replay_id, player_id, team_id FROM w3g.replay_players FINAL WHERE [race = {gI_race:String}] [AND lowerUTF8(name) = lowerUTF8({gI_player:String})] [AND (replay_id, player_id) IN (<slot set>)]`. No `WHERE` when all three are absent. |
 | 9 | Join | `FROM (<r>) AS r INNER JOIN (<p0>) AS p0 ON p0.replay_id = r.replay_id [INNER JOIN (<p1>) AS p1 ON p1.replay_id = r.replay_id]`. |
 | 10 | Slots intersect | 2 slots: `WHERE p1.team_id != p0.team_id`. Every replay has 2 players on 2 teams, so each slot is one player (api.md A11) and a mirror works (G12). The `p1` race filter enforces the opponent race exactly (C3). |
 | 11 | Result | `won` → `r.winning_team_id = pI.team_id`; `lost` → `r.winning_team_id != pI.team_id`. Both need rule 1's `winning_team_id >= 0`. |
 | 12 | Grain and focus | `GROUP BY r.replay_id, r.gnl_series_id, r.gnl_game_no, r.duration_ms`. `min(p0.player_id) AS focus_player_id` (the lower id when both fit). `count() OVER () AS total`. The `GROUP BY` removes duplicates (G14: 364 rows, 364 ids). |
 | 13 | Order | One fixed order (api.md 2.4, A2): `r.gnl_series_id DESC, r.gnl_game_no DESC, r.replay_id`, then `LIMIT {limit:UInt32} OFFSET {offset:UInt32}`. |
-| 14 | Param names | `gI_race`, `gI_player`, `gI_sK_type`, `gI_sK_code`, `gI_sK_from`, `gI_sK_to`, `gI_types`, `gI_codes`, `gI_pat`, `min_ms`, `max_ms`, `map`, `limit`, `offset`. `I` = slot, `K` = step. `gI_race` appears in both the slot set and `pI`. |
+| 14 | Param names | `gI_race`, `gI_player`, `gI_sK_type`, `gI_sK_code`, `gI_sK_from`, `gI_sK_to`, `gI_types`, `gI_codes`, `gI_pat`, `gI_sK_pat`, `min_ms`, `max_ms`, `map`, `limit`, `offset`. `I` = slot, `K` = step. `gI_race` appears in both the slot set and `pI`. |
 | 15 | Layout | 4 spaces per nesting level, exactly as §7. Goldens compare bytes. In a slot `WHERE`, each term after the first goes on its own `AND` line: race, `is_repeat = 0`, then the conditions. |
 
 ### 4.2 `sequenceMatch` facts
+
+**`sequenceMatch` skips only events that match no condition.** The ClickHouse docs show conditions `number = 1`, `number = 2`, `number = 3` over the data 1, 3, 2: `(?1)(?2)` gives 0, because the 3 matches a condition and sits between. A `(?t<=N)` link therefore demands that its two steps are adjacent among the events that match any step. The slot `WHERE` admits every step code (rule 4), so with 3 or more steps one order of another step's code between the pair breaks the chain. The search then loses a real game.
+
+**The compiler splits the two jobs** (rule 7). The ordering pattern keeps `.*` between every step and carries no `(?t…)`. Each gap step compiles to its own two-condition aggregate `sequenceMatch('(?1)(?t<=N)(?2)')(time_ms, <cond K-1>, <cond K>)`, ANDed into the `HAVING`. Only those two codes are conditions in that aggregate, so only they can break the gap.
 
 Each ran as `SELECT sequenceMatch({p:String})(t, <conds>) FROM values('t UInt32, e String', …)` (26.9).
 
@@ -491,6 +495,18 @@ Each ran as `SELECT sequenceMatch({p:String})(t, <conds>) FROM values('t UInt32,
 | A@0, A@0 (one row duplicated) | A, A | `(?1).*(?2)` and `(?1)(?t<=10000)(?2)` | 1 and 1 | A duplicate counts; rule 5's `DISTINCT` exists for this |
 | A@0, B@10001 | A, B | `(?1)(?t<=10000)(?2)` | 0 | The bound is inclusive: 10001 fails |
 | A@0, B@10000 | A, B | `(?1)(?t<=10000)(?2)` | 1 | … and 10000 passes |
+
+The case that fixed rule 7 (G08's shape: `eaom`, then `eate` within 30 s, then `unit ewsp`, with a wisp order between `eaom` and `eate`). Not run here; it follows from the skip rule above, and PR 6 pins it as a golden.
+
+| Events (ms) | Conditions | Pattern | Result | Shows |
+|---|---|---|---|---|
+| eaom@0, ewsp@1000, eate@2000, ewsp@3000 | eaom, eate, ewsp | `(?1)(?t<=30000)(?2).*(?3)` | 0 | The old one-pattern form drops a real build |
+| the same rows | eaom, eate, ewsp | `(?1).*(?2).*(?3)` | 1 | The ordering pattern holds |
+| the same rows | eaom, eate | `(?1)(?t<=30000)(?2)` | 1 | The gap aggregate sees only its own two codes |
+
+The two new aggregates both give 1, so the slot matches.
+
+Known limit, accepted: the gap aggregate and the ordering pattern match independently. A slot with an early A, B, C chain and a late A, B pair within N passes, although no single chain holds both. Rare on real builds; a golden in PR 6 records the shape. The old form's false negative hit every 3-step search with a common third code.
 
 - **Equal timestamps.** `hero_trained` ties with the hero's first skill (views.sql:405-431). No documented order guarantee was found. Measured: "`hero_trained Edem` then a Demon Hunter skill" matches 1,605 of 1,605 player-games; the reverse order matches 3. Decided (C5): keep plain `time_ms` and pin golden E1 (§7).
 - **Split `hero_trained`.** views.sql:405-408 assumes a hero's ability events arrive in one INSERT block. One doc is one `replays_raw` row, so this holds per doc. If it fails, two `hero_trained` rows land with different `time_ms`; neither `FINAL` nor `DISTINCT` merges them. The fix belongs in the load path, not the compiler. No step search asks "`hero_trained X` then `hero_trained X`".
@@ -529,7 +545,7 @@ Five changes: S1-S3 and S5 change tables; S4 pins the image. S1, S2 and S5 land 
 | G08 race N, wisp + 2 more | 204,800 (25) | 204,800 (25) | **114,688 (14)** | 106,496 (13) |
 | Opener refresh (`building`) | 950,132 (116) | 393,216 (48) | **262,144 (32)** | 237,568 (29) |
 
-- The event-first column is from the first draft, which carried `matchup` after `race`, so its G10 figure used the matchup filter.
+- The Current and Audit keys carry `matchup` after `race`, so their G10 figures used the matchup filter. The event-first column carries no `matchup`: its G10 equals its G06.
 - Decided: the proposed key. Why: every race-set search reads one unbroken prefix; event-first wins 1-3 granules only when race is blank.
 - `matchup` left the key (C3). Its saving grows with the corpus: the G10 range is about 1/5 of the G06 range. G08 gains least: `ewsp` is 25% of Night Elf rows.
 - Before (server, 4 parts, G06): `Keys: race event_type subject_code … Granules: 28/118 … generic exclusion search`. After (local): `Granules: 2/117`. Same result set (2,496 pairs).
@@ -607,9 +623,9 @@ Decided (stories.md D1, C10): the drain writes the raw R2 object key into each d
 - Re-stage: re-run the drain over the staging bucket's `replays/` with the breadcrumbs cleared, then rebuild (PLAN.md:106). A replay not from the drain keeps `''` and shows "No file".
 - Decided: the list keeps its fixed order (§4 rule 13). The PR 3 re-stage adds a play date if the drain can read the upload time.
 
-### S4. Pin the ClickHouse image to 26.8
+### S4. Pin the ClickHouse image to 26.8.2
 
-Decided: PR 2 pins compose.yaml:12, compose.yaml:43 and infrastructure/ci.yml:26 to `clickhouse/clickhouse-server:26.8` (26.8 LTS; 26.8.2 newest; today 24.10). Why: the plans in 3.4 and 3.6 skip a pre-join filter on `replays` because the server adds a runtime join filter, on by default from 26.2 (`query-join-filter-before`). Every plan and M-fact here was measured on 26.9 (host binary); PR 2 re-runs them in the 26.8 container before it lands. The local project, the fixtures project, CI and the box all run this one image (plan.md §4).
+Decided: PR 2 pins compose.yaml:12, compose.yaml:43 and infrastructure/ci.yml:26 to `clickhouse/clickhouse-server:26.8.2` (the newest tag of the 26.8 LTS line; today 24.10). The concrete patch tag is pinned, not `26.8`: `26.8` moves, and every measured plan here must run on one fixed server. A patch bump is a one-line commit. Why 26.8: the plans in 3.4 and 3.6 skip a pre-join filter on `replays` because the server adds a runtime join filter, on by default from 26.2 (`query-join-filter-before`). Every plan and M-fact here was measured on 26.9 (host binary); PR 2 re-runs them in the 26.8 container before it lands. The local project, the fixtures project, CI and the box all run this one image (plan.md §4).
 
 ### S5. `is_repeat` on order rows
 
@@ -640,12 +656,12 @@ Decided: PR 2 pins compose.yaml:12, compose.yaml:43 and infrastructure/ci.yml:26
 | C8 | `SELECT DISTINCT` on the RMT key columns before a 2+ step `GROUP BY`, plus `LIMIT 1 BY replay_id` in backfill.sql. | Exact by construction. G06 slot: 2,496 pairs in all shapes; memory plain 1.42 MiB, `DISTINCT` 1.44 MiB, `FINAL` 14.15 MiB. |
 | C9 | Timeline emits a retrain as `hero_retrained`, `code = hero_id` (3.8). | A retrain is a real action; relearned skills otherwise look like a data error. Cost: two `if()`s, one api.md 3.8 enum value, one UI label. |
 | C10 | S3 `source_key` (stories.md D1). | The key cannot drift from the file. |
-| C11 | S4, pin 26.8; PR 2 re-measures on 26.8. | Runtime join filters are on by default from 26.2. |
+| C11 | S4, pin `26.8.2`; PR 2 re-measures on it. | Runtime join filters are on by default from 26.2. |
 | C12 | Flag repeats at load (`is_repeat`), never delete (§9). | Replays record commands; flagged rows stay for audit (`insert-mutation-avoid-delete`). |
 
 ## 7. SQL goldens
 
-Request in, exact SQL and params out. The compiler emits this text byte for byte (without `FORMAT`). "Total" is the full-load result on 26.9, for information only. No golden G01-G17 uses a flagged code (§9), so the `is_repeat` line leaves their totals unchanged.
+Request in, exact SQL and params out. The compiler emits this text byte for byte (without `FORMAT`). "Total" is the full-load result on 26.9, for information only. No golden G01-G17 uses a flagged code (§9), so the `is_repeat` line leaves their totals unchanged. G08's count was measured with the old gap form; PR 6 re-measures.
 
 | # | Request body (query keys) | Branch covered | Pattern | Total |
 |---|---|---|---|---|
@@ -655,8 +671,8 @@ Request in, exact SQL and params out. The compiler emits this text byte for byte
 | G04 | slot N, step `hero_trained Edem` | 1 step: no `sequenceMatch`, no `DISTINCT` | – | 1,520 |
 | G05 | slot N, `building eate` 0-15 s | step window | – | 2,162 |
 | G06 | slot N, `eate` then `eaom` | 2 steps, open gap, `DISTINCT` | `(?1).*(?2)` | 2,263 |
-| G07 | as G06, `eaom` within 60 s | gated gap | `(?1)(?t<=60000)(?2)` | 2,110 |
-| G08 | slot N, `eate`, `unit ewsp` within 30 s, `hero_trained Edem` | 3 steps, mixed | `(?1)(?t<=30000)(?2).*(?3)` | 1,499 |
+| G07 | as G06, `eaom` within 60 s | gated gap, its own aggregate | `(?1).*(?2)` plus `(?1)(?t<=60000)(?2)` | 2,110 |
+| G08 | slot N, `eate`, `unit ewsp` within 30 s, `hero_trained Edem` | 3 steps, mixed | `(?1).*(?2).*(?3)` plus `(?1)(?t<=30000)(?2)` | re-measure in PR 6 (old form: 1,499) |
 | G09 | slot N, `emow` then `emow` | repeated step, IN lists deduped | `(?1).*(?2)` | 2,408 |
 | G10 | G06 slot + `{"race":"O"}` | 2 slots, empty second | `(?1).*(?2)` | 654 |
 | G11 | G06 slot + slot O `building oalt` | both slots have steps | `(?1).*(?2)` | 654 |
@@ -797,11 +813,31 @@ LIMIT {limit:UInt32} OFFSET {offset:UInt32}
 `{"g0_codes": ["eaom", "eate"], "g0_pat": "(?1).*(?2)", "g0_race": "N", "g0_s0_code": "eate", "g0_s0_type": "building", "g0_s1_code": "eaom", "g0_s1_type": "building", "g0_types": ["building"], "limit": 25, "offset": 0}`
 </details>
 
-<details><summary>G07 gated gap, G09 repeated step, G18 flagged code (text equals G06)</summary>
+<details><summary>G07 gated gap</summary>
 
-A gap value or a repeated code never changes the text. Only the params differ.
+Request: G06, plus `"within_previous_seconds": 60` on `eaom`.
 
-- G07 (`"within_previous_seconds": 60` on `eaom`): `{"g0_codes": ["eaom", "eate"], "g0_pat": "(?1)(?t<=60000)(?2)", "g0_race": "N", "g0_s0_code": "eate", "g0_s0_type": "building", "g0_s1_code": "eaom", "g0_s1_type": "building", "g0_types": ["building"], "limit": 25, "offset": 0}`
+The text equals G06, except the `HAVING` becomes:
+
+```sql
+        HAVING sequenceMatch({g0_pat:String})(
+            time_ms,
+            event_type = {g0_s0_type:String} AND subject_code = {g0_s0_code:String},
+            event_type = {g0_s1_type:String} AND subject_code = {g0_s1_code:String})
+          AND sequenceMatch({g0_s1_pat:String})(
+            time_ms,
+            event_type = {g0_s0_type:String} AND subject_code = {g0_s0_code:String},
+            event_type = {g0_s1_type:String} AND subject_code = {g0_s1_code:String}))
+```
+`{"g0_codes": ["eaom", "eate"], "g0_pat": "(?1).*(?2)", "g0_race": "N", "g0_s0_code": "eate", "g0_s0_type": "building", "g0_s1_code": "eaom", "g0_s1_pat": "(?1)(?t<=60000)(?2)", "g0_s1_type": "building", "g0_types": ["building"], "limit": 25, "offset": 0}`
+
+With two steps the gap aggregate carries the same two conditions as the ordering pattern, so the total stays 2,110.
+</details>
+
+<details><summary>G09 repeated step, G18 flagged code (text equals G06)</summary>
+
+A repeated code never changes the text. Only the params differ.
+
 - G09 (`emow` then `emow`; `DISTINCT` keeps it exact under an unmerged duplicate): `{"g0_codes": ["emow"], "g0_pat": "(?1).*(?2)", "g0_race": "N", "g0_s0_code": "emow", "g0_s0_type": "building", "g0_s1_code": "emow", "g0_s1_type": "building", "g0_types": ["building"], "limit": 25, "offset": 0}`
 - G18 (race O, `ostr` then `ostr`; `is_repeat = 0` drops the sub-second re-click): `{"g0_codes": ["ostr"], "g0_pat": "(?1).*(?2)", "g0_race": "O", "g0_s0_code": "ostr", "g0_s0_type": "building", "g0_s1_code": "ostr", "g0_s1_type": "building", "g0_types": ["building"], "limit": 25, "offset": 0}`
 </details>
@@ -810,15 +846,24 @@ A gap value or a repeated code never changes the text. Only the params differ.
 
 Request: `{"groups":[{"race":"N","steps":[{"event_type":"building","subject_code":"eate"},{"event_type":"unit","subject_code":"ewsp","within_previous_seconds":30},{"event_type":"hero_trained","subject_code":"Edem"}]}]}`
 
-The text equals G06, except its last line of `sequenceMatch` conditions (the `g0_s1` line, which ends `))`) becomes these two lines:
+The text equals G06, except the `HAVING` becomes:
 
 ```sql
+        HAVING sequenceMatch({g0_pat:String})(
+            time_ms,
+            event_type = {g0_s0_type:String} AND subject_code = {g0_s0_code:String},
             event_type = {g0_s1_type:String} AND subject_code = {g0_s1_code:String},
-            event_type = {g0_s2_type:String} AND subject_code = {g0_s2_code:String}))
+            event_type = {g0_s2_type:String} AND subject_code = {g0_s2_code:String})
+          AND sequenceMatch({g0_s1_pat:String})(
+            time_ms,
+            event_type = {g0_s0_type:String} AND subject_code = {g0_s0_code:String},
+            event_type = {g0_s1_type:String} AND subject_code = {g0_s1_code:String}))
 ```
-`{"g0_codes": ["Edem", "eate", "ewsp"], "g0_pat": "(?1)(?t<=30000)(?2).*(?3)", "g0_race": "N", "g0_s0_code": "eate", "g0_s0_type": "building", "g0_s1_code": "ewsp", "g0_s1_type": "unit", "g0_s2_code": "Edem", "g0_s2_type": "hero_trained", "g0_types": ["building", "hero_trained", "unit"], "limit": 25, "offset": 0}`
+`{"g0_codes": ["Edem", "eate", "ewsp"], "g0_pat": "(?1).*(?2).*(?3)", "g0_race": "N", "g0_s0_code": "eate", "g0_s0_type": "building", "g0_s1_code": "ewsp", "g0_s1_pat": "(?1)(?t<=30000)(?2)", "g0_s1_type": "unit", "g0_s2_code": "Edem", "g0_s2_type": "hero_trained", "g0_types": ["building", "hero_trained", "unit"], "limit": 25, "offset": 0}`
 
 Byte order: `Edem` sorts before `eate`.
+
+The old one-pattern form `(?1)(?t<=30000)(?2).*(?3)` gave 1,499. An `Edem` order between the `eate` and the `ewsp` broke its gap, so 1,499 is a floor. PR 6 re-measures on the new shape.
 </details>
 
 <details><summary>G10 slot and opponent race</summary>
@@ -1045,7 +1090,7 @@ Numbers kept so other documents' links hold.
 2. Equal timestamps: plain `time_ms`, pinned by golden E1 (C5).
 3. `gnl_series_id = 0` everywhere: the list keeps its fixed order; the PR 3 re-stage adds a play date if the drain can read the upload time.
 4. S1 key: as proposed.
-5. Random: race ids are `H O N U R`; `R` is a fifth race, and filters read `race`, not `race_detected`.
+5. Random: `H O N U R` are the storage values and every race param here takes a letter; the wire ids are the GNL ids `HU OC NE UD RANDOM`, mapped to the letters at the Rust API boundary (3.7). `R` is a fifth race, and filters read `race`, not `race_detected`.
 6. 71 replays with no events: PR 1 checks whether they are LAN games hit by the w3grs post-2.0.2 action-id shift (the calibration saw w3grs return 0 orders on a LAN game vs the AI). Until then they show in no-slot search and stats, never in step search or openers.
 7. `max_rows_to_read`: profile limits are measured after PR 2 (about 10× the largest route read).
 8. `kind != 'unknown'` stays in SQL (3.8).
@@ -1081,7 +1126,7 @@ Where the codes sit (w3grs buckets): tier codes in `building`; research in `upgr
 
 ### 9.2 Calibration
 
-Report: `/home/daniel/.claude/jobs/ac2bfdc7/tmp/design-ground/order-calibration.md`. Truth: stat-events of 3 short LAN test games (5.5-7 min, v2.00 build 6117).
+Report: `docs/design/order-calibration.md`. Truth: stat-events of 3 short LAN test games (5.5-7 min, v2.00 build 6117).
 
 | Class | Truth starts | Raw orders | With the rule | Result |
 |---|---|---|---|---|
@@ -1140,7 +1185,7 @@ ARRAY JOIN
 
 - `mv__order_upgrade` and `mv__order_unknown` take the same `WITH` and `is_repeat` lines, with `'upgrades'` and `'unknown'` for `'buildings'`. `mv__order_unit` and `mv__order_item` are unchanged; their rows take `DEFAULT 0`.
 - `arrayExists` over an earlier same-code order within 1000 ms equals "gap to the previous same-code order < 1000 ms", because the arrays are time-sorted (9.1). Cost is O(n²) per player bucket.
-- `hero_codes` reads `mappings`, which `just local::mappings` (or `box::mappings`) loads before any backfill (`mv_events__order` already joins it).
+- `hero_codes` reads `mappings`, which `just local::mappings` (or `box::mappings`) loads before any backfill (`mv_events__order` already joins it). The subquery runs at each insert, not at CREATE; the PR 2 hero-flag golden runs through the real rebuild order (`schema`, `mappings`, `load`), not clickhouse-local, and proves it.
 - `mv_events__order` (views.sql:358-378) adds `e.is_repeat AS is_repeat`. The hero MVs write `DEFAULT 0`: `hero_trained` comes from ability events, not orders.
 - Checked (26.9, `clickhouse local`, the 6,564 `data/parsed/gnl/` docs through these MVs): 19,467 flags (building 4,390, upgrade 3,633, unknown 11,444). A window-function recount of the rule gives 0 mismatches. F1's 19,472 adds the 5 flags of the 3 fixtures (server, 26.9, re-read 2026-09-11). An `arrayLastIndex(…) AS k` alias inside the lambda gave wrong flags (9,805 mismatches), so do not use it. PR 2 re-runs this check on 26.8.
 

@@ -250,10 +250,10 @@ const R = {
   map: 'Concealed Hill', matchup: 'NvO', duration_ms: 937219, version: '2.00', winning_team_id: 0,
   download_url: '#',
   players: [
-    { player_id: 1, name: 'thanks#11187', race: 'N', team_id: 0, won: true, apm: 140,
+    { player_id: 1, name: 'thanks#11187', race: 'NE', team_id: 0, won: true, apm: 140,
       apm_per_minute: [110,96,162,130,149,136,121,135,152,137,149,157,160,151,147,102],
       heroes: [{ slot: 0, code: 'Edem', final_level: 4 }, { slot: 1, code: 'Ekee', final_level: 4 }] },
-    { player_id: 2, name: 'Okeanos#22605', race: 'O', team_id: 1, won: false, apm: 89,
+    { player_id: 2, name: 'Okeanos#22605', race: 'OC', team_id: 1, won: false, apm: 89,
       apm_per_minute: [54,36,72,84,98,100,88,74,114,105,107,100,65,100,142,55],
       heroes: [{ slot: 0, code: 'Ofar', final_level: 3 }, { slot: 1, code: 'Oshd', final_level: 2 }, { slot: 2, code: 'Otch', final_level: 1 }] },
   ],
@@ -271,7 +271,7 @@ const KINDS = [
   { k: 'g', label: 'Upgrades', verb: 'Upgrade' }, { k: 'h', label: 'Heroes', verb: 'Hero' },
   { k: 'i', label: 'Items', verb: 'Item' },
 ]
-const RACES = { H: ['Human', 'HUMAN'], O: ['Orc', 'ORC'], N: ['Night Elf', 'NIGHT_ELF'], U: ['Undead', 'UNDEAD'], R: ['Random', 'RANDOM'] }
+const RACES = { HU: ['Human', 'HUMAN'], OC: ['Orc', 'ORC'], NE: ['Night Elf', 'NIGHT_ELF'], UD: ['Undead', 'UNDEAD'], RANDOM: ['Random', 'RANDOM'] }
 
 const { createApp, ref, computed, watchEffect, onMounted, onBeforeUnmount } = Vue
 const icons = ref({})

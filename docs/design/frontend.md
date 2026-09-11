@@ -2,7 +2,7 @@
 
 - Written 2026-09-11. Condensed 2026-09-11 with the final decisions.
 - Scope: the Vite + Vue 3 + Vuetify 3 app that replaces `frontend/index.html`, for the four stories in `docs/design/stories.md`. The HTTP contract is `docs/design/api.md`. This file does not change it.
-- Paths are relative to this repo. `gnl:` means `wc3-gym-frontend` at `origin/main`. `vuetify:` means `node_modules/vuetify/lib/` in the gnl clone (Vuetify 3.8.0).
+- Paths are relative to this repo. `gnl:` means `wc3-gym-frontend` at `feature/stone-bronze-theme`. `vuetify:` means `node_modules/vuetify/lib/` in the gnl clone (Vuetify 3.8.0).
 - Data: examples in sections 4 and 12 come from the 3 fixture replays. Examples in sections 10 and 11 and the mockups come from the local dev set: 6,567 replays (`SELECT count() FROM w3g.replays FINAL`, 2026-09-11; 6,564 from `gs://w3warehouse-05b6-replays/w3g/gnl/` plus the 3 fixtures), measured on 26.9. The dev set is for debugging only. The org deploy holds only app-reported GNL replays.
 - Palette checks: the `dataviz` skill validator (`scripts/validate_palette.js`), run 2026-09-11 on the light and dark surfaces (section 6.5).
 - This file also owns how the app ships: Vite dev, build, nginx, compose and CI (section 14).
@@ -11,7 +11,7 @@
 
 | Part | Decision |
 |---|---|
-| Stack | Vue 3, Vuetify 3, vue-router 4, `d3-scale`, `d3-axis`, `d3-selection`, `d3-shape`. Same versions as gnl `package.json:13-26`. `@fontsource/alegreya`, `alegreya-sans`, `noto-sans-kr`, `noto-sans-sc` 5.3.0 (6.3). No Pinia. |
+| Stack | Vue 3, Vuetify 3, vue-router 4, `d3-scale`, `d3-axis`, `d3-selection`, `d3-shape`. Same versions as gnl `package.json:13-28`. `@fontsource/alegreya`, `alegreya-sans`, `noto-sans-kr`, `noto-sans-sc` 5.3.0 (6.3). `@mdi/font` 7, the Vuetify icon set (6.3). No Pinia. |
 | Routes | `/search`, `/openers`, `/stats`, `/replays/:id`. History mode. `/` redirects to `/search`. |
 | Shell | The gnl shell: `v-app-bar` with title, inline nav links and the theme menu, a `v-navigation-drawer` below md (gnl: `src/App.vue:150-151, 205-214, 217`). |
 | State | The route query holds every filter, step, sort, page and selection. A pasted link gives the same result. |
@@ -20,7 +20,7 @@
 | The one bold element | Build orders render as rows of Warcraft III command-card icons: the picker, the step list, the opener trail and the timeline. Everything else stays quiet (6.4). |
 | Orders | Replays record commands, not outcomes. Every screen that shows orders or counts says "ordered". Flagged repeats (`is_repeat = 1`, PR 2) never show and never count. |
 | Names | `{name} {race}` until the dims loader lands (after the four pages). No flag, no MMR, no season or team filter. |
-| Random | `R` is the queued race and a fifth race in every race control. Its events carry the rolled race's codes (9.3). |
+| Random | `RANDOM` is the queued race and a fifth race in every race control. Its events carry the rolled race's codes (9.3). |
 
 ## 2. App layout under `frontend/`
 
@@ -43,7 +43,7 @@ frontend/
     query.test.mjs         the one test file (4.4)
     format.js              fmtPct, m:ss format and parse, WIN_RATE_FLOOR (section 13)
     theme.js               light, dark or system in localStorage (6.2; gnl src/helpers/theme.js)
-    races.js               gnl: src/helpers/races.js, keyed by H O N U R
+    races.js               gnl: src/helpers/races.js, verbatim; ids HU OC NE UD RANDOM
     objects.js             /mappings cache, icons.json lookup, code -> event_type
     icons.json             moved from frontend/icons.json, imported as a module
     assets/base.css        gnl: src/assets/base.css, verbatim
@@ -52,7 +52,7 @@ frontend/
     components/
       PlayerName.vue  RaceIcon.vue  RaceSelect.vue  GroupedTable.vue   (copied, section 7)
       FilterRow.vue  ObjectIcon.vue  ObjectPicker.vue  StepList.vue (one slot's steps)  ReplayTable.vue  StateBlock.vue
-      charts/useWidth.js   ResizeObserver width ref (gnl: DivisionBracketing.vue:121-122, 130)
+      charts/useWidth.js   ResizeObserver width ref (gnl: DivisionBracketing.vue:120-121, 129)
       charts/ChartTooltip.vue  ColumnChart.vue  BarList.vue  WinRateBars.vue  ApmLine.vue  BuildTimeline.vue
     views/
       SearchView.vue  OpenersView.vue  StatsView.vue  ReplayView.vue  NotFoundView.vue
@@ -66,7 +66,7 @@ infrastructure/docker/
 
 ## 3. Routing and shell
 
-`createRouter({ history: createWebHistory(), routes })`, as gnl `src/helpers/router.js:1, 13`. No `meta.role`, no `beforeEach`. Reads are open.
+`createRouter({ history: createWebHistory(), routes })`, as gnl `src/helpers/router.js:14-15`. No `meta.role`, no `beforeEach`. Reads are open.
 
 | Path | View | Query keys it reads |
 |---|---|---|
@@ -149,6 +149,7 @@ without=eden                      no Ancient of Wonders ordered, up to 3 codes (
 | `sort` | `popular` | `/openers` only: `popular` or `winrate` (api.md 3.5). Search lists have one fixed order and no sort key (api.md 2.4, A2). |
 | `open` | none | Opened prefixes, one key per row: `open=eate&open=eate.eaom`. Codes join with `.`. |
 | `sel` | none | The one selected prefix: `sel=eate.eaom.etoa`. On decode every parent of `sel` joins `open`. |
+| `kinds` | none | `/replays/:id` only: the kind chips that are on, joined with `,`: `kinds=building,unit`. Absent means every kind. |
 
 ### 4.4 Test
 
@@ -160,6 +161,7 @@ without=eden                      no Ancient of Wonders ordered, up to 3 codes (
 - Code to `event_type` for `eate`, `ankh`, `Recb`, `Edem`, `AEmb` (api.md 3.2).
 - `m:ss` parsing: `5` gives 300 s, `5:30` gives 330 s, blank gives none.
 - `sel=a.b.c` with no `open` decodes to `open` = `a`, `a.b`.
+- `kinds=building,unit` round trips to the two chips; absent decodes to every kind.
 - `WIN_RATE_FLOOR` equals 10 (section 13).
 
 ## 5. API client and errors
@@ -173,7 +175,7 @@ without=eden                      no Ancient of Wonders ordered, up to 3 codes (
 | `responseError(body, text, status)` | 121 | none; it reads `body.error` |
 | JSON-or-text body parse | 140, 156 | none |
 | `X-Total-Count` read into `{ items, total }` | 162 | none |
-| `pageQuery` drops empty keys | 20-31 | none. The API treats `race=` as no `race` (api.md 2.1). |
+| `pageQuery` drops empty keys | 20-31 | it destructures a fixed key set, so every warehouse key is lost. The warehouse version walks the caller's params object and drops empty values. The API treats `race=` as no `race` (api.md 2.1). |
 | 401 logout branch and auth headers | 131 | dropped. No auth. |
 
 - Base path `/api`. Every call takes an `AbortSignal`. Calls: `get(path, params)`, `getPage(path, params)`, `postPage(path, params, body)`.
@@ -266,13 +268,17 @@ Every colour is a Vuetify theme colour. Components name tokens (`color="primary"
 
 ```js
 // src/main.js: the GNL theme block (D1-D15) plus the three warehouse chart colours
+import 'vuetify/styles'
+import * as components from 'vuetify/components'
+import * as directives from 'vuetify/directives'
+import { createVuetify } from 'vuetify'
 import { activeTheme } from './theme.js'
 
 const FIELD = { variant: 'filled', bgColor: 'surface-light', density: 'compact', rounded: 'sm', color: 'primary' }
 
 createVuetify({
   theme: {
-    defaultTheme: activeTheme(),  // the stored choice, so the first paint is right (gnl src/main.js:35)
+    defaultTheme: activeTheme(),  // the stored choice, so the first paint is right (gnl src/main.js:40)
     themes: {
       light: {
         dark: false,
@@ -306,6 +312,8 @@ createVuetify({
       },
     },
   },
+  components: { ...components },
+  directives,
   defaults: {
     VTooltip: { openOnClick: true },
     VAppBar: { flat: true, border: 'b', color: 'surface' },
@@ -317,9 +325,10 @@ createVuetify({
 })
 ```
 
+- The three `vuetify/...` imports and the `components` and `directives` keys are what gnl does (`src/main.js:24-26, 149-152`). No `vite-plugin-vuetify` (F14).
 - The GNL theme PR (D15) puts the same light and dark colours in gnl `src/main.js`. The three chart colours are the warehouse's only addition; a page moved into gnl brings them along.
 - Vuetify emits each colour as `--v-theme-<name>` (an `r,g,b` triplet) and the `.text-<name>`, `.bg-<name>`, `.border-<name>` classes (vuetify: `composables/theme.js:176-180, 279-282`). A key that starts with `on-` gets only a `.<name>` class. `border-color` is parsed from hex (theme.js:287-290).
-- Sentence-case buttons (D13): gnl `src/assets/base.css:53-57` sets `.v-btn { text-transform: none; letter-spacing: normal; }`, and the warehouse copies `base.css` verbatim. No extra default.
+- Sentence-case buttons (D13): gnl `src/assets/base.css:69-73` sets `.v-btn { text-transform: none; letter-spacing: normal; }`, and the warehouse copies `base.css` verbatim. No extra default.
 - Filled fields use `surface-light`. Vuetify's `filled` variant paints only a 4 % `currentColor` overlay (vuetify.css `.v-field--variant-filled .v-field__overlay`), so the defaults pass `bgColor: 'surface-light'`. The bottom line turns `primary` on focus and `error` on an error. `style.css` holds no field rules.
 - Card title bars are bronze (D5): `<v-card-title class="bg-primary">`, text in `on-primary`. Which cards have one: 6.4.
 - Lines: Vuetify borders use `border-color` at `border-opacity`. Custom CSS and SVG use `rgba(var(--v-theme-on-surface), var(--v-border-opacity))`.
@@ -332,13 +341,14 @@ Theme choice (D1; the same three modes as gnl):
 |---|---|---|
 | `src/theme.js` | `src/helpers/theme.js` | Copied, without the `readonly` branch (the warehouse has no embedded page). `themeMode` is `light`, `dark` or `system`, kept in `localStorage` key `theme`. `activeTheme()` follows `prefers-color-scheme` under `system`. |
 | Menu | `src/App.vue:21-30, 205-214` | A text icon button at the end of the app bar opens a `v-menu`: Light (`mdi-white-balance-sunny`), Dark (`mdi-weather-night`), System (`mdi-theme-light-dark`). The button shows the current mode's icon. A `watchEffect` sets `useTheme().global.name` from `activeTheme()`. Shown at every width. |
-| Pre-paint | `index.html:15-25` | The same script, with the two `background` values: it paints `#E8E9E3` or `#151B17` before the app loads, so a hard load does not flash white or black. The only hex outside `main.js`; a change to `background` changes both. |
+| Pre-paint | `index.html:15-24` | The same script, with the two `background` values: it paints `#E8E9E3` or `#151B17` before the app loads, so a hard load does not flash white or black. The only hex outside `main.js`; a change to `background` changes both. |
 
 ### 6.3 Type
 
 - Fonts are self-hosted with @fontsource 5.3.0 (D14). No third-party request. `main.js` imports the weights in use:
 
 ```js
+import '@mdi/font/css/materialdesignicons.css'
 import '@fontsource/alegreya/700.css'
 import '@fontsource/alegreya/800.css'
 import '@fontsource/alegreya-sans/400.css'
@@ -352,6 +362,7 @@ import '@fontsource/noto-sans-sc/500.css'
 import '@fontsource/noto-sans-sc/700.css'
 ```
 
+- `@mdi/font` carries the `mdi-*` icons the views name. gnl imports it the same way (`src/main.js:3`).
 - The mockups load the same families from Google Fonts (`tokens.css:4`).
 
 | Property | Stack | Weights | Use |
@@ -409,7 +420,7 @@ html, body { font-family: var(--font-body); font-variant-numeric: lining-nums ta
 - Command-card icons are 64 x 64 PNGs (`file frontend/icons/btn3m1-result.png`). Sizes: 40 px in the picker and opener path tiles, 28 px in step lists and opener trails, 24 px in the timeline and skill trails, 20 px on phones. `rounded="sm"`, no border.
 - Decided: `ObjectIcon.vue` falls back to `mdi-help-box-outline` at the same size, name in the tooltip. Why: 3 of 649 named codes have no icon (`orbr` Reinforced Orc Burrow, `uzg1` Spirit Tower, `nits` Ice Troll Berserker).
 - Race marks: `RaceIcon.vue` from gnl, 1.4 em square with a tooltip (gnl: `RaceIcon.vue:2-14, 21`).
-- Player names: the GNL app standard is `{flag} {name} {race} {mmr}`. The warehouse has no country and no MMR until the dims loader, so `PlayerName` shows `{name} {race}`, keeps the empty flag slot and has no MMR slot (section 7).
+- Player names: the GNL app standard is `{flag} {name} {race} {mmr}`. The warehouse has no country and no MMR until the dims loader, so `PlayerName` shows `{name} {race}` and has no flag or MMR slot (section 7).
 
 ### 6.5 Chart palette validation
 
@@ -470,17 +481,17 @@ Rejected:
 
 | gnl path | Copy as | Change |
 |---|---|---|
-| `src/components/PlayerName.vue` | same | Keep the gnl order: flag slot, name, race (lines 10-14). Keep the empty `fp` span (line 11) in place of the flag. Keep `RaceIcon v-if="race"` (line 13) and `.race-gap` (line 14). Link or plain span. Drop `FlagIcon`, `player.country`, the panel link, the off-race and Host chips (lines 15-17). |
-| `src/components/RaceIcon.vue` | same | Lookup by letter |
-| `src/components/RaceSelect.vue` | same | `items` from the new `races.js`, `item-value` the letter, `defineModel()` (line 30) kept |
-| `src/helpers/races.js` | `races.js` | Ids `H O N U R`, not `HU OC UD NE RANDOM` (api.md A5). Same five PNGs. |
+| `src/components/PlayerName.vue` | same | Keep the gnl order: name, then race (lines 12-13). Keep `RaceIcon v-if="race"` (line 13). Link or plain span. Drop `FlagIcon` and the empty `fp` spans (lines 10-11, 14): `.fp` lives only in flagpack's CSS, which the warehouse does not install. The flag slot returns with the dims loader. Drop `player.country`, the panel link, the off-race and Host chips (lines 15-17). |
+| `src/components/RaceIcon.vue` | same, verbatim | none |
+| `src/components/RaceSelect.vue` | same, verbatim | none; `item-value` is the id and `defineModel()` (line 30) stays |
+| `src/helpers/races.js` | `races.js` | same, verbatim. Ids `HU OC NE UD RANDOM`, as gnl backend `app/models/enums.py:4-9`. Same five PNGs. |
 | `src/components/GroupedTable.vue` | same, verbatim | Stats table views. `col.align === 'right'` drives number columns (line 13). |
 | `src/App.vue:21-30, 150-151, 157-178, 205-214, 217` | the shell (section 3) | Three links and the theme menu. No groups, no avatar menu, no auth. |
 | `src/helpers/theme.js` | `theme.js` | Drop the `readonly` branch: no warehouse page is embedded (6.2) |
-| `index.html:15-25` | the pre-paint script | The two `background` values (6.2) |
+| `index.html:15-24` | the pre-paint script | The two `background` values (6.2) |
 | `src/assets/base.css` | same, verbatim | none |
 | `src/helpers/fetch-wrapper.js` | `api.js` | 5.1 |
-| `src/components/DivisionBracketing.vue:121-122, 130, 136, 178-180` | `charts/useWidth.js` and the axis `watchEffect` | The pattern, not the component |
+| `src/components/DivisionBracketing.vue:120-121, 129, 135, 177-180` | `charts/useWidth.js` and the axis `watchEffect` | The pattern, not the component |
 | `src/views/FantasyBetsView.vue:43-46` | `ReplayTable.vue` | `v-data-table-server` with `items-length` from `X-Total-Count` |
 
 - `PlayerName`, `RaceIcon`, `RaceSelect` register globally, as gnl. Every player name on every screen is one `PlayerName`.
@@ -507,7 +518,7 @@ Rejected:
 | Length | `duration_ms` as `m:ss`, right-aligned |
 | Result | The focus player: "Won" or "Lost" plus the dot (6.6). Blank when `won` is null or no focus player. Focus is Player 1 on search, the opener's owner in the panel. |
 | GNL | `gnl` as "S{series_id} G{game_no}", text only, blank when null |
-| File | `mdi-download` icon button to `download_url` (public base URL + `source_key`, stories D1); "No file" when null |
+| File | `mdi-download` icon button to `download_url` (stories D1); "No file" when null |
 
 - Row key: `replay_id` plus `focus_player_id`. The openers list can hold one game twice, once per owner (api.md 2.5, 3.6).
 - A row click goes to `/replays/:id`. The file button stops the click.
@@ -559,7 +570,7 @@ A command-card grid, like the in-game build card: a name search field, kind tabs
 
 - Items come from `/mappings`. A tab shows one `kind`.
 - Race filter: an item shows when `race` equals the slot race or `race` is null (api.md 3.2, the derived `race`). This keeps heroes, skills, upgrades and items for Night Elf, where a "code starts with the race letter" filter would empty them.
-- Slot race `R`, or no slot race: every item shows, grouped in each tab under a race icon heading in the order H, O, N, U, then no race. Why: a derived `race` is never `R`, and a Random player's events carry `race = 'R'` but the rolled race's codes (queries.md §8 question 5). Measured 2026-09-11 on the dev set: `R` player-games rolled U 259, H 243, N 235, O 227, unknown 40; `R` building events start with `h` 5,755, `u` 4,562, `o` 3,495, `e` 3,470.
+- Slot race `RANDOM`, or no slot race: every item shows, grouped in each tab under a race icon heading in the order `HU`, `OC`, `NE`, `UD`, then no race. Why: a derived `race` is never `RANDOM`, and a Random player's events carry `race = 'RANDOM'` but the rolled race's codes (queries.md §8 question 5). Measured 2026-09-11 on the dev set: Random player-games rolled `UD` 259, `HU` 243, `NE` 235, `OC` 227, unknown 40; Random building events start with `h` 5,755, `u` 4,562, `o` 3,495, `e` 3,470.
 - The search field filters by `name` across all tabs. Enter picks the first hit.
 - Skills group under a heading per hero, from the `hero` field.
 - Each icon is a `v-btn` with `aria-label` = name and a name tooltip. Arrow keys move focus in the grid. Enter picks.
@@ -587,7 +598,7 @@ PR 15 adds the API fields (api.md 3.4). PR 16 adds these controls. The codec is 
 
 | Form | Control | Label on screen | Review (stories.md story 1) |
 |---|---|---|---|
-| Minimum count | "At least" number field in the step's timing row, blank = 1 | "at least 5 Archer orders by 5:00" | Night Elf, `earc` at least 5 by 5:00: fixtures 1, dev set 1,100 |
+| Minimum count | "At least" number field in the step's timing row, minimum 2; blank clears the token (api.md bounds it 2-100) | "at least 5 Archer orders by 5:00" | Night Elf, `earc` at least 5 by 5:00: fixtures 1, dev set 1,100 |
 | Without | "Without" chips under the steps, up to 3 codes, each from the picker. Button hidden at 3. | "no Ancient of Wonders ordered" | Night Elf, `eate`, without `eden`: 1, 573 |
 | First hero | "First hero" switch on a hero step. Shown only for the `hero_trained` kind. | "first hero Demon Hunter" | Night Elf, first hero `Edem`: 3, 1,430 |
 
@@ -602,14 +613,14 @@ md and up: the tree (7 of 12 columns) and the selection panel (5 of 12, `positio
 
 - Tree: "{total} player-games", then columns Opener, Games (share bar), Win rate (win bar), Avg min, replay button. A "Stopped here" row closes each open level.
 - Panel: path tiles, figures, then the replay list (10.3).
-- Dev-set example, Night Elf: root 2,730; `eate` 2,503 (92%, 50%, 15.3 min); `eaom` 2,294 (92%, 50%, 15.4); `etoa` 872 (38%, 51%, 16.1, 21 stopped); `eden` 816 (48%, 15.8); 59 stopped at `eaom`.
+- Dev-set example, Night Elf: root 2,730; `eate` 2,503 (92%, 50%, 15.3 min); `eaom` 2,294 (92%, 50%, 15.4); `etoa` 872 (38%, 51%, 16.1, 21 stopped); `eden` 816 (36%, 48%, 15.8); 59 stopped at `eaom`.
 
 - An opener is a player's first six non-supply building orders (api.md 3.5), flagged repeats skipped. The column header reads "Opener"; its tooltip says "First six building orders".
 - One `v-table`, not nested tables. Children splice in under their parent; closing a row removes its descendants (`index.html:949-967`). Sibling paths do not move.
 - Each level is one `GET /openers?prefix=...` (api.md 3.5). Answers cache in a `Map` keyed by prefix for the life of the filter set.
 - On load, every `open` prefix and every parent of `sel` loads in depth order, so a shared link rebuilds the same tree and panel.
 - No `open` and no `sel`: the page follows the top row down to depth 3 and writes `open` and `sel` with `router.replace`. Cost: 3 requests in sequence on a cold page.
-- Filter change: `sel` is trimmed to the part of the path that still exists, then written back with `router.replace` (as the mockup, `openers-tree.html:260-273`).
+- Filter change: `sel` is trimmed to the part of the path that still exists, then written back with `router.replace`. The trim is new in PR 12: the mockup drops the path and picks a fresh one.
 
 ### 10.2 Controls and columns
 
@@ -619,7 +630,7 @@ md and up: the tree (7 of 12 columns) and the selection panel (5 of 12, `positio
 | Other filters | 4.1 |
 | Sort toggle | `sort=popular` or `sort=winrate` |
 | Row click | sets `sel`. When `branches > 0`, also adds or removes the prefix in `open`. Depth stops at 6 (api.md 3.5, `index.html:448`). |
-| Opener cell | Prefix icons (not text) at 28 px and 0.38 opacity, then the row's icon, its name, and a `v-chip size="x-small"` with `branches` (`index.html:370-372`). Indent 16 px per depth. Selected row: 3 px `primary` inset bar. |
+| Opener cell | Prefix icons (not text) at 28 px and 0.38 opacity, then the row's icon, its name, and a `v-chip size="x-small"` with `branches` (`index.html:370-377`). Indent 16 px per depth. Selected row: 3 px `primary` inset bar. |
 | Games | `rows[].games`, plus the share bar (10.4) |
 | Win rate | `wins / games` through `fmtPct`, plus the win bar (10.4). Below `WIN_RATE_FLOOR`: `text-medium-emphasis`, no bar. |
 | Avg min | `avg_minutes`, one decimal |
@@ -661,7 +672,7 @@ md and up: the tree (7 of 12 columns) and the selection panel (5 of 12, `positio
 
 ### 10.6 390 px
 
-- Order: filter panel, sort toggle (full width), path tiles and figures, the tree, the replay list. The panel parts split around the tree (mockup `openers-tree-mobile.png`).
+- Order: filter panel, sort toggle (full width), path tiles and figures, the tree, the replay list. The panel parts split around the tree.
 - Path tiles scroll sideways in their own `overflow-x: auto` box.
 - Tree columns: Opener, Games, Win rate, replay button. Avg min moves into the row tooltip. The name wraps under the icons.
 - Indent 8 px per depth. Prefix icons 20 px; only the last two show, after a `…` icon.
@@ -719,7 +730,7 @@ One `GET /replays/{id}` (api.md 3.8, A9).
 | Title | `map`, "Unknown map" when `""` |
 | Players line | two `PlayerName` (`{name} {race}`), "v" between, `mdi-trophy` after the winner |
 | Meta line | `duration_ms` as `m:ss`, `matchup`, `version`, `gnl` as text "GNL S{series_id} G{game_no}" |
-| Download | `download_url` (public base URL + `source_key`); "No file" when null |
+| Download | `download_url`; "No file" when null |
 | Player card | 2 px key in `series-1` or `series-2`, `PlayerName`, "Won" with `mdi-trophy` or "Lost", in ink. `apm` as the card figure. `heroes[]` in `slot` order: 40 px icon, name, "Level {final_level}". Under each hero its skill trail: the `hero_skill` events with that `hero_code`, 24 px icons in time order, `m:ss` under each. |
 | APM chart | `players[].apm_per_minute` (12.4) |
 | Timeline | `events[]`; the API already drops flagged repeats (12.3) |
@@ -788,10 +799,10 @@ List (the table view):
 
 | Rule | How |
 |---|---|
-| Real pixels | `useWidth(el)`: a `ref` from a `ResizeObserver` on the chart's parent, clamped to 280 px (gnl: `DivisionBracketing.vue:121-122, 130`). `<svg>` `width` and `height` in pixels. No `viewBox` stretching. |
-| Vue owns marks | `v-for` against `computed` scales (gnl: `DivisionBracketing.vue:136`) |
-| d3-axis owns one `<g>` | `watchEffect(() => select(g).call(axisLeft(y)...))` (gnl: `DivisionBracketing.vue:178-180`). Axis colours from CSS on `.axis` with tokens. |
-| Tick density | `max(2, round(width / 90))` ticks (gnl: `DivisionBracketing.vue:180`) |
+| Real pixels | `useWidth(el)`: a `ref` from a `ResizeObserver` on the chart's parent, clamped to 280 px (gnl: `DivisionBracketing.vue:120-121, 129`). `<svg>` `width` and `height` in pixels. No `viewBox` stretching. |
+| Vue owns marks | `v-for` against `computed` scales (gnl: `DivisionBracketing.vue:135`) |
+| d3-axis owns one `<g>` | `watchEffect(() => select(g).call(axisLeft(y)...))` (gnl: `DivisionBracketing.vue:177-180`). Axis colours from CSS on `.axis` with tokens. |
+| Tick density | `max(2, round(width / 90))` ticks (gnl: `DivisionBracketing.vue:179`) |
 | Win-rate scale | `[0, 1]`. Bars from 0 in `win`, a 50 % tick or reference line (D10). No fitted domain. |
 | Percent format | `fmtPct(x, digits = 0)` in `format.js`: `new Intl.NumberFormat('en', { style: 'percent', minimumFractionDigits: digits, maximumFractionDigits: digits }).format(x)`. "50%", "53.2%", no space. One decimal only on stats matchup value labels. |
 | Win-rate floor | One exported constant, `WIN_RATE_FLOOR = 10`, in `format.js`. Neither it nor the server literal is on the wire (api.md 3.5). Under it, openers rows, the selection panel and matchup rows show a medium-emphasis number and no bar. Decided: keep it in two places, the server literal in the `/openers` `winrate` sort (api.md 3.5, queries.md 3.5) and this constant, pinned by a golden and by `query.test.mjs`. |
@@ -855,7 +866,7 @@ compose `ui` service, replacing `compose.yaml:75-84`:
 ```
 
 - Port 8000, the service name `api` and the `chapi` network come from rust.md §8 and §15.
-- Node 22 is my pick; gnl `package.json:1-34` names no engine.
+- Node 22 is my pick; gnl `package.json:1-36` names no engine.
 - `.dockerignore` gains `**/node_modules/` and `frontend/dist/`.
 - Loopback port only, as today (`compose.yaml:80-81`).
 
@@ -925,7 +936,7 @@ All decided.
 | F16 | Player colours | `series-1` blue, `series-2` magenta `#B03A7A` / `#C95E98` (6.5) | Orange and gold read as bronze, teal and purple fail against blue (6.5). |
 | F14 | Fonts in Vuetify | CSS overrides in `style.css` (6.3), not Vuetify SASS settings | Three rules, no `sass` or `vite-plugin-vuetify` (gnl has neither). Ceiling: the breakpoint type classes keep Roboto; change when a view needs them. |
 
-Also decided (one line each): race ids are the letters `H O N U R` (api.md A5); `R` is a fifth race; private chat hidden; `m:ss` timing; empty `/search` lists every game; phone table tries the Vuetify `mobile` prop (8.2); fallback glyph for the 3 icon-less codes (6.4); win-rate floor in two places pinned by tests (13); legacy page at `/legacy/` until PR 14 (section 2); page PR shots replace the mockups (section 17); GNL series as text (12.2); D2 (URL holds state) and D3 (two Review bases) confirmed.
+Also decided (one line each, Daniel 2026-09-11): race ids on the wire are the GNL ids `HU OC NE UD RANDOM` (gnl backend `app/models/enums.py:4-9`), so `races.js`, `RaceSelect`, `RaceIcon` and the five PNGs copy from gnl unchanged; storage keeps the parser's letters and the Rust API maps at its boundary; `RANDOM` is a fifth race; private chat hidden; `m:ss` timing; empty `/search` lists every game; phone table tries the Vuetify `mobile` prop (8.2); fallback glyph for the 3 icon-less codes (6.4); win-rate floor in two places pinned by tests (13); legacy page at `/legacy/` until PR 14 (section 2); page PR shots replace the mockups (section 17); GNL series as text (12.2); D2 (URL holds state) and D3 (two Review bases) confirmed.
 
 ## 16. Open questions
 
@@ -942,7 +953,7 @@ Decided: each page PR's Playwright shots (light and dark, 1440 and 390 px) repla
 | Mockup | Gap | Closed by | Section |
 |---|---|---|---|
 | all four | No gnl shell: no inline nav links with a drawer below md | PR 10 | 3 |
-| `build-order-search.html` | With slot race `R` or no race, the picker does not group icons under race headings. No "ordered" wording in the timing row. | PR 11 | 9.2, 9.3 |
-| `openers-tree.html` | The replay list sits in a `v-dialog`, not the selection panel with path tiles and figures. The URL holds no `open` or `sel`. | PR 12 | 10.1-10.3, F6, F11 |
+| `build-order-search.html` | With slot race `RANDOM` or no race, the picker does not group icons under race headings. No "ordered" wording in the timing row. | PR 11 | 9.2, 9.3 |
+| `openers-tree.html` | The replay list sits in a `v-dialog`, not the selection panel with path tiles and figures. The URL holds no `open` or `sel`. The share bar scales on the parent's `total` (`openers-tree.html:143-152`); 10.4 decides one share scale on `root.total`. | PR 12 | 10.1-10.4, F6, F11 |
 | `replay-detail.html` | The timeline is the list only; the swimlane (the md-and-up default) is missing. Tooltips do not say "Ordered at". Flagged repeats are not hidden. | PR 14 | 12.3, F5 |
 | none | The count, without and first-hero controls have no mockup | PR 16 | 9.7 |

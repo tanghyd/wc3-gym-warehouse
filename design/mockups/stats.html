@@ -66,18 +66,18 @@ const STATE = new URLSearchParams(location.search).get('state')
 const STATS = {
   games: 6567,
   matchups: [
-    ['H','H',305,305,null],['H','N',672,672,351],['H','O',859,859,389],['H','R',222,222,116],['H','U',691,691,343],
-    ['N','H',672,672,321],['N','N',293,293,null],['N','O',707,707,366],['N','R',186,186,99],['N','U',636,636,319],
-    ['O','H',859,859,470],['O','N',707,707,341],['O','O',461,461,null],['O','R',262,262,129],['O','U',698,698,340],
-    ['R','H',222,222,106],['R','N',186,186,87],['R','O',262,262,133],['R','R',43,43,null],['R','U',248,248,120],
-    ['U','H',691,691,348],['U','N',636,636,317],['U','O',698,698,358],['U','R',248,248,128],['U','U',284,284,null],
+    ['HU','HU',305,305,null],['HU','NE',672,672,351],['HU','OC',859,859,389],['HU','RANDOM',222,222,116],['HU','UD',691,691,343],
+    ['NE','HU',672,672,321],['NE','NE',293,293,null],['NE','OC',707,707,366],['NE','RANDOM',186,186,99],['NE','UD',636,636,319],
+    ['OC','HU',859,859,470],['OC','NE',707,707,341],['OC','OC',461,461,null],['OC','RANDOM',262,262,129],['OC','UD',698,698,340],
+    ['RANDOM','HU',222,222,106],['RANDOM','NE',186,186,87],['RANDOM','OC',262,262,133],['RANDOM','RANDOM',43,43,null],['RANDOM','UD',248,248,120],
+    ['UD','HU',691,691,348],['UD','NE',636,636,317],['UD','OC',698,698,358],['UD','RANDOM',248,248,128],['UD','UD',284,284,null],
   ].map(([race, opponent_race, games, decided, wins]) => ({ race, opponent_race, games, decided, wins })),
   heroes: [
-    ['H', 3054, 'Hamg:2183,Hmkg:1716,Hpal:845,Hblm:315,Ntin:283,Nfir:113,Nbrn:75,Nbst:71,Nngs:67,Nalc:53,Nplh:32,Npbm:29'],
-    ['N', 2787, 'Edem:1605,Ekee:927,Nngs:824,Emoo:452,Ewar:230,Nplh:177,Npbm:174,Nbrn:139,Nalc:137,Nfir:109,Nbst:103,Ntin:82'],
-    ['O', 3448, 'Oshd:1942,Obla:1843,Ofar:1436,Otch:1061,Nfir:319,Nngs:139,Nplh:69,Npbm:30,Ntin:26,Nbrn:22,Nalc:20,Nbst:9'],
-    ['U', 2841, 'Udea:2062,Ulic:1806,Ucrl:921,Nbrn:471,Udre:326,Nngs:268,Nplh:258,Nalc:39,Nfir:22,Ntin:18,Npbm:11,Nbst:9'],
-    ['R', 1004, 'Hamg:154,Udea:143,Hmkg:139,Edem:137,Nngs:127,Ulic:117,Ucrl:106,Ofar:105,Oshd:100,Obla:95,Hpal:76,Otch:71,Ekee:67,Nbrn:54,Udre:48,Nfir:47,Emoo:39,Hblm:38,Nplh:34,Ntin:19,Nalc:18,Ewar:14,Npbm:14,Nbst:11'],
+    ['HU', 3054, 'Hamg:2183,Hmkg:1716,Hpal:845,Hblm:315,Ntin:283,Nfir:113,Nbrn:75,Nbst:71,Nngs:67,Nalc:53,Nplh:32,Npbm:29'],
+    ['NE', 2787, 'Edem:1605,Ekee:927,Nngs:824,Emoo:452,Ewar:230,Nplh:177,Npbm:174,Nbrn:139,Nalc:137,Nfir:109,Nbst:103,Ntin:82'],
+    ['OC', 3448, 'Oshd:1942,Obla:1843,Ofar:1436,Otch:1061,Nfir:319,Nngs:139,Nplh:69,Npbm:30,Ntin:26,Nbrn:22,Nalc:20,Nbst:9'],
+    ['UD', 2841, 'Udea:2062,Ulic:1806,Ucrl:921,Nbrn:471,Udre:326,Nngs:268,Nplh:258,Nalc:39,Nfir:22,Ntin:18,Npbm:11,Nbst:9'],
+    ['RANDOM', 1004, 'Hamg:154,Udea:143,Hmkg:139,Edem:137,Nngs:127,Ulic:117,Ucrl:106,Ofar:105,Oshd:100,Obla:95,Hpal:76,Otch:71,Ekee:67,Nbrn:54,Udre:48,Nfir:47,Emoo:39,Hblm:38,Nplh:34,Ntin:19,Nalc:18,Ewar:14,Npbm:14,Nbst:11'],
   ].map(([race, player_games, s]) => ({ race, player_games,
     picks: s.split(',').map(p => { const [code, n] = p.split(':'); return { code, player_games: +n } }) })),
   durations: { width_minutes: 5, cap_minutes: 60, counts: [439,1129,1890,1666,929,342,95,44,15,6,2,1,9] },
@@ -89,11 +89,11 @@ const FILTERS = {
 }
 const HERO_NAMES = { Edem:'Demon Hunter',Ekee:'Keeper of the Grove',Emoo:'Priestess of the Moon',Ewar:'Warden',Hamg:'Archmage',Hblm:'Blood Mage',Hmkg:'Mountain King',Hpal:'Paladin',Nalc:'Goblin Alchemist',Nbrn:'Dark Ranger',Nbst:'Beastmaster',Nfir:'Firelord',Nngs:'Naga Sea Witch',Npbm:'Pandaren Brewmaster',Nplh:'Pit Lord',Ntin:'Goblin Tinker',Obla:'Blademaster',Ofar:'Far Seer',Oshd:'Shadow Hunter',Otch:'Tauren Chieftain',Ucrl:'Crypt Lord',Udea:'Death Knight',Udre:'Dreadlord',Ulic:'Lich' }
 
-// ---- races.js, keyed H O N U R
+// ---- races.js, the GNL ids (gnl backend app/models/enums.py:4-9)
 const RACES = [
-  { id: 'H', name: 'Human', file: 'HUMAN' }, { id: 'O', name: 'Orc', file: 'ORC' },
-  { id: 'U', name: 'Undead', file: 'UNDEAD' }, { id: 'N', name: 'Night Elf', file: 'NIGHT_ELF' },
-  { id: 'R', name: 'Random', file: 'RANDOM' },
+  { id: 'HU', name: 'Human', file: 'HUMAN' }, { id: 'OC', name: 'Orc', file: 'ORC' },
+  { id: 'UD', name: 'Undead', file: 'UNDEAD' }, { id: 'NE', name: 'Night Elf', file: 'NIGHT_ELF' },
+  { id: 'RANDOM', name: 'Random', file: 'RANDOM' },
 ]
 const race = id => RACES.find(r => r.id === id)
 const raceIcon = id => `../../frontend/race-icons/${race(id).file}.png`
@@ -318,7 +318,7 @@ const App = {
     const setCount = computed(() => Object.values(f).filter(v => v !== null && v !== '').length)
     const clear = () => Object.assign(f, { race: null, opponent_race: null, map: null, player: null, min_minutes: '', max_minutes: '' })
 
-    const ORDER = ['H', 'N', 'O', 'U', 'R']
+    const ORDER = ['HU', 'NE', 'OC', 'UD', 'RANDOM']
     const byPair = Object.fromEntries(STATS.matchups.map(r => [r.race + r.opponent_race, r]))
     const pairs = [], mirrors = []
     ORDER.forEach((a, i) => ORDER.slice(i).forEach(b => {

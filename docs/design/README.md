@@ -25,7 +25,8 @@ Written 2026-09-11. Numbers: 26.9 host binary, 6,567-replay dev load. PR 2 re-me
 | Repeats | Flag `is_repeat` at load, never delete: tier halls, `R…` research, heroes, under 1000 ms |
 | Orders | The UI says "ordered"; counts count orders |
 | Stack | Docker first: just modules `local`, `fixtures` (PR 1), `box` (with the box) |
-| ClickHouse | PR 2 pins 26.8 LTS (today 24.10) for local, CI and the box |
+| ClickHouse | PR 2 pins `clickhouse/clickhouse-server:26.8.2`, the 26.8 LTS line (today 24.10), for local, CI and the box |
+| Races | Wire ids are the GNL ids `HU OC NE UD RANDOM`; storage keeps the parser letters; the API maps at its boundary |
 | Style | GNL stone and bronze, light and dark, with the gnl theme menu. Charts: `win` blue, `loss` red, player 2 magenta, one-series bars jade |
 | Hosting | None yet (Daniel, 2026-09-11). Local Docker deploys for now; later GCP, or Hetzner with Cloudflare R2. The box PR and the tunnel move wait for that. |
 | Names | `{name} {race}` until the dims loader |
@@ -37,7 +38,7 @@ Written 2026-09-11. Numbers: 26.9 host binary, 6,567-replay dev load. PR 2 re-me
 | 0 | `feature/warehouse-design` | These documents and mockups |
 | 1 | `chore/dev-data-recipes` | `local` and `fixtures` modules, `load`; drops `infrastructure/local/` |
 | 1b | `chore/drain-battle-test` | 6,564 files through compose MinIO and the drain image |
-| 2 | `feature/schema-rebuild` | S1 key, S2 `openers`, 26.8 pin, `is_repeat` |
+| 2 | `feature/schema-rebuild` | S1 key, S2 `openers`, the `26.8.2` pin, `is_repeat` |
 | 3 | `feature/replay-source-key` | `source_key`, staging re-stage |
 | 4 | `feature/api-readonly-user` | `warehouse_api` user and profile |
 | 5 | `feature/api-service-core` | Crate, client, `/health`, `/mappings`, `/filters` |

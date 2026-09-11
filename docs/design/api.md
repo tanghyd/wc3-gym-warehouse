@@ -34,7 +34,7 @@ Not routes:
 |---|---|
 | Base path | The service serves at `/`. The browser calls `/api/...`. The Vite dev proxy strips `/api` (gnl-frontend: `vite.config.js`, proxy `rewrite`). The prod proxy does the same (2.9). Same origin, no CORS. |
 | Body | JSON, UTF-8, `snake_case` keys |
-| Player race | One letter as stored in `replay_players.race`: `H`, `O`, `N` (Night Elf), `U`, `R` |
+| Player race | A GNL id: `HU`, `OC`, `NE` (Night Elf), `UD`, `RANDOM` (gnl backend `app/models/enums.py:4-9`). Storage keeps the letters `H O N U R`; the API maps at its boundary (rust.md 4.4). |
 | Matchup | As stored in `replays.matchup`, e.g. `"NvO"` |
 | Times | `time_ms` = ms from game start. `duration_ms` = game length. Integers. |
 | Object codes | 4 chars, case-sensitive, exactly as in `w3g.mappings.code` |
@@ -53,8 +53,8 @@ Why (F): tier and research repeat almost only under 1 s (Stronghold 1,052 of 1,0
 
 | Key | Type | Bounds | Meaning |
 |---|---|---|---|
-| `race` | letter | `H O N U R` | Race of the focus player |
-| `opponent_race` | letter | `H O N U R` | Race of the other player |
+| `race` | GNL id | `HU OC NE UD RANDOM` | Race of the focus player |
+| `opponent_race` | GNL id | `HU OC NE UD RANDOM` | Race of the other player |
 | `player` | string | 1-64 chars | Focus player name. Exact, case-insensitive (`lowerUTF8()` on both sides, queries.md §1). |
 | `map` | string | 1-64 chars | Exact map name, as `GET /filters` lists it |
 | `min_minutes` | integer | 0-180 | `duration_ms >= min_minutes * 60000` |
@@ -64,7 +64,7 @@ Why (F): tier and research repeat almost only under 1 s (Stronghold 1,052 of 1,0
 - A game passes when it has players P and Q on different teams. P matches `race` and `player`. Q matches `opponent_race`.
 - P is the opener's owner on `/openers` (views.sql:52, index.html:887). On `/stats`, P and Q only select the cohort.
 - Every route adds `replays.type = '1on1'` (index.html:750, views.sql:80).
-- Decided: `R` is a fifth race, so `race=O` skips a Random who rolled Orc. Why: the rolled race is out of scope (`race_detected` has it for 964 of 1,004 Random players (F), queries.md §4.1 rule 4).
+- Decided: `RANDOM` is a fifth race, so `race=OC` skips a Random who rolled Orc. Why: the rolled race is out of scope (`race_detected` has it for 964 of 1,004 Random players (F), queries.md §4.1 rule 4).
 - No season or team filter until the dims loader (after the four pages).
 
 ### 2.3 Filter-row keys on `/search`
@@ -107,7 +107,7 @@ The search body has no top-level `race`, `opponent_race` or `player`; each slot 
 | `gnl` | object or null | `{"series_id": int, "game_no": int}`. Null when `gnl_series_id = 0` (tables.sql:33-36). The UI shows it as text. |
 | `download_url` | string or null | `DOWNLOAD_BASE_URL` + `replays.source_key` when both are non-empty, else null. The UI then shows "No file". |
 | `focus_player_id` | integer or null | The player the result column reports. `/search`: the player `groups[0]` bound to; null with no groups; the lower `player_id` when both fit. `/openers/replays`: the opener's owner (3.6). |
-| `players` | array | Sorted by `player_id`. Item: `player_id` int, `name` string, `race` letter, `team_id` int, `won` bool or null (null when `winning_team_id < 0`). |
+| `players` | array | Sorted by `player_id`. Item: `player_id` int, `name` string, `race` GNL id, `team_id` int, `won` bool or null (null when `winning_team_id < 0`). |
 
 - Row key: `(replay_id, focus_player_id)`. On `/openers/replays` a mirror game can appear twice (3.6).
 - `source_key` (queries.md §5 S3, PR 3): the drain writes the raw R2 object key into each doc; `replays.source_key String DEFAULT ''` stores it. PR 3 re-stages the staging bucket (drain re-run, breadcrumbs cleared). Rows not loaded by the drain (fixtures, dev load) keep `''`.
@@ -132,7 +132,7 @@ Every non-2xx answer is `{"error": "<text>"}` with `Cache-Control: no-store`. Th
 | 503 | No query permit within 1 s (2.8), or ClickHouse 202 `TOO_MANY_SIMULTANEOUS_QUERIES`. With `Retry-After: 1`. | `warehouse busy: retry` |
 | 503 | ClickHouse 241 `MEMORY_LIMIT_EXCEEDED` | `query used too much memory: narrow the filters` |
 | 504 | ClickHouse 159 `TIMEOUT_EXCEEDED` | `query took too long: narrow the filters` |
-| 500 | ClickHouse 396 `TOO_MANY_ROWS_OR_BYTES` (an API bug: every route caps its rows) | `warehouse query failed` |
+| 500 | ClickHouse 396 `TOO_MANY_ROWS_OR_BYTES`: the corpus outgrew the `max_result_rows` profile limit (2.8) | `warehouse query failed` |
 | 500 | Any other ClickHouse error | `warehouse query failed` |
 
 - axum's own rejections (JSON, 405, 413, 415, fallback) are plain text by default (not verified); the service maps them to the envelope in one place.
@@ -203,7 +203,7 @@ No parameters. Response: an array, one item per named object, sorted by `name`.
 | `code` | string | 4-char object code |
 | `name` | string | Display name |
 | `kind` | enum | `building`, `unit`, `upgrade`, `item`, `hero`, `hero_skill` |
-| `race` | letter or null | Owner race, derived in Rust (table below). Null = neutral or no race. |
+| `race` | GNL id or null | Owner race, derived in Rust (table below), then mapped to the GNL id (rust.md 4.4). Null = neutral or no race. |
 | `hero` | string or null | On a `hero_skill`: the hero's display name (`mappings.hero`). Null otherwise. |
 
 - Rows: `kind != 'unknown' AND name != ''` (index.html:1014), filtered in SQL. (X): 649 rows, 649 distinct codes, so a code is unique among these rows.
@@ -227,11 +227,11 @@ GET /mappings
 ```
 ```json
 [
-  {"code": "eate", "name": "Altar of Elders", "kind": "building", "race": "N", "hero": null},
+  {"code": "eate", "name": "Altar of Elders", "kind": "building", "race": "NE", "hero": null},
   {"code": "ankh", "name": "Ankh of Reincarnation", "kind": "item", "race": null, "hero": null},
-  {"code": "Recb", "name": "Corrosive Breath", "kind": "upgrade", "race": "N", "hero": null},
-  {"code": "Edem", "name": "Demon Hunter", "kind": "hero", "race": "N", "hero": null},
-  {"code": "AEmb", "name": "Mana Burn", "kind": "hero_skill", "race": "N", "hero": "Demon Hunter"}
+  {"code": "Recb", "name": "Corrosive Breath", "kind": "upgrade", "race": "NE", "hero": null},
+  {"code": "Edem", "name": "Demon Hunter", "kind": "hero", "race": "NE", "hero": null},
+  {"code": "AEmb", "name": "Mana Burn", "kind": "hero_skill", "race": "NE", "hero": "Demon Hunter"}
 ]
 ```
 (Cut to 5 of 649 rows.) Errors: 400 (unknown key), 503, 500.
@@ -276,7 +276,7 @@ Group (one player slot):
 
 | Field | Type | Bounds | Default | Meaning |
 |---|---|---|---|---|
-| `race` | letter | `H O N U R` | none | Slot player's race |
+| `race` | GNL id | `HU OC NE UD RANDOM` | none | Slot player's race |
 | `player` | string | 1-64 | none | Slot player's name, case-insensitive |
 | `result` | enum | `won`, `lost` | none | Slot player's outcome. When set, games with an unknown winner drop out (`winning_team_id >= 0`, views.sql:81-83). |
 | `steps` | array of Step | 0-8 | `[]` | Ordered build steps |
@@ -305,17 +305,17 @@ Match rules:
 | No groups | Lists every 1on1 game passing `map` and minutes. Paging bounds the cost. |
 | Orders only | Every step condition adds `is_repeat = 0` (2.1). |
 | One step | No `sequenceMatch`. The step's WHERE condition is the whole test (index.html:720-721). |
-| 2+ steps | `sequenceMatch({pat:String})(time_ms, cond1, ...)`. The pattern starts `(?1)`. Each later step adds `(?t<={ms})(?k)` when `within_previous_seconds` is set, else `.*(?k)`. Never `.*(?t<=N)` or `(?t<=N).*` (compiler.py:909 bug). |
+| 2+ steps | Two jobs, two patterns (queries.md §4.2, rule 7). Order: `sequenceMatch({gI_pat:String})(time_ms, cond1, ...)`, pattern `(?1)` then `.*(?k)` per later step. It never carries a `(?t…)`. Gap: each step with `within_previous_seconds` ANDs its own `sequenceMatch({gI_sK_pat:String})(time_ms, <cond k-1>, <cond k>)`, pattern `(?1)(?t<={ms})(?2)`. Why: `sequenceMatch` skips only events that match no condition, so in one pattern a third step's order between the pair breaks the gap and a real game is lost. Never `.*(?t<=N)` or `(?t<=N).*` (compiler.py:909 bug). |
 | Step window | `time_from_seconds`, `time_to_seconds` go into that step's condition as bound `UInt32` values. |
 | Repeated step | "A then A" needs two A events (measured: one gives 0, two give 1 for `(?1).*(?2)`). |
 | Equal timestamps | Decided: a real-data golden pins the order. Why: 1,605 of 1,605 came in order (F; queries.md C5). |
 | Minimum count | One bound `HAVING` term per counted step: `uniqExactIf(seq, <step cond>) >= {gI_sK_min:UInt32}`. Not `count()`: `replay_events` dedupes only at merge (`insert-optimize-avoid-final`). The step sits in the sequence at its first matching order. |
 | Without | The codes join the slot's `subject_code IN` list; one bound term `countIf(subject_code IN {gI_without:Array(String)}) = 0`. A slot with only `without` codes uses `replay_players FINAL` of that race as its base. |
 | First hero | The player's earliest `hero_trained` row has this code (as w3warehouse: compiler.py:806-844). Decided: `hero_trained` = first ability cast, not training order; accepted. (F): that and `player_heroes.hero_slot = 0` both give 1,514 Night Elf player-games for `Edem`. |
-| Too complex | A pattern caps at 1,000,000 iterations, then 160 → 400 (2.6). (F), race N: 7 × `unit ewsp` at 600 s gaps then `building etol` within 1 s fails in ~0.06 s; 4 × fails too; 8 × with open gaps returns 2,668 pairs. No setting raises the cap on 26.9, and a step cap cannot prevent it. |
+| Too complex | A pattern caps at 1,000,000 iterations, then 160 → 400 (2.6). (F), race N: 7 × `unit ewsp` at 600 s gaps then `building etol` within 1 s fails in ~0.06 s; 4 × fails too; 8 × with open gaps returns 2,668 pairs. No setting raises the cap on 26.9, and a step cap cannot prevent it. Measured with the old one-pattern form; the split form (rule above) runs 7 two-condition aggregates plus one 8-condition ordering pattern, so PR 6 re-checks whether 160 still fires. If not, the case becomes a plain golden and the 160 → 400 map keeps only its stub test. |
 | Dedup and header shape | queries.md §4.1 is the source. Rules 10-11: each slot binds through `replay_players FINAL` with `(replay_id, player_id) IN (<slot set>)`. Rule 14: page `GROUP BY r.replay_id, …`. `replays FINAL` relies on the runtime join filter (`RF1`, on by default from 26.2, measured on 26.9), not a second `IN` (queries.md §5). Header reads use `FINAL` (`insert-optimize-avoid-final`). |
 
-One slot, every value bound (PR 2 adds `is_repeat = 0`; PR 15 adds the count and without terms):
+One slot, every value bound (step 1 carries a gap and a time cap; PR 2 adds `is_repeat = 0`; PR 15 adds the count and without terms):
 
 ```sql
 SELECT replay_id, player_id
@@ -330,11 +330,16 @@ HAVING sequenceMatch({g0_pat:String})(time_ms,
     event_type = {g0_s0_type:String} AND subject_code = {g0_s0_code:String},
     event_type = {g0_s1_type:String} AND subject_code = {g0_s1_code:String}
         AND time_ms <= {g0_s1_to:UInt32})
+  AND sequenceMatch({g0_s1_pat:String})(time_ms,
+    event_type = {g0_s0_type:String} AND subject_code = {g0_s0_code:String},
+    event_type = {g0_s1_type:String} AND subject_code = {g0_s1_code:String}
+        AND time_ms <= {g0_s1_to:UInt32})
 ```
 
+- Patterns here: `g0_pat` = `(?1).*(?2)`, `g0_s1_pat` = `(?1)(?t<=30000)(?2)`. A step without `within_previous_seconds` adds no second aggregate (queries.md §7 G07, G08).
 - SQL text changes only with the request shape; values never enter it.
 - `DISTINCT` drops an unmerged ReplacingMergeTree duplicate but keeps `seq`, so real same-ms repeats survive (queries.md §4.1 rules 3, 5; C8; `insert-optimize-avoid-final`). One-step slots skip it.
-- Read cost (F; queries.md §5 S1; `schema-pk-filter-on-orderby`): current key (tables.sql:213) 28 of 118 granules with race, 118 without. S1 key: 2 and 5 of 116; largest G08 114,688 rows, ~1.75 million at 100,000 replays (linear estimate).
+- Read cost (F; queries.md §5 S1; `schema-pk-filter-on-orderby`): current key (tables.sql:213) 28 of 118 granules with race, 118 without (server, 4 parts). S1 key: 2 and 5 of 116 (local, 1 part); largest G08 114,688 rows, ~1.75 million at 100,000 replays (linear estimate). G08's total: re-measure in PR 6 (old form: 1,499).
 
 Response: 200, array of replay rows (2.5), with `X-Total-Count`.
 
@@ -345,10 +350,10 @@ POST /search?limit=25
 Content-Type: application/json
 
 {"groups": [
-  {"race": "N", "steps": [
+  {"race": "NE", "steps": [
     {"event_type": "building", "subject_code": "eate"},
     {"event_type": "building", "subject_code": "eaom"}]},
-  {"race": "O"}
+  {"race": "OC"}
 ]}
 ```
 ```
@@ -362,18 +367,18 @@ Cache-Control: no-store
    "map": "Springtime 1.3", "matchup": "NvO", "duration_ms": 403900, "winning_team_id": 1,
    "gnl": null, "download_url": null, "focus_player_id": 2,
    "players": [
-     {"player_id": 1, "name": "FoCuS#31324", "race": "O", "team_id": 0, "won": false},
-     {"player_id": 2, "name": "Medusa#31315", "race": "N", "team_id": 1, "won": true}]},
+     {"player_id": 1, "name": "FoCuS#31324", "race": "OC", "team_id": 0, "won": false},
+     {"player_id": 2, "name": "Medusa#31315", "race": "NE", "team_id": 1, "won": true}]},
   {"replay_id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
    "map": "Concealed Hill", "matchup": "NvO", "duration_ms": 937219, "winning_team_id": 0,
    "gnl": null, "download_url": null, "focus_player_id": 1,
    "players": [
-     {"player_id": 1, "name": "thanks#11187", "race": "N", "team_id": 0, "won": true},
-     {"player_id": 2, "name": "Okeanos#22605", "race": "O", "team_id": 1, "won": false}]}
+     {"player_id": 1, "name": "thanks#11187", "race": "NE", "team_id": 0, "won": true},
+     {"player_id": 2, "name": "Okeanos#22605", "race": "OC", "team_id": 1, "won": false}]}
 ]
 ```
 
-- `replay_id` decides the order (`gnl_series_id = 0`). Without the `{"race": "O"}` group the total is 3: `(0ddb…, 2)`, `(9233…, 2)`, `(dcd3…, 1)`.
+- `replay_id` decides the order (`gnl_series_id = 0`). Without the `{"race": "OC"}` group the total is 3: `(0ddb…, 2)`, `(9233…, 2)`, `(dcd3…, 1)`.
 
 Goldens (story 1 "Done when"):
 
@@ -381,12 +386,12 @@ Goldens (story 1 "Done when"):
 |---|---|
 | A@0, A@5 s, B@100 s; step B `within_previous_seconds: 10` | `(?1)(?t<=10000)(?2)`, 0 (measured). Old `(?1)(?t<=10000).*(?2)` gives 1. |
 | A@0, X@3 s, B@8 s; conditions A, B; bound 10 s | 1 (measured): a non-step event does not break the bound |
-| One step `hero_trained Edem`, `race: N` | No `sequenceMatch`. Total 3 (X), 1,520 (F). |
-| `eate` then `eaom`, `race: N` | Total 3 (X), 2,263 (F). With `{"race": "O"}` second group: 2 (X), 654 (F). |
-| Race N, 7 × `unit ewsp` each `within_previous_seconds: 600`, then `building etol` `within_previous_seconds: 1` | Valid; ClickHouse 160; API 400 `groups: search too complex: …`. Live parity case (rust.md 17.3) + stub test 160 → 400. |
-| PR 15: race N, step `unit earc`, `min_count: 5`, `time_to_seconds: 300` | 1 (X, `dcd3…`), 1,100 (F) |
-| PR 15: race N, step `building eate`, `without: ["eden"]` | 1 (X), 573 (F) |
-| PR 15: race N, step `hero_trained Edem`, `first_hero: true` | 3 (X), 1,430 (F) |
+| One step `hero_trained Edem`, `race: NE` | No `sequenceMatch`. Total 3 (X), 1,520 (F). |
+| `eate` then `eaom`, `race: NE` | Total 3 (X), 2,263 (F). With `{"race": "OC"}` second group: 2 (X), 654 (F). |
+| Race NE, 7 × `unit ewsp` each `within_previous_seconds: 600`, then `building etol` `within_previous_seconds: 1` | Valid; ClickHouse 160; API 400 `groups: search too complex: …`. Live parity case (rust.md 17.3) + stub test 160 → 400. PR 6 re-checks under the split gap form (3.4 "Too complex"). |
+| PR 15: race NE, step `unit earc`, `min_count: 5`, `time_to_seconds: 300` | 1 (X, `dcd3…`), 1,100 (F) |
+| PR 15: race NE, step `building eate`, `without: ["eden"]` | 1 (X), 573 (F) |
+| PR 15: race NE, step `hero_trained Edem`, `first_hero: true` | 3 (X), 1,430 (F) |
 | PR 15 check | Whether the parser drops cancelled training orders. |
 
 Errors:
@@ -398,7 +403,7 @@ Errors:
 | 400 | `groups[0].steps[0].within_previous_seconds: not allowed on the first step` |
 | 400 | `groups[1].steps[2].time_to_seconds: must not be below time_from_seconds` |
 | 400 | `groups[0].steps[1].subject_code: "Edem" is a hero, use event_type hero_trained` |
-| 400 | `groups[0].race: must be one of H, O, N, U, R` |
+| 400 | `groups[0].race: must be one of HU, OC, NE, UD, RANDOM` |
 | 400 | `groups[0].steps[0].min_count: must be 2-100` (PR 15) |
 | 400 | `groups[0].steps[0].first_hero: only on hero_trained` (PR 15) |
 | 400 | `groups[0].without: at most 3 codes` (PR 15) |
@@ -420,7 +425,7 @@ Response:
 
 | Field | Type | Meaning |
 |---|---|---|
-| `race` | letter | Echo |
+| `race` | GNL id | Echo |
 | `prefix` | array of codes | Echo |
 | `total` | integer | Player-games whose opener starts with `prefix` |
 | `stopped` | integer | Part of `total` whose opener ends exactly at `prefix`. `sum(rows[].games) + stopped = total`. |
@@ -431,7 +436,7 @@ Response:
 | `rows[].branches` | integer | Distinct buildings at the next depth. 0 at depth 6. |
 
 - Opener: a player's first six non-supply building orders with `is_repeat = 0`, in time order, consecutive repeats removed (`arrayCompact`, views.sql:57-64; A13). (F): 5,337 of 12,881 openers repeat a code. Fix the views.sql:41 comment ("distinct"). A prefix with a code twice in a row never matches: 400.
-- Decided: `otrb` gets `is_supply_building = 1` in the fork's mappings export. Why: 3,386 of 3,396 Orc openers hold it (F); `uzig` is already 1.
+- Decided: `otrb` gets `is_supply_building = 1`. Why: 3,386 of 3,396 Orc openers hold it (F); `uzig` is already 1. The list is `SUPPLY_BUILDING_CODES` (pipeline/parse-rs/src/bin/export-mappings.rs:28); its comment at :26-27 keeps Burrow out on purpose, and db/w3g/tables.sql:226-228 repeats that policy. PR 7 adds the code in both places, then runs `just local::mappings`.
 - Only decided 1on1 games count (views.sql:80-83), so the cohort can be smaller than `/stats`.
 - `popular`: `games` desc, `wins/games` desc, `code`. `winrate`: rows with 10+ games first, then `wins/games` desc, `games` desc, `code` (index.html:899-903).
 - Decided: the floor 10 (story 2, index.html:446) is a literal in the `winrate` ORDER BY (queries.md 3.5) and one frontend constant, pinned by a golden and a test. Not on the wire.
@@ -439,24 +444,24 @@ Response:
 - Source: `replay_openers` view today, the queries.md §5 S2 `openers` table (`query-mv-refreshable`) later; same contract. Both routes go public only on S2: on the view each click reads 991,101 rows, 155.14 MiB (F), and each new `player` string misses the 60 s cache. PR 2 re-measures the S2 refresh.
 
 ```
-GET /openers?race=N
+GET /openers?race=NE
 ```
 ```json
-{"race": "N", "prefix": [], "total": 3, "stopped": 0,
+{"race": "NE", "prefix": [], "total": 3, "stopped": 0,
  "rows": [{"code": "eate", "games": 3, "wins": 3, "avg_minutes": 9.7, "branches": 1}]}
 ```
 
 ```
-GET /openers?race=N&prefix=eate,eaom
+GET /openers?race=NE&prefix=eate,eaom
 ```
 ```json
-{"race": "N", "prefix": ["eate", "eaom"], "total": 3, "stopped": 0,
+{"race": "NE", "prefix": ["eate", "eaom"], "total": 3, "stopped": 0,
  "rows": [
    {"code": "etoa", "games": 2, "wins": 2, "avg_minutes": 6.7, "branches": 1},
    {"code": "eden", "games": 1, "wins": 1, "avg_minutes": 15.6, "branches": 1}]}
 ```
 
-`GET /openers?race=N&player=Medusa%2331315` gives one row: `eate`, 2 games.
+`GET /openers?race=NE&player=Medusa%2331315` gives one row: `eate`, 2 games.
 
 Golden: `prefix=eate,eaom,eate` is valid, 14 openers (F; queries.md 3.5). `prefix=eate,eate` is 400.
 
@@ -482,7 +487,7 @@ The games behind one tree row.
 - One row per opener owner (`(replay_id, player_id)` of the view; `focus_player_id` = owner, A14), so `X-Total-Count` = the tree row's `games`. (F): prefix `eate` 2,503 rows in 2,270 replays; `eate,eaom,eden` 816 in 794 (queries.md 3.6). The hydrate takes the page's distinct ids.
 
 ```
-GET /openers/replays?race=N&prefix=eate,eaom,eden
+GET /openers/replays?race=NE&prefix=eate,eaom,eden
 ```
 ```
 200 OK
@@ -493,8 +498,8 @@ X-Total-Count: 1
   "map": "Concealed Hill", "matchup": "NvO", "duration_ms": 937219, "winning_team_id": 0,
   "gnl": null, "download_url": null, "focus_player_id": 1,
   "players": [
-    {"player_id": 1, "name": "thanks#11187", "race": "N", "team_id": 0, "won": true},
-    {"player_id": 2, "name": "Okeanos#22605", "race": "O", "team_id": 1, "won": false}]}]
+    {"player_id": 1, "name": "thanks#11187", "race": "NE", "team_id": 0, "won": true},
+    {"player_id": 2, "name": "Okeanos#22605", "race": "OC", "team_id": 1, "won": false}]}]
 ```
 
 Errors: as 3.5, plus `prefix: required` and the paging errors.
@@ -507,12 +512,12 @@ Request: shared filters only.
 |---|---|---|
 | `games` | integer | Distinct replays in the cohort (`uniqExact(replay_id)`). The page states it. |
 | `matchups[]` | array | One row per ordered race pair, sorted by `race`, then `opponent_race` |
-| `matchups[].race`, `.opponent_race` | letter | Row race, column race |
+| `matchups[].race`, `.opponent_race` | GNL id | Row race, column race |
 | `matchups[].games` | integer | All games of that pair |
 | `matchups[].decided` | integer | Games with a known winner |
 | `matchups[].wins` | integer or null | Decided games won by `race`. Null on a mirror row. |
 | `heroes[]` | array | One item per player race, sorted by `race` |
-| `heroes[].race` | letter | |
+| `heroes[].race` | GNL id | |
 | `heroes[].player_games` | integer | Player-games of that race: the share's denominator |
 | `heroes[].picks[]` | array | `{code, player_games}`, sorted by `player_games` desc, then `code`. Tavern heroes count under the player's race. |
 | `durations` | object | `{"width_minutes": 5, "cap_minutes": 60, "counts": [int]}` |
@@ -532,17 +537,17 @@ GET /stats
 {
   "games": 3,
   "matchups": [
-    {"race": "H", "opponent_race": "N", "games": 1, "decided": 1, "wins": 0},
-    {"race": "N", "opponent_race": "H", "games": 1, "decided": 1, "wins": 1},
-    {"race": "N", "opponent_race": "O", "games": 2, "decided": 2, "wins": 2},
-    {"race": "O", "opponent_race": "N", "games": 2, "decided": 2, "wins": 0}
+    {"race": "HU", "opponent_race": "NE", "games": 1, "decided": 1, "wins": 0},
+    {"race": "NE", "opponent_race": "HU", "games": 1, "decided": 1, "wins": 1},
+    {"race": "NE", "opponent_race": "OC", "games": 2, "decided": 2, "wins": 2},
+    {"race": "OC", "opponent_race": "NE", "games": 2, "decided": 2, "wins": 0}
   ],
   "heroes": [
-    {"race": "H", "player_games": 1, "picks": [{"code": "Hmkg", "player_games": 1}]},
-    {"race": "N", "player_games": 3, "picks": [
+    {"race": "HU", "player_games": 1, "picks": [{"code": "Hmkg", "player_games": 1}]},
+    {"race": "NE", "player_games": 3, "picks": [
       {"code": "Edem", "player_games": 3}, {"code": "Ekee", "player_games": 2},
       {"code": "Nngs", "player_games": 1}]},
-    {"race": "O", "player_games": 2, "picks": [
+    {"race": "OC", "player_games": 2, "picks": [
       {"code": "Oshd", "player_games": 2}, {"code": "Obla", "player_games": 1},
       {"code": "Ofar", "player_games": 1}, {"code": "Otch", "player_games": 1}]}
   ],
@@ -573,7 +578,7 @@ Hero rows come from `player_heroes`. APM rows come from `replay_players.apm`: 89
 | `chat[]` | array | `{time_ms, player_id, mode, message}`, sorted by `time_ms`. Only `mode = 'All'`. |
 
 - Decided: hide private chat (`AND mode = 'All'`, queries.md 3.8). Why: the route is public and cached 1 hour. (F): 5 lines, 3 `All`, 2 `Private`.
-- Source: tables keyed by `replay_id` (`replays`, `replay_players`, `player_heroes`, `player_order_events`, `hero_ability_events`, `chat`; tables.sql:92, 119, 131, 151, 167; `schema-pk-filter-on-orderby`). `replay_events` by `replay_id` is a full scan (queries.md 3.8). Headers read `FINAL`.
+- Source: tables keyed by `replay_id` (`replays`, `replay_players`, `player_heroes`, `player_order_events`, `hero_ability_events`, `chat`; tables.sql:65, 92, 119, 131, 151, 167; `schema-pk-filter-on-orderby`). `replay_events` by `replay_id` is a full scan (queries.md 3.8). Headers read `FINAL`.
 - No event cap: 152 events in 15.6 min (X), ~600 for 60 min. `max_result_rows` is the backstop.
 - The GNL series shows as text: the GNL route `/match/:id` is member-only and needs a match id the warehouse lacks.
 
@@ -588,10 +593,10 @@ GET /replays/dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8
   "map": "Concealed Hill", "matchup": "NvO", "duration_ms": 937219, "winning_team_id": 0,
   "version": "2.00", "gnl": null, "download_url": null,
   "players": [
-    {"player_id": 1, "name": "thanks#11187", "race": "N", "team_id": 0, "won": true, "apm": 140,
+    {"player_id": 1, "name": "thanks#11187", "race": "NE", "team_id": 0, "won": true, "apm": 140,
      "apm_per_minute": [110, 96, 162, 130, 149],
      "heroes": [{"slot": 0, "code": "Edem", "final_level": 4}, {"slot": 1, "code": "Ekee", "final_level": 4}]},
-    {"player_id": 2, "name": "Okeanos#22605", "race": "O", "team_id": 1, "won": false, "apm": 89,
+    {"player_id": 2, "name": "Okeanos#22605", "race": "OC", "team_id": 1, "won": false, "apm": 89,
      "apm_per_minute": [54, 36, 72, 84, 98],
      "heroes": [{"slot": 0, "code": "Ofar", "final_level": 3}, {"slot": 1, "code": "Oshd", "final_level": 2},
                 {"slot": 2, "code": "Otch", "final_level": 1}]}
@@ -622,7 +627,7 @@ Errors: 404 `No game with this id` (the story text); 503, 504, 500 per 2.6.
 | A2 | `limit`/`offset` + `X-Total-Count`, one fixed order, no `sort` | `count() OVER ()` is free; GNL `getPage`/`postPage` read it. No story asks for a sort; no play date exists. |
 | A3 | Unknown or wrong-kind code: 400 naming the field, via in-memory `mappings` | It can never match, so an empty 200 misleads. Goldens need no database. |
 | A4 | `/mappings` derives `race` | `mappings.race` is empty for upgrades and skills (F); index.html gets `AHfa`, `Rwdm` wrong. |
-| A5 | Race ids: stored letters `H O N U R` | Every table and `matchup` uses them. GNL ids (`HU OC UD NE RANDOM`, gnl-frontend: `src/helpers/races.js`) need a map everywhere. |
+| A5 | Race ids: the GNL ids `HU OC NE UD RANDOM` on the wire, the stored letters `H O N U R` in SQL | Decided 2026-09-11 (Daniel). The app speaks one race id (gnl backend `app/models/enums.py:4-9`); the API maps id to letter when it parses a request and letter to id when it hydrates a response (rust.md 4.4). Storage and `matchup` keep the letters, so no re-parse. |
 | A6 | `max-age` tiers (2.7), no ETags | 60 s staleness is invisible next to minutes of ingest (PLAN.md:54). |
 | A7 | Openers carry `stopped`; story 2 reads "children plus stopped sum to the parent" | 59 stopped at `prefix=eate,eaom` (F; queries.md 3.5). |
 | A8 | `/stats`: one route, one cohort | Story 3 states one cohort size; charts are small. |
@@ -653,7 +658,7 @@ Errors: 404 `No game with this id` (the story text); 503, 504, 500 per 2.6.
 
 Numbers stay stable for references from other documents.
 
-1. Race ids: decided, letters (A5).
+1. Race ids: decided, GNL ids on the wire, stored letters in SQL (A5).
 2. List order: decided, fixed order now; PR 3 adds a play date if the drain can read the upload time (2.4).
 3. Readonly profile over HTTP: a check, not a question. `?readonly=1` in a URL fails with Code 164; a native `--readonly=1` session accepts `--param_x` (measured). PR 4 (users.d, empty-password test) and the live CI job on 26.8 (rust.md 17.3) run `curl -u <api user>: 'http://127.0.0.1:8123/?param_x=7' --data-binary 'SELECT {x:UInt8} FORMAT JSON'`.
 4. `stopped`: decided (A7).
@@ -663,5 +668,5 @@ Numbers stay stable for references from other documents.
 8. Profile limits: decided, measured after PR 2 (2.8).
 9. Random players: decided, `R` is a fifth race (2.2).
 10. **Open for Daniel, decide at PR 10: GNL backend search path and hosting.** PLAN.md:39 plans `GET /replays/search` in the GNL backend. Options: (a) the backend forwards a POST body to this API's `POST /search`; (b) the backend queries ClickHouse itself. Hosting: (a) the box through nginx first, pages copied into the GNL app later; (b) the GNL app from the start. Recommend (a) and (a): after the ingress move 8123 is not public, and one compiler owns the search SQL.
-11. Orc Burrow: decided, `is_supply_building = 1` in the fork export (3.5).
+11. Orc Burrow: decided, `is_supply_building = 1` in `SUPPLY_BUILDING_CODES` (3.5).
 12. **Open for Daniel, decide at PR 10: public ingress (2.9).** Options: (a) tunnel to ClickHouse 8123 with a password (today); (b) tunnel to the `ui` nginx with a site hostname and one per-IP rate-limit rule on `/api/*` (rust.md R9). Recommend (b): the API checks then hold, and raw SQL is not public.

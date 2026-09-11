@@ -47,8 +47,8 @@ services/api/
 
 ### 4.1 Body (`POST /search`)
 
-- Serde structs with `#[serde(deny_unknown_fields)]`. `Race`, `Outcome`, `EventType` use `rename`/`rename_all = "snake_case"`.
-- Race values are `H O N U R`. `R` (Random) is a fifth race.
+- Serde structs with `#[serde(deny_unknown_fields)]`. `Outcome` and `EventType` use `rename`/`rename_all = "snake_case"`. A `race` field is a `String`, mapped in `req` (4.4), so the 400 text is the api.md one.
+- Race values on the wire are the GNL ids `HU OC NE UD RANDOM`. `RANDOM` is a fifth race.
 - The handler takes `Bytes` and calls `serde_path_to_error::deserialize`: text `<path>: <serde message>` (api.md 2.6). Not axum `Json`: its text has a fixed axum prefix (axum: src/json.rs:174-194). Cost: a 3-line `Content-Type: application/json` check for the 415.
 - `DefaultBodyLimit::max(16384)` gives the 413 (api.md 2.6, 2.8). The `Bytes` extractor obeys it.
 - Bounds and cross-field rules run in `req::search` after serde: `bad("<path>: <rule>")` with the api.md 3.4 texts.
@@ -86,6 +86,16 @@ fn texts(vs: &[&str]) -> String {
 
 Both get a unit test with the M1 and M2 inputs.
 
+### 4.4 Race ids
+
+Decided (Daniel, 2026-09-11): the wire carries the GNL ids `HU OC NE UD RANDOM` (gnl backend `app/models/enums.py:4-9`, api.md 2.1). Storage keeps the parser's letters `H O N U R` in `replay_players.race` and the event tables. No re-parse.
+
+- One `const RACES: [(&str, char); 5]` in `req.rs` holds the pairs `HU H`, `OC O`, `NE N`, `UD U`, `RANDOM R`. Two functions read it: id to letter, letter to id.
+- Request parsing maps every race parameter to its letter before `sql.rs` sees it: `race`, `opponent_race` and `groups[i].race`. An unknown id gives 400 `groups[0].race: must be one of HU, OC, NE, UD, RANDOM` (api.md 3.4).
+- The hydrate maps back: every `race` field of a response holds a GNL id, `GET /mappings` included (api.md 3.2). The `matchup` string stays as stored, e.g. `"NvO"`.
+- SQL text, every `{name:String}` parameter value and the goldens keep the letters (17.1).
+- Unit test: each id maps to its letter and back; an unknown id gives the 400 text.
+
 ## 5. The SQL compiler (`sql.rs`)
 
 ```rust
@@ -96,10 +106,10 @@ pub struct Query { pub sql: String, pub params: Vec<(String, String)> }  // name
 |---|---|
 | 1 | Pure: no I/O, clock or randomness. Goldens compare bytes. |
 | 2 | SQL text comes only from static fragments, loop indices and `match` arms on enums. No request string enters it (guard test, 17.1). |
-| 3 | Semantic param names: `g0_race`, `g0_s1_code`, `g0_s1_to`, `g0_pat`, `map`, `min_ms`, `limit`, `offset`. |
+| 3 | Semantic param names: `g0_race`, `g0_s1_code`, `g0_s1_to`, `g0_pat`, `g0_s1_pat`, `map`, `min_ms`, `limit`, `offset`. |
 | 4 | One fixed `ORDER BY` per list route (api.md 2.4). `/openers` picks one of two by a `match` on `sort` returning `&'static str`. |
 | 5 | The `sequenceMatch` pattern is a bound `{g<i>_pat:String}` (measured to work: clickhouse-audit.md:127). |
-| 6 | Pattern: `(?1)`, then per later step `(?t<=<ms>)(?<k>)` with `within_previous_seconds`, else `.*(?<k>)`. Never `.*(?t<=N)` or `(?t<=N).*` (false matches or adjacency; w3warehouse-api.md §7). |
+| 6 | Two patterns (api.md 3.4; queries.md §4.2, rule 7). Order: `(?1)`, then `.*(?<k>)` per later step, never a `(?t…)`. Gap: each step with `within_previous_seconds` ANDs `sequenceMatch({g<i>_s<k>_pat:String})(time_ms, <cond k-1>, <cond k>)` with `(?1)(?t<=<ms>)(?2)`. Never `.*(?t<=N)` or `(?t<=N).*` (false matches or adjacency; w3warehouse-api.md §7). |
 | 7 | One step: no `sequenceMatch`; the condition goes into the WHERE (index.html:720-721). |
 | 8 | Times are `UInt32` ms (`seconds * 1000`, `minutes * 60000`), max 10,800,000. The `(?t<=N)` unit is ms against `time_ms`. |
 | 9 | No `SETTINGS` (Code 164 under `readonly = 1`, w3warehouse-api.md C3; `agent-query-safety`: limits in the profile) and no `FORMAT`: `Ch` appends `\nFORMAT JSON` (6.1), the transport, as queries.md §1. The goldens equal queries.md §7. |
@@ -149,7 +159,7 @@ Decided: `tokio::sync::OnceCell::get_or_try_init` on first use. Why: same size a
 
 - A failed init leaves the cell empty; the next request tries again. `/health` does not read the cache.
 - After `just local::mappings` or `just box::mappings`, restart the API (the table changes only on a parser bump, section 16). No TTL reload: add it when mappings change without a restart.
-- `Mappings`: `code -> {name, kind, hero, is_supply_building}` from `w3g.mappings` where `kind != 'unknown' AND name != ''` (api.md 3.2). Orc Burrow (`otrb`) is `is_supply_building = 1`, set in the w3grs fork mapping export.
+- `Mappings`: `code -> {name, kind, hero, is_supply_building}` from `w3g.mappings` where `kind != 'unknown' AND name != ''` (api.md 3.2). Orc Burrow (`otrb`) is `is_supply_building = 1`: PR 7 adds it to `SUPPLY_BUILDING_CODES` (pipeline/parse-rs/src/bin/export-mappings.rs:28) and to the db/w3g/tables.sql:226-228 comment, then runs `just local::mappings`.
 - The object-race rule (api.md 3.2): one function, one unit test over `eaom`, `Edem`, `Recb`, `Rwdm`, `AEmb`, `AHfa`, `ankh`.
 
 ## 7. Errors (`error.rs`)
@@ -221,12 +231,12 @@ All values are starting values. Decided: measure them after PR 2 (the rebuild on
 | `max_memory_usage_for_user` 2 GB | Caps all API queries. Box 4 GB (PLAN.md:74), server 80% (tuning.xml:16) = 3.2 GB. Ingest, refresh and merges run as `default`: M15 270 MiB insert, 159 MiB refresh. tuning.xml:14-15 defers a per-query cap "until one fat query starts starving others"; public input is that case. Rule after PR 2: server cap minus that peak, minus merge headroom. |
 | `max_concurrent_queries_for_user` 8 | Two `/stats` loads (about 4 queries each). Overflow: 202 (6.2). Watch the 503 rate. |
 | `quota` `default` | M14: every limit NULL. On purpose: one shared user, so a quota would lock out everyone. Per-visitor limits belong at Cloudflare. |
-| `networks` | Loopback (a `clickhouse-client` inside the container) and `chapi` (only `clickhouse`, `api`, `ui`): `172.30.87.0/24` in the local project and on the box, `172.30.88.0/24` in the `wh-fixtures` project (section 16). Two compose projects cannot share one subnet. The tunnel on `default` cannot log in. Not checked: the source address of a host call through the published port (PR 4 gate). |
+| `networks` | Loopback (a `clickhouse-client` inside the container) and `chapi` (only `clickhouse`, `api`, `ui`): `172.30.87.0/24` in the local project and on the box, `172.30.88.0/24` in the `wh-fixtures` project (section 16). Two compose projects cannot share one subnet. The tunnel on `default` cannot log in. Not checked: the source address of a host call through the published port (PR 4 gate). Expected: a host process on the published port arrives from the bridge gateway `172.30.87.1` (local) or `172.30.88.1` (fixtures), inside the subnet; PR 4 records the real address from `system.query_log` and, if it is outside, `api`, `api-parity`, `fixtures::api` and `fixtures::parity` run the API in a container on `chapi`. |
 | Not set: `timeout_before_checking_execution_speed` | M13 (26.9): a 2 s limit fired at 2.0 s with 10 and with 0. The live 159 check covers 26.8. |
 | `output_format_json_quote_64bit_integers` 0 | M6: 26.9 defaults to 0. The pin keeps `u64` parseable whatever 26.8 does. |
 | `max_result_rows` scope | M5: the final result only, not the `/search` slot sets. |
 | `GRANT SELECT ON w3g.*` | Least privilege; `url()` and `s3()` stay closed. |
-| `password from_env` | Server and API read `CLICKHOUSE_API_PASSWORD` from `.env` (.env.example:1). Set on the box. PR 4 tests the empty case. Not checked: how the image restricts `default` when `CLICKHOUSE_PASSWORD` is empty. |
+| `password from_env` | Server and API read `CLICKHOUSE_API_PASSWORD` from `.env`, as they read `CLICKHOUSE_PASSWORD` today (.env.example:3-4); PR 4 adds the new line. Set on the box. PR 4 tests the empty case. Not checked: how the image restricts `default` when `CLICKHOUSE_PASSWORD` is empty. |
 
 Wiring:
 
@@ -313,7 +323,7 @@ reqwest = { version = "0.13.5", default-features = false, features = ["query"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 serde_path_to_error = "0.1.20"
-tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net", "signal", "sync"] }
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net", "signal", "sync", "time"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 
@@ -407,7 +417,7 @@ Docker first (plan.md §4, Daniel, 2026-09-11). The rules:
 | Module | File | Lands | Place |
 |---|---|---|---|
 | root | `justfile` | today | No ClickHouse: cargo, npm, the module list |
-| `local` | `just/local.just` | PR 1 | Compose project `wc3-gym-warehouse` (compose.yaml:7). ClickHouse on `127.0.0.1:8123`. Holds the full load. |
+| `local` | `just/local.just` | PR 1 | Compose project `wc3-gym-warehouse` (compose.yaml:8). ClickHouse on `127.0.0.1:8123`. Holds the full load. |
 | `fixtures` | `just/fixtures.just` | PR 1 | Compose project `wh-fixtures`: own volumes, ClickHouse on `127.0.0.1:8124`, `chapi` `172.30.88.0/24`. Holds the 3 fixtures, or the PR 1b battle set. |
 | `box` | `just/box.just` | The box PR (PLAN.md build order step 3), not before | The Hetzner box, over ssh |
 
@@ -467,6 +477,8 @@ parse_version := '2'
 # clickhouse-client in the container, SQL on stdin. $CLICKHOUSE_PASSWORD expands in the container.
 client := "docker compose exec -T clickhouse sh -c 'exec clickhouse-client ${CLICKHOUSE_PASSWORD:+--password=\"$CLICKHOUSE_PASSWORD\"} \"$@\"' client"
 
+# PR 1 refreshes w3g.refresh__opener_rollup (views.sql:444); PR 2 (S2) renames it to w3g.refresh__openers.
+
 # build and start clickhouse, the schema one-shot, the drain and the ui
 up:
     docker compose up -d --build
@@ -486,12 +498,12 @@ schema:
 # load the 3 parser goldens into w3g.replays_raw, no bucket needed (run mappings first)
 fixtures:
     for f in pipeline/parse-rs/tests/goldens/*.json; do {{client}} --query "INSERT INTO w3g.replays_raw (replay_id, doc) SELECT JSONExtractString(doc, 'id'), doc FROM input('doc String') WHERE JSONExtractString(doc, 'id') NOT IN (SELECT replay_id FROM w3g.replays_raw) FORMAT JSONAsString" < "$f"; done
-    {{client}} --query 'SYSTEM REFRESH VIEW w3g.refresh__openers'
+    {{client}} --query 'SYSTEM REFRESH VIEW w3g.refresh__opener_rollup'
 
 # load parsed docs from the mounted data/ in one INSERT … FROM file(), then refresh
 load glob='data/parsed/gnl/*.json':
     {{client}} --param_glob='{{glob}}' --query "INSERT INTO w3g.replays_raw (replay_id, doc) SELECT JSONExtractString(doc, 'id') AS replay_id, doc FROM file({glob:String}, 'JSONAsString', 'doc String') WHERE replay_id != '' AND replay_id NOT IN (SELECT replay_id FROM w3g.replays_raw) LIMIT 1 BY replay_id"
-    {{client}} --query 'SYSTEM REFRESH VIEW w3g.refresh__openers'
+    {{client}} --query 'SYSTEM REFRESH VIEW w3g.refresh__opener_rollup'
 
 # parse every new or changed replay in the bucket once, with the drain image
 drain-once:
@@ -580,7 +592,7 @@ ch:
     ssh -t "$WAREHOUSE_BOX" cd "$WAREHOUSE_BOX_DIR" "&&" docker compose exec clickhouse sh -c "'exec clickhouse-client \${CLICKHOUSE_PASSWORD:+--password=\"\$CLICKHOUSE_PASSWORD\"}'"
 ```
 
-- `client` (PR 1) has one path: the container. Today's fallback (justfile:5-8) runs a host `clickhouse-client` when one is on PATH. That binary connects to native port 9000, which compose does not publish, so on such a machine every recipe misses the container.
+- `client` (PR 1) has one path: the container. Today's fallback (justfile:5-9) runs a host `clickhouse-client` when one is on PATH. That binary connects to native port 9000, which compose does not publish, so on such a machine every recipe misses the container.
 - `fixtures`: the 3 parser goldens are the 3 fixture replays (M8); the `replay_id` gate copies backfill.sql:22-23. PR 1 adds it with today's target `w3g.refresh__opener_rollup`; PR 2 (S2) renames it, and the `backfill` and `load` refreshes, to `w3g.refresh__openers`. PR 1 checks that the `input()` + `JSONAsString` insert works and that `SYSTEM REFRESH VIEW` has finished before the recipe returns (add `SYSTEM WAIT VIEW` if the refresh is async).
 - `load` (PR 1) loads parsed docs in one `INSERT … FROM file()` (`insert-batch-size`), with the backfill.sql:22-23 gate and `LIMIT 1 BY replay_id`. `file()` is chrooted to `user_files_path` `/app/` (user-files.xml). Compose mounts `${W3WAREHOUSE_DATA_DIR:-./data}` read-only at `/app/data`, so the glob reads as a repo-relative path. A worktree has no `data/`: its `.env` sets `W3WAREHOUSE_DATA_DIR` to the main clone's `data/`. PR 2 rebuilds the local project with `load`.
 - `fixtures::up` drops its volumes first, so the base is the same every time (D3). No recipe removes the local project's volumes.
@@ -597,7 +609,7 @@ ch:
 ### 17.1 SQL goldens (`tests/goldens.rs`)
 
 - One case = `tests/goldens/<route>/<case>.json` plus `<case>.sql` (queries and params) or `<case>.err` (status and text).
-- Input: `{"query": "race=N&prefix=eate", "body": {...}}`. The runner parses `query` with axum's `Query::try_from_uri` (the handler's path), then calls `req::<route>` and `sql::<route>`.
+- Input: `{"query": "race=NE&prefix=eate", "body": {...}}`. The runner parses `query` with axum's `Query::try_from_uri` (the handler's path), then calls `req::<route>` and `sql::<route>`.
 - `.sql`: each query as emitted (no `FORMAT`), then its params as comments, byte for byte:
 
 ```
@@ -607,6 +619,7 @@ SELECT ...
 -- param g0_pat=(?1)(?t<=10000)(?2)
 ```
 
+- Race ids: the input holds a GNL id, the param holds the stored letter (4.4).
 - `tests/goldens/mappings.json`: a small fixed `Mappings` with only the codes used, so a parser bump does not move goldens.
 - `UPDATE_GOLDENS=1` rewrites the files (`just api-bless`); the git diff is the review (parse-rs tests/parity.rs:13-16).
 - Guard: no `String` param value of 4+ chars appears in any SQL text (rule 2).
@@ -614,7 +627,7 @@ SELECT ...
 
 | Route | Cases |
 |---|---|
-| search | one step hero `Edem` (no `sequenceMatch`); two steps open gap (`(?1).*(?2)`); 10 s gap (`(?1)(?t<=10000)(?2)`); three steps mixed (`(?1)(?t<=N)(?2).*(?3)`); step window; opponent slot; result won; result lost; player bound; map and minutes; no groups (lists every game); `limit=2&offset=1` (G17); repeated step (G09); mirror (G12); Random slot (G15); no race (G16); flagged code `ostr` then `ostr` (G18); equal timestamps (real-data golden). Byte-equal to queries.md §7. |
+| search | one step hero `Edem` (no `sequenceMatch`); two steps open gap (`(?1).*(?2)`); 10 s gap (`(?1)(?t<=10000)(?2)`); three steps mixed (`(?1).*(?2).*(?3)` plus `(?1)(?t<=N)(?2)`, G08); step window; opponent slot; result won; result lost; player bound; map and minutes; no groups (lists every game); `limit=2&offset=1` (G17); repeated step (G09); mirror (G12); Random slot (G15); no race (G16); flagged code `ostr` then `ostr` (G18); equal timestamps (real-data golden). Byte-equal to queries.md §7. |
 | search errors | 3 groups; 9 steps; gap on step 0; `to` below `from`; `Edem` as `building`; unknown code; race `X`; `limit=0`; unknown field; wrong type |
 | search D4 (PR 15) | minimum count ("at least 5 Archer orders by 5:00", `uniqExact(seq)`); "without" only (base: `replay_players` of that race); first hero |
 | openers | top level; prefix of 2; player filter; `sort=winrate` |
@@ -641,14 +654,14 @@ Decided: the stub is a small axum app in the test (about 25 lines). Why: same po
 
 | Check | Asserts | Data |
 |---|---|---|
-| Search parity | `tests/parity/search/*.sql` freezes the page's search SQL per story Review case (SQL tab, index.html:311-317). Its replay-id set equals `POST /search` (`limit=100`). | Fixtures and full load |
+| Search parity | `tests/parity/search/*.sql` freezes the page's search SQL per story Review case (`buildSql()` and `slotSelect()`, frontend/index.html:699-798). Its replay-id set equals `POST /search` (`limit=100`). | Fixtures and full load |
 | Story numbers | `/stats` 3 games, NvO 2, HvN 1 (story 3); `dcd3…` Concealed Hill, NvO, 15.6 min (story 4); 150 events after the PR 2 flag (api.md 3.8); the openers Review rows; every `download_url` is `null` | The 3 fixtures (M8) |
 | Pattern semantics | Compiler patterns over inline rows: A@0, A@5 s, B@100 s with a 10 s gap gives 0; A@0, X@3 s, B@8 s gives 1 (api.md 3.4 goldens) | Inline rows |
 | Read-only user | `SELECT {x:UInt8}` as `warehouse_api` works; a `SETTINGS max_execution_time = 1` query gives Code 164 | None |
 | Profile limits | Over `max_rows_to_read` gives 158, summed over tables (M11); a slow read gives 159 | `numbers()` |
 | Cancel on close | A slow `SELECT` through `Ch` with a fixed `query_id`; drop the future after 1 s; poll `system.processes` until the id is gone (bound 5 s). Proves a dropped reqwest future closes the socket. | `numbers()` |
 
-- Search parity is the only semantic oracle: blessed goldens catch a change, not a wrong answer. The frozen SQL lands in PR 6 and outlives `frontend/index.html` (deleted in PR 14). It reads `replay_events`, `replay_players` and `replays`, which keep their names (S2 retires only the rollup objects). It does not depend on the data.
+- Search parity is the only semantic oracle: blessed goldens catch a change, not a wrong answer. The frozen SQL lands in PR 6 and outlives `frontend/index.html` (deleted in PR 14). It reads `replay_events`, `replay_players`, `replays` and `w3g.replay_map` (index.html:751, :767, :795), which keep their names (S2 retires only the rollup objects). It does not depend on the data.
 - Known difference: the page's second slot can bind slot 1's player (index.html:775-788); the API binds two players. The cases avoid mirrors.
 - Known difference: the page SQL has no `is_repeat = 0` (rule 12). The frozen copy adds it to its event reads, so both sides read the same rows.
 - Openers have no frozen SQL: the page template (index.html:906-923) reads the `replay_openers` view, and S2 moves the route to `w3g.openers` (queries.md §6 C7). The story Review rows check them.
