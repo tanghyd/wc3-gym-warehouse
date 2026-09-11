@@ -5,7 +5,3 @@ target/
 __pycache__/
 .venv/
 data/
-
-# host-native clickhouse-server runtime (see infrastructure/local/README.md)
-infrastructure/local/config/config.xml
-infrastructure/local/config/config.d/

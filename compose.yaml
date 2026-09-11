@@ -15,15 +15,18 @@ services:
     restart: unless-stopped
     stop_grace_period: 60s          # the 10s default SIGKILL truncates the flush
     # Loopback only. The tunnel reaches ClickHouse over the compose network, so
-    # nothing needs to listen on a public interface.
+    # nothing needs to listen on a public interface. The fixtures project sets
+    # CLICKHOUSE_HTTP_PORT to 8124, so both projects run at once.
     ports:
-      - "127.0.0.1:8123:8123"
+      - "127.0.0.1:${CLICKHOUSE_HTTP_PORT:-8123}:8123"
     volumes:
       - ch_store:/var/lib/clickhouse
       - ./infrastructure/docker/clickhouse/tuning.xml:/etc/clickhouse-server/config.d/tuning.xml:ro
       - ./infrastructure/docker/clickhouse/user-files.xml:/etc/clickhouse-server/config.d/user-files.xml:ro
       - ./infrastructure/docker/clickhouse/metric-log.xml:/etc/clickhouse-server/config.d/metric-log.xml:ro
       - ./infrastructure/docker/clickhouse/refreshable.xml:/etc/clickhouse-server/users.d/refreshable.xml:ro
+      # The parsed docs file() reads.
+      - ${W3WAREHOUSE_DATA_DIR:-./data}:/app/data:ro
     ulimits:
       nofile:
         soft: 262144

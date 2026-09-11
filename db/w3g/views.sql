@@ -439,7 +439,7 @@ LEFT JOIN w3g.mappings AS mh
 -- miscount. Refreshable (re-run the whole query, swap the result) is the tool.
 --
 -- REFRESH EVERY 10 MINUTE bounds staleness without the backfill having to know
--- this rollup exists. `just backfill` follows with an explicit
+-- this rollup exists. `just local::backfill` follows with an explicit
 -- SYSTEM REFRESH VIEW … when a run needs to be fresh the instant it exits.
 CREATE MATERIALIZED VIEW IF NOT EXISTS w3g.refresh__opener_rollup
 REFRESH EVERY 10 MINUTE

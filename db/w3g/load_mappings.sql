@@ -1,7 +1,7 @@
 -- db/w3g/load_mappings.sql — (re)load the w3g.mappings dim from a JSONEachRow
 -- file produced by the pipeline/parse-rs export-mappings binary.
 --
--- This is the file() path, for a server that can see the file. `just mappings`
+-- This is the file() path, for a server that can see the file. `just local::mappings`
 -- pipes the same rows over stdin instead, which works against a remote server.
 --
 -- Invoke:

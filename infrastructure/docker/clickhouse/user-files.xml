@@ -1,10 +1,9 @@
 <?xml version="1.0"?>
 <!--
-  file() is chrooted to user_files_path. The loader writes parsed JSON to the
-  shared `wh_data` volume (mounted at /app/data here and in the loader), and
-  the load SQL reads it via file("data/json/...") — paths relative to the
-  loader's repo root. Point user_files_path at /app/ so those same relative
-  paths resolve to /app/data/json/... inside this server.
+  file() is chrooted to user_files_path. Compose mounts the parsed docs
+  read-only at /app/data (${W3WAREHOUSE_DATA_DIR:-./data}), so with
+  user_files_path at /app/ a repo-relative glob such as
+  data/parsed/gnl/*.json resolves inside this server (just local::load).
 -->
 <clickhouse>
     <user_files_path>/app/</user_files_path>
