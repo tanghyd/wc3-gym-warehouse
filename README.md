@@ -11,11 +11,11 @@ Same rules as the other Warcraft-Gym repos: branch, PR to `main`, squash merge.
 Copy `.env.example` to `.env` and fill in the bucket credentials, then:
 
 ```
-just up                 # clickhouse, the schema, and the drain
-just mappings           # load the WC3 name mappings once
-just drain-once         # parse everything new in replays/
-just backfill-bucket    # load the parsed prefix out of the configured bucket
-just ch                 # a clickhouse-client shell
+just up                     # clickhouse, the schema, and the drain
+just local::mappings        # load the WC3 name mappings once
+just local::drain-once      # parse everything new in replays/
+just local::backfill-bucket # load the parsed prefix out of the configured bucket
+just ch                     # a clickhouse-client shell
 ```
 
 `just up` also serves the search page at http://localhost:8080. Pick a race, a
@@ -44,14 +44,16 @@ way in both apps. `frontend/race-icons/` holds its race marks.
 from w3warehouse and cut to the objects this schema names. `frontend/icons.json`
 maps an object code to its file.
 
-`just backfill-bucket` builds the URL from `.env`. Pass your own glob to
-`just backfill '<url>'` to load a narrower set, such as one date.
+`just local::backfill-bucket` builds the URL from `.env`. Pass your own glob to
+`just local::backfill '<url>'` to load a narrower set, such as one date.
+
+`just local::load` reads parsed docs from the `data/` directory compose mounts
+instead of a bucket. `just fixtures::up` builds a second project, `wh-fixtures`,
+holding only the 3 parser goldens, with ClickHouse on 8124.
 
 `docker compose --profile local up -d` adds a MinIO to stand in for the R2
-bucket; `--profile prod` adds the Cloudflare Tunnel.
-
-On a machine with no Docker, `infrastructure/local/` starts the same ClickHouse
-and MinIO straight on the host.
+bucket; `--profile prod` adds the Cloudflare Tunnel. Every ClickHouse runs in a
+container: the stack needs Docker.
 
 ## How it fits together
 
