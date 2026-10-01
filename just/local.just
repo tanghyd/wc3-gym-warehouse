@@ -70,11 +70,11 @@ goldens:
         for (const f of fs.readdirSync("/out").filter((f) => f.endsWith(".json")))
           fs.writeFileSync("/goldens/" + f, JSON.stringify(sort(JSON.parse(fs.readFileSync("/out/" + f, "utf8"))), null, 1));'
 
-# copy every .w3g under a folder changed since a date into the bucket's replays/local/, keeping
+# copy every .w3g under a folder changed since a date into the bucket's replays/<dest>/, keeping
 # subfolders and skipping LastReplay.w3g (the client rewrites it after each game), such as
-# `just local::upload-replays "/mnt/c/Users/Daniel/Documents/Warcraft III/BattleNet/51230813/Replays" 2026-09-01`
+# `just local::upload-replays /home/daniel/warcraft/w3warehouse/data/w3g/replay_service 2000-01-01 w3warehouse-ladder`
 [positional-arguments]
-upload-replays dir since:
+upload-replays dir since dest='local':
     #!/usr/bin/env bash
     set -euo pipefail
     stage=$(mktemp -d); trap 'rm -rf "$stage"' EXIT
@@ -82,7 +82,7 @@ upload-replays dir since:
     echo "uploading $(find "$stage" -type f | wc -l) replays"
     docker compose run --rm --no-deps -v "$stage:/upload:ro" -e KEY="$W3WAREHOUSE_S3_ACCESS_KEY" \
       -e SECRET="$W3WAREHOUSE_S3_SECRET_KEY" --entrypoint sh minio-setup -c \
-      'mc alias set local http://minio:9000 "$KEY" "$SECRET" >/dev/null && mc cp -q -r /upload/ "local/$BUCKET/${PREFIX:+$PREFIX/}replays/local/"'
+      "mc alias set local http://minio:9000 \"\$KEY\" \"\$SECRET\" >/dev/null && mc cp -q -r /upload/ \"local/\$BUCKET/\${PREFIX:+\$PREFIX/}replays/$3/\""
 
 # rewrite the melee mappings seed from the parser's tables (after a w3grs bump)
 mappings:
