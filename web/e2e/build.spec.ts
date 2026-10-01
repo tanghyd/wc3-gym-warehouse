@@ -3,18 +3,13 @@ import { expect, test, type APIRequestContext, type Locator, type Page } from "@
 // The build-order search on /: each list equals POST /search's answer to the same request.
 const API = process.env.API_URL ?? "http://api:8000";
 
-type Row = { replay_id: string; gnl: unknown; result_source: string; focus_player_id: number; players: { player_id: number; name: string; won: boolean | null }[] };
+type Row = { replay_id: string; gnl: unknown; focus_player_id: number; players: { player_id: number; name: string; won: boolean | null }[] };
 const rows = (page: Page) => page.locator("tbody tr");
 const goldens = (page: Page) => rows(page).filter({ hasText: /\bS900[123] G\d/ });
 const slot = (page: Page, n: number) => page.getByRole("region", { name: `Player ${n}` });
 const steps = (card: Locator) => card.locator("ol > li");
 /** The replay ids the list shows, in order. */
 const shown = (page: Page) => rows(page).locator('a[href^="/replays/"]').evaluateAll((as) => as.map((a) => a.getAttribute("href")!.split("/").pop()));
-/** Per Player 1 cell: its result chip ("" with none) and whether it is marked inferred. */
-const player1 = (page: Page) =>
-  rows(page)
-    .locator("td:nth-child(5)")
-    .evaluateAll((tds) => tds.map((td) => [td.querySelector(".chip")?.textContent ?? "", !!td.querySelector('[title^="Inferred:"]')]));
 const record = (w: number, l: number) => (w + l ? `${w} – ${l}` + (w + l >= 10 ? ` (${Math.round((100 * w) / (w + l))}%)` : "") : "—");
 
 async function search(request: APIRequestContext, body: object): Promise<Row[]> {
@@ -49,10 +44,8 @@ async function nightElfBuild(page: Page) {
   await war.getByRole("spinbutton", { name: "Within previous (s)" }).fill("20");
   await expect(war.getByText("ordered within 20 s of step 1")).toBeVisible();
 }
-// the list leaves out games vs Computer unless ?computer=1; the filter rides on Player 1
-const HUMAN = { computer_game: [0] };
 const NE_BUILD = {
-  filters: { race: ["NE"], ...HUMAN },
+  filters: { race: ["NE"] },
   steps: [
     { type: "building", code: "eate", to_min: 2 },
     { type: "building", code: "eaom", within_prev_s: 20 },
@@ -67,7 +60,7 @@ test.describe("build-order search", () => {
     await expect.poll(() => new URL(page.url()).searchParams.get("steps")).toBe("eate@-120,eaom~20");
 
     const want = await search(request, NE_BUILD);
-    const all = await search(request, { filters: { race: ["NE"], ...HUMAN } });
+    const all = await search(request, { filters: { race: ["NE"] } });
     // the timing narrows: fewer games than the race alone, the three goldens kept
     expect(want.length).toBeGreaterThan(0);
     expect(want.length).toBeLessThan(all.length);
@@ -79,8 +72,7 @@ test.describe("build-order search", () => {
 
     // the Player 1 column reports the focus player, who is listed first
     const focus = want.map((r) => r.players.find((p) => p.player_id === r.focus_player_id)!);
-    // a result from the last actor keeps its chip and adds the inferred mark
-    expect(await player1(page)).toEqual(want.map((r, i) => [focus[i].won === null ? "" : focus[i].won ? "Won" : "Lost", r.result_source === "last_actor"]));
+    expect(await rows(page).locator("td:nth-child(5)").allInnerTexts()).toEqual(focus.map((p) => (p.won === null ? "" : p.won ? "Won" : "Lost")));
     expect(await rows(page).locator("td:nth-child(4) li:first-child .font-name").allInnerTexts()).toEqual(focus.map((p) => p.name));
     // and his record over the list sits beside the count
     const [w, l] = [focus.filter((p) => p.won === true).length, focus.filter((p) => p.won === false).length];
@@ -183,7 +175,7 @@ test.describe("build-order search", () => {
 
   test("a second player narrows the games to what POST /search answers", async ({ page, request }) => {
     await page.goto(`/?race=NE&steps=eate`);
-    const p1Only = await search(request, { filters: { race: ["NE"], ...HUMAN }, steps: [{ type: "building", code: "eate" }] });
+    const p1Only = await search(request, { filters: { race: ["NE"] }, steps: [{ type: "building", code: "eate" }] });
     await expect(rows(page)).toHaveCount(p1Only.length);
 
     const p2 = slot(page, 2);
@@ -193,12 +185,12 @@ test.describe("build-order search", () => {
     await expect(page).toHaveURL(/[?&]opp_steps=Obla(&|$)/);
     // Player 2 is the focus's opponent: each side names the other's race
     const want = await search(request, {
-      filters: { race: ["NE"], opponent_race: ["OC"], ...HUMAN },
+      filters: { race: ["NE"], opponent_race: ["OC"] },
       steps: [{ type: "building", code: "eate" }],
       others: [{ filters: { race: ["OC"], opponent_race: ["NE"] }, steps: [{ type: "hero_trained", code: "Obla" }] }],
     });
     // the Blademaster step narrows more than the opponent race alone
-    const raceOnly = await search(request, { filters: { race: ["NE"], opponent_race: ["OC"], ...HUMAN }, steps: [{ type: "building", code: "eate" }] });
+    const raceOnly = await search(request, { filters: { race: ["NE"], opponent_race: ["OC"] }, steps: [{ type: "building", code: "eate" }] });
     expect(want.length).toBeGreaterThan(0);
     expect(want.length).toBeLessThan(raceOnly.length);
     expect(raceOnly.length).toBeLessThan(p1Only.length);
@@ -213,15 +205,12 @@ test.describe("build-order search", () => {
 
   test("Player 2's outcome is his own, never Player 1's", async ({ page, request }) => {
     await page.goto("/?opp_result=won");
-    // every game with a known winner but those vs Computer, its loser listed as Player 1
-    const res = await request.post(`${API}/query`, { data: { measures: ["replays"], filters: { result: ["win"], ...HUMAN } } });
+    // every game with a known winner, its loser listed as Player 1
+    const res = await request.post(`${API}/query`, { data: { measures: ["replays"], filters: { result: ["win"] } } });
     const decided: number = (await res.json()).rows[0].replays;
     expect(decided).toBeGreaterThan(0);
     await expect(rows(page)).toHaveCount(decided);
-    expect(new Set((await player1(page)).map(([chip]) => chip))).toEqual(new Set(["Lost"]));
-    // the losses the last actor names are marked inferred, as many as the API counts
-    const inferred = await request.post(`${API}/query`, { data: { measures: ["replays"], filters: { result: ["win"], result_source: ["last_actor"], ...HUMAN } } });
-    await expect(rows(page).locator('td:nth-child(5) [title^="Inferred:"]')).toHaveCount((await inferred.json()).rows[0].replays);
+    expect(new Set(await rows(page).locator("td:nth-child(5)").allInnerTexts())).toEqual(new Set(["Lost"]));
     // two winners in one game: none
     await page.goto("/?result=won&opp_result=won");
     await expect(page.getByText("No replay matches. Widen the filters.")).toBeVisible();
@@ -229,8 +218,8 @@ test.describe("build-order search", () => {
 
   test("Player 2's steps are his own, never Player 1's", async ({ page, request }) => {
     await page.goto("/?opp_steps=Edem");
-    // every game but those vs Computer where someone trained a Demon Hunter
-    const res = await request.post(`${API}/query`, { data: { measures: ["replays"], filters: HUMAN, steps: [{ type: "hero_trained", code: "Edem" }] } });
+    // every game where someone trained a Demon Hunter
+    const res = await request.post(`${API}/query`, { data: { measures: ["replays"], steps: [{ type: "hero_trained", code: "Edem" }] } });
     const ids = await shown(page);
     expect(ids.length).toBeGreaterThan(0);
     expect(ids.length).toBe((await res.json()).rows[0].replays);

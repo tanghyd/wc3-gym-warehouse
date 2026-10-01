@@ -24,7 +24,7 @@ The replay inspector is at http://localhost:3000, the API at http://localhost:80
 |---|---|
 | `just dbt <args>` | any dbt command in the dbt container, such as `build`, `test` or `docs generate` |
 | `just local::docs` | writes dbt's docs site (models, columns, tests, lineage) into the target volume that http://localhost:8080 serves |
-| `just local::upload-replays <folder> <date>` | copies every `.w3g` under a folder changed since a date into the bucket's `replays/local/`, except `LastReplay.w3g` (a copy of the latest game); then `just drain-once` and `just dbt build` |
+| `just local::upload-replays <folder> <date> [dest]` | copies every `.w3g` under a folder changed since a date into the bucket's `replays/<dest>/` (default `local`), except `LastReplay.w3g` (a copy of the latest game), such as `just local::upload-replays /home/daniel/warcraft/w3warehouse/data/w3g/replay_service 2000-01-01 w3warehouse-ladder`; then `just drain-once` and `just dbt build` |
 | `just local::drain-test` | the drain's unit tests and parser goldens, in its image |
 | `just local::mappings` | rewrites `dbt/seeds/mappings_melee.csv` from the parser's tables, after a w3grs bump |
 | `just local::api-test` | the API tests in its container: compiler goldens, then the live cases |
@@ -39,7 +39,7 @@ replays/<series>/game<n>.w3g ─drain─▶ parsed/v3/dt=<date>/<id>.json ─dbt
                                                                                               /search
 ```
 
-1. The GNL backend writes a reported replay to `<env>/replays/<series id>/game<n>.w3g`; `<env>` is the Vercel environment (`app/services/r2.py`), set as `W3WAREHOUSE_S3_PREFIX`. Locally, `minio-setup` puts the 3 goldens there as series 9001-9003. Any other `.w3g` under `replays/` (such as `replays/local/`, which `just local::upload-replays` fills) is drained too, with no `gnl` field.
+1. The GNL backend writes a reported replay to `<env>/replays/<series id>/game<n>.w3g`; `<env>` is the Vercel environment (`app/services/r2.py`), set as `W3WAREHOUSE_S3_PREFIX`. Locally, `minio-setup` puts the 3 goldens there as series 9001-9003. Any other `.w3g` under `replays/` (such as `replays/w3warehouse-ladder/`, which `just local::upload-replays` fills) is drained too, with no `gnl` field.
 2. The drain (`pipeline/parse-rs`, w3grs) parses each new or changed file and writes the parsed document under `parsed/v3/`, with the raw object key as `source_key`. It never moves or deletes a raw file.
 3. `just dbt build`:
    - `raw_replays` is an incremental model. It reads the dbt source `bucket.parsed_docs`, an S3 table over the `parsed_docs` named collection (`infrastructure/docker/clickhouse/named-collections.xml`) that dbt's `on-run-start` hook creates, and appends the documents it does not have yet. It skips a loaded document by its file name (`<replay_id>.json`) before ClickHouse fetches it. The URL and the keys come from the server's environment, so no secret lands in SQL.
@@ -52,21 +52,21 @@ replays/<series>/game<n>.w3g ─drain─▶ parsed/v3/dt=<date>/<id>.json ─dbt
 | Model | Grain |
 |---|---|
 | `raw_replays` | one parsed document per replay |
-| `replays`, `replay_players` | replay header with readable map name, patch, result and `result_source`, and `duplicate_of` for a second file of one game; player per replay with `last_action_ms` |
+| `replays`, `replay_players` | replay header with readable map name, patch and result, and `duplicate_of` for a second file of one game; player per replay |
 | `replay_events` | every order and hero skill per player in time order; build-order steps match here |
-| `player_games` | one row per player per 1v1 game, a game saved twice counted once: opponent, map, patch, result and `result_source`, first hero, `opener_1`..`opener_6`, `computer_game` (a game vs the WC3 AI) |
+| `player_games` | one row per player per 1v1 game, a game saved twice counted once: opponent, map, patch, result, first hero, `opener_1`..`opener_6` |
 | `mappings` | object codes and names: the melee seed plus the custom-map seed |
 | `patches` (seed) | the game patch of each build number, kept by hand: 6117 is 2.0, 7000 is 3.0 |
 | `player_heroes`, `player_group_hotkeys`, `chat`, `resource_transfers` | as named |
 
 The opener tree is a `GROUP BY` over `player_games.opener_N`, so the refreshable rollup and its 10-minute staleness are gone.
 
-A 1v1 result comes from the file's leave records (`result_source` replay). A w3c- file never records its saver's own leave, so when he left first it names no winner; then the player whose last command came later wins (`last_actor`, shown as inferred). Equal times, a Computer slot and other game types stay `unknown`. One game can arrive as the client's Autosaved copy and the w3c- copy: they share `game_key` (random seed and sorted names), `duplicate_of` points the others at one copy (w3c- first, then a recorded winner, then the lowest id), and only `player_games` leaves duplicates out. The per-replay tables keep every file, because the replay page opens any file by id and build-order steps always join `player_games`.
+A 1v1 winner comes from the replay's leave blocks, which the parser reads into `winningTeamId`. A replay-service copy is recorded by the FLO observer, so it carries both players' leaves and names the winner. A player-saved w3c- file loses the saver's own leave, so a game the saver quit has no winner (`winning_team_id` -1, result `unknown`). Results for GNL games will come from the GNL report, through the dims loader. One game can arrive as two files: they share `game_key` (random seed and sorted names), `duplicate_of` points the others at one copy (a recorded winner first, then the lowest id), and only `player_games` leaves duplicates out. The per-replay tables keep every file, because the replay page opens any file by id and build-order steps always join `player_games`.
 
 ### dbt docs and tests
 
 - Every model, seed and column has a description in YAML. Shared terms (replay_id, race, matchup, order kinds) are doc blocks in `dbt/models/docs.md`. `+persist_docs` in `dbt_project.yml` writes them into ClickHouse as table and column comments, so `system.tables.comment` and `system.columns.comment` carry them. A description must not contain a semicolon: dbt 2.0.6 splits the comment DDL on it.
-- Tests: `unique` and `not_null` on each table's key, with composite keys as an expression such as `replay_id || ':' || toString(player_id)`. `relationships` from `replay_players`, `player_games` and `replay_events` to `replays`. `accepted_values` on race, result, computer_game, order kind and event type. Singular tests in `dbt/tests/`: two `player_games` rows per 1v1 game and none for a duplicate, no event after the game's end (a warning), no gap in the openers, a winner that follows its `result_source`, one copy per `game_key`, and a patch for every build (a warning). Unit tests in `dbt/models/marts/unit_tests.yml` for the opener derivation, the `gnl_race` macro, and the result, duplicate and patch rules of `replays`. dbt 2.0.6 compares only their String columns.
+- Tests: `unique` and `not_null` on each table's key, with composite keys as an expression such as `replay_id || ':' || toString(player_id)`. `relationships` from `replay_players`, `player_games` and `replay_events` to `replays`. `accepted_values` on race, result, order kind and event type. Singular tests in `dbt/tests/`: two `player_games` rows per 1v1 game and none for a duplicate, no event after the game's end (a warning), no gap in the openers, one copy per `game_key`, and a patch for every build (a warning). Unit tests in `dbt/models/marts/unit_tests.yml` for the opener derivation, the `gnl_race` macro, and the result, duplicate and patch rules of `replays`. dbt 2.0.6 compares only their String columns.
 - The source `bucket.parsed_docs` has freshness on the S3 `_time` virtual column: `just dbt source freshness`.
 - Exposures in `dbt/models/exposures.yml` name the three readers: the replay inspector, the query API and Grafana.
 - dbt's docs site has no column-level lineage: dbt v2 builds it from static analysis, which is off for ClickHouse. It also lists the dbt and ClickHouse adapter macros, which dbt 2.0.6 cannot hide.
@@ -96,7 +96,7 @@ A filter is a list of values or a `{gte, lte}` range. A step names an event type
 
 ## The replay inspector (`web/`)
 
-A Next.js app in the wc3-gym-frontend look, light and dark, at http://localhost:3000. `/` lists the replays and searches build orders (`POST /search`): Player 1, whose result the list reports, and his opponent each take a race, a name, an outcome and ordered steps, each step an order of one object with optional timing; map, patch and length scope the game. A result from the last actor reads as inferred, with the reason in its title. `/openers` is the opener tree of one race, a level per building, most played or best win rate first; a row counts games won or lost, one per player, and links to its games on `/` (`POST /query` on `player_games.opener_N`). The URL holds every filter, step and open row, so a link rebuilds the page. `/replays/<id>` shows one game: the players, their heroes and skills, APM per minute, both build orders and the chat (`GET /replays/{id}`, plus one `POST /query` on `mappings` for the names). Server components read the API at `API_URL` (`http://api:8000` in compose), so the browser never calls it. The object and race icons live in `web/public/`.
+A Next.js app in the wc3-gym-frontend look, light and dark, at http://localhost:3000. `/` lists the replays and searches build orders (`POST /search`): Player 1, whose result the list reports, and his opponent each take a race, a name, an outcome and ordered steps, each step an order of one object with optional timing; map, patch and length scope the game. `/openers` is the opener tree of one race, a level per building, most played or best win rate first; a row counts games won or lost, one per player, and links to its games on `/` (`POST /query` on `player_games.opener_N`). The URL holds every filter, step and open row, so a link rebuilds the page. `/replays/<id>` shows one game: the players, their heroes and skills, APM per minute, both build orders and the chat (`GET /replays/{id}`, plus one `POST /query` on `mappings` for the names). Server components read the API at `API_URL` (`http://api:8000` in compose), so the browser never calls it. The object and race icons live in `web/public/`.
 
 | Recipe | Does |
 |---|---|

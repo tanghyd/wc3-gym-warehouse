@@ -7,15 +7,15 @@ models:
   - name: player_games
     description: >-
       One row per player per 1v1 game (type 1on1): who played whom, on which map and patch,
-      the result and where it came from, the first hero and the first six buildings. A game
-      that arrived as two files counts once, so a replay with a duplicate_of has no rows.
-      The query API's main semantic model.
+      the result, the first hero and the first six buildings. A game that arrived as two
+      files counts once, so a replay with a duplicate_of has no rows. The query API's main
+      semantic model.
     config:
       meta:
         semantic:
-          dimensions: [replay_id, player_id, player, race, opponent, opponent_race, computer_game,
-                       matchup, map, patch, duration_ms, minutes, result, result_source, apm, first_hero, opener_1,
-                       opener_2, opener_3, opener_4, opener_5, opener_6, gnl_series_id, gnl_game_no]
+          dimensions: [replay_id, player_id, player, race, opponent, opponent_race, matchup, map,
+                       patch, duration_ms, minutes, result, apm, first_hero, opener_1, opener_2,
+                       opener_3, opener_4, opener_5, opener_6, gnl_series_id, gnl_game_no]
           measures:
             games: count()
             wins: countIf(result = 'win')
@@ -67,16 +67,6 @@ models:
               description: Opponent race is a GNL race id.
               arguments:
                 values: [HU, OC, NE, UD, RANDOM]
-      - name: computer_game
-        description: >-
-          1 when the player or the opponent is the WC3 AI, else 0. The AI is named Computer,
-          with no #tag, so no battle tag matches it, and a replay holds none of its orders.
-        data_tests:
-          - accepted_values:
-              description: computer_game is 0 or 1.
-              arguments:
-                values: [0, 1]
-                quote: false
       - name: matchup
         description: "{{ doc('matchup') }}"
       - name: map
@@ -88,19 +78,12 @@ models:
       - name: minutes
         description: Game length in minutes, rounded to one decimal.
       - name: result
-        description: win or loss for this player against replays.winning_team_id, or unknown when no rule names a winner.
+        description: win or loss for this player against replays.winning_team_id, or unknown when the replay names no winner.
         data_tests:
           - accepted_values:
               description: Result is win, loss or unknown.
               arguments:
                 values: [win, loss, unknown]
-      - name: result_source
-        description: "{{ doc('result_source') }}"
-        data_tests:
-          - accepted_values:
-              description: Result source is replay, last_actor or unknown.
-              arguments:
-                values: [replay, last_actor, unknown]
       - name: apm
         description: The player's actions per minute over the time they were in the game, from the parser.
       - name: first_hero
@@ -206,37 +189,24 @@ models:
       - name: parse_time_ms
         description: How long the parser took on this replay, in milliseconds.
       - name: source_key
-        description: The raw replay's object key in the bucket, such as preview/replays/local/w3c-20260928085813.w3g, written into the parsed document by the drain.
-      - name: recorded_winning_team_id
-        description: >-
-          The winning team's id as the parser read it from the file's leave records, for
-          1on1 games only. -1 when the file names no winner, as in a w3c- file the saver
-          left first, which never records his own leave.
+        description: The raw replay's object key in the bucket, such as preview/replays/9003/game1.w3g, written into the parsed document by the drain.
       - name: winning_team_id
         description: >-
-          The winning team's id: recorded_winning_team_id when the file names one, else for a
-          1on1 the team of the player whose last command came later. -1 when neither names a
-          winner. result_source says which.
-      - name: result_source
-        description: "{{ doc('result_source') }}"
-        data_tests:
-          - accepted_values:
-              description: Result source is replay, last_actor or unknown.
-              arguments:
-                values: [replay, last_actor, unknown]
+          The winning team's id, which the parser reads from the replay's leave blocks for 1on1
+          games only. -1 when they name no winner, as in a player-saved w3c- file of a game the
+          saver quit, or when the game is not 1on1.
       - name: random_seed
         description: The game's random seed from the replay header.
       - name: game_key
         description: >-
           The game's random seed and its players' sorted names, such as
           2907768841:Solstice2183#1401,thanks#11187. Two files of one game share it, such as
-          the client's Autosaved copy and the w3c- copy.
+          the replay-service copy and a copy a player saved.
       - name: duplicate_of
         description: >-
           For a second file of a game, the replay_id of the copy that stands for the game, or
-          '' on that copy itself. The copy is a w3c- file first (the client's own copy names
-          the saver the winner even when he quit first), then one with a recorded winner, then
-          the lowest replay_id. player_games leaves duplicates out.
+          '' on that copy itself. The copy is one with a recorded winner first, then the
+          lowest replay_id. player_games leaves duplicates out.
       - name: start_spots
         description: The number of start spots in the lobby.
       - name: observers
@@ -358,11 +328,6 @@ models:
         description: The race letter (H, O, N, U) the parser read from the player's first race-specific order, or '' when none was seen. Shows a random player's actual race.
       - name: apm
         description: Actions per minute over the time the player was in the game, from the parser.
-      - name: last_action_ms
-        description: >-
-          Game time of the player's last command in milliseconds: the end of the timeslot that
-          holds it, any action kind counted. 0 when the player gave none, as for every Computer
-          slot. It can exceed duration_ms in a file the WC3 client wrote.
       - name: actions_rightclick
         description: Count of right-click actions (move, attack, smart orders).
       - name: actions_basic

@@ -13,10 +13,5 @@ data_tests:
     description: >-
       Every replay's build number has a row in the patches seed. Severity warn, so a new
       build shows as a warning with patch '' until someone adds its row.
-  - name: results_follow_their_source
-    description: >-
-      winning_team_id follows result_source. replay keeps the recorded winner, last_actor
-      is the team of the 1on1 player whose last command came strictly later when both gave
-      one, and unknown is -1.
   - name: duplicates_point_to_their_game
     description: Every game_key has exactly one replay that stands for it, and each duplicate points to that replay.

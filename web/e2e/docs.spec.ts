@@ -17,7 +17,7 @@ test("dbt docs list the warehouse models", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Sources 1" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Exposures 3" })).toBeVisible();
   await page.getByText("player_games", { exact: true }).first().click();
-  await expect(page.getByText(/^One row per player per 1v1 replay \(type 1on1\)/).first()).toBeVisible();
+  await expect(page.getByText(/^One row per player per 1v1 game \(type 1on1\)/).first()).toBeVisible();
   await page.screenshot({ path: path.join(__dirname, "shots", "dbt-docs.png"), fullPage: true });
   // every column is declared in YAML, so the Columns tab is never empty (chat has 7)
   await page.goto(DOCS);

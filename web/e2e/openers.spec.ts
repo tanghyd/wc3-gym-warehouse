@@ -8,16 +8,14 @@ const rows = (page: Page) => page.locator("tbody tr");
 const mss = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 const record = (w: number, l: number) => (w + l ? `${w} – ${l}` + (w + l >= 10 ? ` (${Math.round((100 * w) / (w + l))}%)` : "") : "—");
 const DECIDED = { result: ["win", "loss"] };
-// the page leaves out games vs Computer unless ?computer=1
-const HUMAN = { computer_game: [0] };
 
 /**
  * The buildings after a prefix, every figure over player-games won or lost. Most played first, or
  * with sort=winrate rows from 10 games up first, by win share. Ties by win share, then games, then code.
  */
-async function level(request: APIRequestContext, filters: Record<string, (string | number)[]>, prefix: string[], sort = "popular", computer = false): Promise<Level> {
+async function level(request: APIRequestContext, filters: Record<string, string[]>, prefix: string[], sort = "popular"): Promise<Level> {
   const next = `opener_${prefix.length + 1}`;
-  filters = { ...filters, ...DECIDED, ...(computer ? {} : HUMAN) };
+  filters = { ...filters, ...DECIDED };
   prefix.forEach((c, i) => (filters = { ...filters, [`opener_${i + 1}`]: [c] }));
   const res = await request.post(`${API}/query`, {
     data: { dimensions: [next], measures: ["games", "wins", "losses", "minutes_total"], filters, limit: 10000 },
@@ -53,67 +51,8 @@ test.describe("openers tree", () => {
     expect(await cells(page)).toEqual(expected(root, name));
     // one unit per row: its games are its wins plus its losses
     for (const r of root) expect(r.games).toBe(r.wins + r.losses);
-    const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { race: ["NE"], ...DECIDED, ...HUMAN } } })).json()).rows[0].games;
+    const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { race: ["NE"], ...DECIDED } } })).json()).rows[0].games;
     await expect(page.locator(".bar .chip")).toHaveText(`${total} games won or lost`);
-    await expect(page.getByRole("checkbox", { name: "Include games vs Computer" })).not.toBeChecked();
-  });
-
-  test("games vs Computer count only with the checkbox, which a reload, the sort and every link keep", async ({ page, request }) => {
-    const filters = { race: ["OC"] };
-    const total = async (computer: boolean) =>
-      (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { ...filters, ...DECIDED, ...(computer ? {} : HUMAN) } } })).json()).rows[0].games;
-    const [human, all, humanTotal, allTotal] = await Promise.all([level(request, filters, []), level(request, filters, [], "popular", true), total(false), total(true)]);
-    // the stack holds Orc games won or lost against Computer
-    expect(allTotal).toBeGreaterThan(humanTotal);
-    const top = all[0].code;
-    // a first building whose count grows with the Computer games in
-    const grows = all.find((r) => r.games > (human.find((h) => h.code === r.code)?.games ?? 0))!;
-    expect(grows).toBeTruthy();
-    const [kids, byRate] = await Promise.all([level(request, filters, [top], "popular", true), level(request, filters, [], "winrate", true)]);
-    const name = await names(request, [...human, ...all, ...kids].map((r) => r.code));
-    const box = page.getByRole("checkbox", { name: "Include games vs Computer" });
-    const chip = page.locator(".bar .chip");
-
-    await page.goto("/openers?race=OC");
-    await expect(box).not.toBeChecked();
-    await expect(chip).toHaveText(`${humanTotal} games won or lost`);
-    expect(await cells(page)).toEqual(expected(human, name));
-
-    await box.check();
-    await page.getByRole("button", { name: "Show openers" }).click();
-    await expect(page).toHaveURL(/[?&]computer=1(&|$)/);
-    await expect(chip).toHaveText(`${allTotal} games won or lost`);
-    expect(await cells(page)).toEqual(expected(all, name));
-    await page.reload();
-    await expect(box).toBeChecked();
-    await expect(chip).toHaveText(`${allTotal} games won or lost`);
-    expect(await cells(page)).toEqual(expected(all, name));
-
-    // expand and collapse keep it
-    await page.getByRole("link", { name: name[top], exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/openers\\?race=OC&computer=1&open=${top}$`));
-    await expect(rows(page)).toHaveCount(all.length + kids.length);
-    expect((await cells(page)).slice(1, 1 + kids.length)).toEqual(expected(kids, name));
-    await page.getByRole("link", { name: name[top], exact: true }).click();
-    await expect(page).toHaveURL(/\/openers\?race=OC&computer=1$/);
-    await expect(rows(page)).toHaveCount(all.length);
-
-    // a new sort keeps it
-    await page.getByRole("combobox", { name: "Sort by" }).selectOption({ label: "Best win rate" });
-    await page.getByRole("button", { name: "Show openers" }).click();
-    await expect(page).toHaveURL(/[?&]sort=winrate&computer=1(&|$)/);
-    await expect(box).toBeChecked();
-    expect(await cells(page)).toEqual(expected(byRate, name));
-
-    // the games link keeps it: the list holds that opener's games, Computer's among them
-    await page.getByRole("link", { name: `List the games of ${name[grows.code]}` }).click();
-    await expect(page).toHaveURL(new RegExp(`/\\?race=OC&computer=1&opener_1=${grows.code}$`));
-    await expect(box).toBeChecked();
-    const res = await request.post(`${API}/search`, { data: { filters: { ...filters, opener_1: [grows.code] } } });
-    const want: string[] = (await res.json()).replays.map((r: { replay_id: string }) => r.replay_id);
-    await expect(page.locator("tbody tr")).toHaveCount(want.length);
-    expect(await page.locator('tbody a[href^="/replays/"]').evaluateAll((as) => as.map((a) => a.getAttribute("href")!.split("/").pop()))).toEqual(want);
-    expect(await page.locator("tbody .font-name").allInnerTexts()).toContain("Computer");
   });
 
   test("the patch filter narrows every figure, and a games link keeps it", async ({ page, request }) => {
@@ -128,14 +67,14 @@ test.describe("openers tree", () => {
     await page.getByRole("button", { name: "Show openers" }).click();
     await expect(page).toHaveURL(/[?&]patch=3\.0(&|$)/);
     expect(await cells(page)).toEqual(expected(root, name));
-    const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { ...filters, ...DECIDED, ...HUMAN } } })).json()).rows[0].games;
+    const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { ...filters, ...DECIDED } } })).json()).rows[0].games;
     await expect(page.locator(".bar .chip")).toHaveText(`${total} games won or lost`);
 
     // the first row's games open on the replay list with the patch still set
     await rows(page).first().getByRole("link", { name: `List the games of ${name[root[0].code]}` }).click();
     await expect(page).toHaveURL(/^[^?]*\/\?.*patch=3\.0/);
     await expect(page.getByRole("combobox", { name: "Patch" })).toHaveValue("3.0");
-    const res = await request.post(`${API}/search`, { data: { filters: { ...filters, ...HUMAN, opener_1: [root[0].code] } } });
+    const res = await request.post(`${API}/search`, { data: { filters: { ...filters, opener_1: [root[0].code] } } });
     await expect(page.locator("tbody tr")).toHaveCount((await res.json()).replays.length);
   });
 
@@ -219,8 +158,8 @@ test.describe("openers tree", () => {
     await link.click();
     await expect(page).toHaveURL(new RegExp(`/\\?race=NE&opponent_race=OC&opener_1=${root[0].code}&opener_2=${kids[0].code}$`));
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Replays");
-    // the list is POST /search's games of that opener, each game once and any result, none vs Computer
-    const res = await request.post(`${API}/search`, { data: { filters: { ...filters, ...HUMAN, opener_1: [root[0].code], opener_2: [kids[0].code] } } });
+    // the list is POST /search's games of that opener, each game once and any result
+    const res = await request.post(`${API}/search`, { data: { filters: { ...filters, opener_1: [root[0].code], opener_2: [kids[0].code] } } });
     const want: string[] = (await res.json()).replays.map((r: { replay_id: string }) => r.replay_id);
     expect(want.length).toBeGreaterThan(0);
     await expect(page.locator("tbody tr")).toHaveCount(want.length);

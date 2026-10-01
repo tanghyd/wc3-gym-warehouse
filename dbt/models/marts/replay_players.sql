@@ -14,7 +14,6 @@ SELECT
     {{ gnl_race("JSONExtractString(p, 'race')") }}           AS race,
     toLowCardinality(JSONExtractString(p, 'raceDetected'))       AS race_detected,
     toUInt32(JSONExtractUInt(p, 'apm'))                          AS apm,
-    toUInt32(JSONExtractUInt(p, 'lastActionMs'))                 AS last_action_ms,
     toUInt32(JSONExtractUInt(p, 'actions', 'rightclick'))        AS actions_rightclick,
     toUInt32(JSONExtractUInt(p, 'actions', 'basic'))             AS actions_basic,
     toUInt32(JSONExtractUInt(p, 'actions', 'buildtrain'))        AS actions_buildtrain,

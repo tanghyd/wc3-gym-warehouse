@@ -11,74 +11,32 @@ const without = (page: Page, race: string) =>
   rows(page).evaluateAll((trs, alt) => trs.filter((tr) => !tr.querySelector(`img[alt="${alt}"]`)).map((tr) => tr.textContent), race);
 /** Seconds of an m:ss length cell. */
 const secs = (t: string) => Number(t.split(":")[0]) * 60 + Number(t.split(":")[1]);
-// the list leaves out games vs Computer unless ?computer=1
-const HUMAN = { computer_game: [0] };
 type Row = {
   replay_id: string;
   duration_ms: number;
-  result_source: string;
   focus_player_id: number;
   players: { player_id: number; name: string; won: boolean | null; heroes: { code: string; final_level: number }[] }[];
 };
 const search = async (request: APIRequestContext, filters: object): Promise<Row[]> => (await (await request.post(`${API}/search`, { data: { filters } })).json()).replays;
 /** The replay ids the list shows, top first. */
 const listed = (page: Page) => page.locator('tbody a[href^="/replays/"]').evaluateAll((as) => as.map((a) => a.getAttribute("href")!.split("/").pop()));
-const playerNames = (page: Page) => page.locator("tbody .font-name").allInnerTexts();
 const record = (w: number, l: number) => (w + l ? `${w} – ${l}` + (w + l >= 10 ? ` (${Math.round((100 * w) / (w + l))}%)` : "") : "—");
-// the mark of a result from the last actor: the chip, the word, the reason in the title
-const INFERRED = 'span[title^="Inferred:"]';
-const WON_REASON = "Inferred: the other player stopped first; the file has no leave record";
-const LOST_REASON = "Inferred: this player stopped first; the file has no leave record";
 const NAME = "thanks#11187";
-// Two games each saved twice, as the client's Autosaved copy and the w3c- copy; the w3c- copy stands for the game.
-const TWICE = [
-  { autosaved: "9e30a4fa55f9af3f026018d34c35f7c0550a8565bbcff4def0295dcfc5a5be54", w3c: "1e466fc0bb5010f687d9f7829129645933e2d92eb83ba932d8af6b31adaee5c5" },
-  { autosaved: "9d0cb24dd6b7bda538c78872ea9cfc06a0cb1435a9b1c1d355d1ab1ccd22ea4a", w3c: "d71dd61bf62edf3c0327f81310516d3e9e4c075afa087105920fdb1dbdcca3f6" },
-];
 
 test.describe("replay list", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
   });
 
-  test("lists every game but those vs Computer, the three goldens among them", async ({ page, request }) => {
-    const all = (await search(request, HUMAN)).length;
+  test("lists every game, the three goldens among them", async ({ page, request }) => {
+    const all = (await search(request, {})).length;
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Replays");
     await expect(rows(page)).toHaveCount(all);
     await expect(goldens(page)).toHaveCount(3);
-    expect(await playerNames(page)).not.toContain("Computer");
-  });
-
-  test("games vs Computer stay out until the checkbox lets them in, and a reload keeps it", async ({ page, request }) => {
-    const [human, all] = await Promise.all([search(request, HUMAN), search(request, {})]);
-    // the stack holds games vs Computer
-    expect(all.length).toBeGreaterThan(human.length);
-    const box = page.getByRole("checkbox", { name: "Include games vs Computer" });
-    await expect(box).not.toBeChecked();
-    await expect(rows(page)).toHaveCount(human.length);
-    expect(await listed(page)).toEqual(human.map((r) => r.replay_id));
-
-    await box.check();
-    await page.getByRole("button", { name: "Search" }).click();
-    await expect(page).toHaveURL(/[?&]computer=1(&|$)/);
-    await expect(rows(page)).toHaveCount(all.length);
-    expect(await listed(page)).toEqual(all.map((r) => r.replay_id));
-    expect(await playerNames(page)).toContain("Computer");
-    await expect(page.locator(".bar .chip")).toHaveText(String(all.length));
-
-    await page.reload();
-    await expect(box).toBeChecked();
-    await expect(rows(page)).toHaveCount(all.length);
-
-    await box.uncheck();
-    await page.getByRole("button", { name: "Search" }).click();
-    await expect(page).not.toHaveURL(/[?&]computer=/);
-    await expect(rows(page)).toHaveCount(human.length);
-    expect(await playerNames(page)).not.toContain("Computer");
   });
 
   test("each player's heroes sit under his name in pick order, as the API row has them", async ({ page, request }) => {
-    const replays = await search(request, HUMAN);
+    const replays = await search(request, {});
     const codes = [...new Set(replays.flatMap((r) => r.players.flatMap((p) => p.heroes.map((h) => h.code))))];
     expect(codes.length).toBeGreaterThan(0);
     const res = await request.post(`${API}/query`, { data: { model: "mappings", dimensions: ["code", "name"], filters: { code: codes, kind: ["hero"] }, limit: 10000 } });
@@ -147,7 +105,7 @@ test.describe("replay list", () => {
     expect(lengths.length).toBeGreaterThan(0);
     expect(lengths.filter((s) => s < 15 * 60 || s > 16 * 60)).toEqual([]);
     // exactly the games from 15:00.000 to 16:00.000, so a 16:02 game never rounds in
-    const all = await search(request, HUMAN);
+    const all = await search(request, {});
     await expect(rows(page)).toHaveCount(all.filter((r) => r.duration_ms >= 900_000 && r.duration_ms <= 960_000).length);
 
     await page.getByRole("spinbutton", { name: "Minutes from" }).fill("999");
@@ -167,51 +125,21 @@ test.describe("replay list", () => {
     await expect(goldens(page).filter({ hasText: "S9001" }).locator("td").nth(2)).toHaveText("OvN");
   });
 
-  test("a result from the last actor reads as inferred on the rows the API marks last_actor", async ({ page, request }) => {
-    const replays = await search(request, HUMAN);
-    const want = replays.filter((r) => r.result_source === "last_actor").map((r) => r.replay_id);
-    expect(want.length).toBeGreaterThan(0);
-    await expect(rows(page)).toHaveCount(replays.length);
-    const got = await rows(page).evaluateAll(
-      (trs, sel) => trs.filter((tr) => tr.querySelector(sel)).map((tr) => tr.querySelector('a[href^="/replays/"]')!.getAttribute("href")!.split("/").pop()),
-      INFERRED,
-    );
-    expect(got).toEqual(want);
-    // with no focus only the winner wears a chip: Won, then the word
-    const mark = rows(page).filter({ has: page.locator(`a[href="/replays/${want[0]}"]`) }).locator(INFERRED);
-    await expect(mark).toHaveCount(1);
-    await expect(mark).toHaveText("Won inferred");
-    await expect(mark.locator(".chip")).toHaveText("Won");
-    await expect(mark).toHaveAttribute("title", WON_REASON);
-  });
-
-  test(`${NAME} as player 1: each game once, the inferred results marked, the record as the API's`, async ({ page, request }) => {
-    const replays = await search(request, { ...HUMAN, player: [NAME] });
+  test(`${NAME} as player 1: the list, the Player 1 column and the record as the API's`, async ({ page, request }) => {
+    const replays = await search(request, { player: [NAME] });
     await page.goto(`/?player=${encodeURIComponent(NAME)}`);
     await expect(rows(page)).toHaveCount(replays.length);
     expect(await listed(page)).toEqual(replays.map((r) => r.replay_id));
-    // a game saved twice lists once, through its w3c- copy; the other copy keeps its own page
-    for (const { autosaved, w3c } of TWICE) {
-      expect(replays.map((r) => r.replay_id)).toContain(w3c);
-      expect(replays.map((r) => r.replay_id)).not.toContain(autosaved);
-      expect((await request.get(`${API}/replays/${autosaved}`)).status()).toBe(200);
-    }
-    // the Player 1 column: his chip and whether it is inferred
-    const focus = replays.map((r) => ({ won: r.players.find((p) => p.player_id === r.focus_player_id)!.won, inferred: r.result_source === "last_actor" }));
-    expect(focus.filter((f) => f.inferred && f.won === false).length).toBeGreaterThan(0);
-    const got = await rows(page).evaluateAll(
-      (trs, sel) => trs.map((tr) => [(tr as HTMLTableRowElement).cells[4].querySelector(".chip")?.textContent ?? null, !!(tr as HTMLTableRowElement).cells[4].querySelector(sel)]),
-      INFERRED,
-    );
-    expect(got).toEqual(focus.map((f) => [f.won === null ? null : f.won ? "Won" : "Lost", f.inferred]));
-    const lost = rows(page).locator(`td:nth-child(5) ${INFERRED}`).filter({ hasText: "Lost" }).first();
-    await expect(lost).toHaveAttribute("title", LOST_REASON);
-    const [w, l] = [focus.filter((f) => f.won === true).length, focus.filter((f) => f.won === false).length];
+    // the Player 1 column: his chip
+    const focus = replays.map((r) => r.players.find((p) => p.player_id === r.focus_player_id)!.won);
+    const got = await rows(page).evaluateAll((trs) => trs.map((tr) => (tr as HTMLTableRowElement).cells[4].querySelector(".chip")?.textContent ?? null));
+    expect(got).toEqual(focus.map((won) => (won === null ? null : won ? "Won" : "Lost")));
+    const [w, l] = [focus.filter((won) => won === true).length, focus.filter((won) => won === false).length];
     await expect(page.locator(".bar").filter({ hasText: "Games" })).toContainText(`Player 1 record ${record(w, l)}`);
   });
 
   test("the patch filter keeps that patch's games, as the API counts them", async ({ page, request }) => {
-    const [p2, p3] = await Promise.all([search(request, { ...HUMAN, patch: ["2.0"] }), search(request, { ...HUMAN, patch: ["3.0"] })]);
+    const [p2, p3] = await Promise.all([search(request, { patch: ["2.0"] }), search(request, { patch: ["3.0"] })]);
     expect(p3.length).toBeGreaterThan(0);
     const patch = page.getByRole("combobox", { name: "Patch" });
     await expect(patch).toHaveValue("");

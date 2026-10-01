@@ -42,7 +42,6 @@
           "matchup": "NvO",
           "duration_ms": 403900,
           "winning_team_id": 1,
-          "result_source": "replay",
           "gnl": {
             "series_id": 9001,
             "game_no": 1
@@ -92,7 +91,6 @@
           "matchup": "NvO",
           "duration_ms": 937219,
           "winning_team_id": 0,
-          "result_source": "replay",
           "gnl": {
             "series_id": 9003,
             "game_no": 1

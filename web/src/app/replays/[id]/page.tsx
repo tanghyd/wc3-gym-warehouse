@@ -17,7 +17,6 @@ export default async function ReplayPage({ params, searchParams }: PageProps<"/r
   const players = [...r.players].sort((a, b) => a.player_id - b.player_id);
   const objects = await getObjects([...new Set([...r.events.map((e) => e.code), ...players.flatMap((p) => p.heroes.map((h) => h.code))])]);
   const who = new Map(players.map((p) => [p.player_id, p]));
-  const inferred = r.result_source === "last_actor";
 
   return (
     <>
@@ -39,7 +38,7 @@ export default async function ReplayPage({ params, searchParams }: PageProps<"/r
                 {i > 0 && <span className="text-banner-muted">v</span>}
                 <span className="inline-flex min-w-0 items-center gap-2">
                   <PlayerName name={p.name} race={p.race} />
-                  {p.won && <Result won inferred={inferred} />}
+                  {p.won && <Result won />}
                 </span>
               </Fragment>
             ))}
@@ -70,7 +69,7 @@ export default async function ReplayPage({ params, searchParams }: PageProps<"/r
                   <PlayerName name={p.name} race={p.race} />
                 </h3>
                 <span className="ml-auto">
-                  <Result won={p.won} inferred={inferred} />
+                  <Result won={p.won} />
                 </span>
               </div>
               <div className="p-4">

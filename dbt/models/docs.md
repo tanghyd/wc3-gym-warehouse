@@ -72,7 +72,3 @@ The player's battle tag as the replay wrote it, such as Name#1234.
 {% docs patch %}
 The game patch the replay's build number belongs to, such as 3.0, from the patches seed. '' for a build the seed has no row for.
 {% enddocs %}
-
-{% docs result_source %}
-Where the result comes from. replay when the file's leave records name the winner. last_actor for a 1on1 the file names no winner for: the player whose last command came later stayed in the game, so wins. The w3c- files never record the saver's own leave, so a game he left first has no leave to read. unknown when neither names a winner: equal last command times, a Computer slot (it gives no commands) or a game that is not 1on1.
-{% enddocs %}

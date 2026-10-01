@@ -5,15 +5,11 @@ import { expect, test } from "@playwright/test";
 const PAGES = [
   ["search", "/"],
   // a Night Elf build against an Orc one: timing on two steps, a hero, an outcome
-  // thanks#11187 as player 1: inferred results in the Player 1 column
-  ["search-player", "/?player=thanks%2311187"],
   ["search-build", `/?race=NE&result=won&steps=${encodeURIComponent("eate@-120,eaom~20,Edem")}&opponent_race=OC&opp_steps=ofor`],
   // the Night Elf tree, open down to the sixth building
   ["openers", "/openers?race=NE&open=eate&open=eate.eaom&open=eate.eaom.eden&open=eate.eaom.eden.etoa&open=eate.eaom.eden.etoa.edob"],
   // the Undead tree by best win rate, open down to a Slaughterhouse sixth
   ["openers-undead", "/openers?race=UD&sort=winrate&open=usep&open=usep.uaod&open=usep.uaod.ugrv&open=usep.uaod.ugrv.utom&open=usep.uaod.ugrv.utom.unp1"],
-  // the Orc tree with games vs Computer in: the checkbox checked
-  ["openers-computer", "/openers?race=OC&computer=1"],
   // Concealed Hill, 15:37, NE v OC: the story 4 golden
   ["replay", "/replays/dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8"],
   // Shallow Grave, 31 minutes, NE v OC: the longest human game
@@ -22,8 +18,6 @@ const PAGES = [
   ["replay-tidehunters", "/replays/025d14359f58eac19f263f0dce880bc13bf9cf8d087158202addeb93474ac8c2"],
   // Fading Autumn, 20 minutes, NE v UD
   ["replay-autumn", "/replays/be7b97ee9668d1f441fa2973387ea4e02fa5a02d2adababec6cb3e7647871c32"],
-  // Northern Isles, 2 minutes, NE v OC: a result from the last actor, marked inferred
-  ["replay-inferred", "/replays/f33bf0f15df541045edb030615f9129f28cecf911a7a376865b10f00dd7a049b"],
   ["missing", "/replays/nope"],
 ] as const;
 // The `background` token, light and dark.

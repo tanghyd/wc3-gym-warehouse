@@ -216,8 +216,7 @@ def compile_search(req: SearchRequest, model: Model) -> tuple[str, dict[str, str
 # The replays a search matched, as the shared replay row (docs/design/api.md 2.5).
 ROWS_SQL = """SELECT
     r.replay_id AS replay_id, r.map AS map, r.matchup AS matchup, r.duration_ms AS duration_ms,
-    r.winning_team_id AS winning_team_id, r.result_source AS result_source,
-    r.gnl_series_id AS gnl_series_id, r.gnl_game_no AS gnl_game_no,
+    r.winning_team_id AS winning_team_id, r.gnl_series_id AS gnl_series_id, r.gnl_game_no AS gnl_game_no,
     arraySort(groupArray((rp.player_id, rp.name, rp.race, rp.team_id, h.heroes))) AS players
 FROM w3g.replays AS r
 INNER JOIN w3g.replay_players AS rp ON rp.replay_id = r.replay_id
@@ -229,12 +228,12 @@ LEFT JOIN (
     GROUP BY replay_id, player_id
 ) AS h ON h.replay_id = rp.replay_id AND h.player_id = rp.player_id
 WHERE has({ids:Array(String)}, r.replay_id)
-GROUP BY replay_id, map, matchup, duration_ms, winning_team_id, result_source, gnl_series_id, gnl_game_no
+GROUP BY replay_id, map, matchup, duration_ms, winning_team_id, gnl_series_id, gnl_game_no
 ORDER BY gnl_series_id, gnl_game_no, replay_id"""
 
 # One replay for the replay page (api.md 3.8). Every read is keyed by replay_id.
 REPLAY_SQL = {
-    "header": """SELECT replay_id, map, matchup, duration_ms, winning_team_id, result_source, version, patch,
+    "header": """SELECT replay_id, map, matchup, duration_ms, winning_team_id, version, patch,
        gnl_series_id, gnl_game_no
 FROM w3g.replays WHERE replay_id = {id:String}""",
     "players": """SELECT p.player_id AS player_id, p.name AS name, p.race AS race, p.team_id AS team_id,

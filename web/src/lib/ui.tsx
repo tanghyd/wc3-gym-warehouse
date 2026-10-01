@@ -73,20 +73,10 @@ export function PlayerName({ name, race, className = "" }: { name: string; race:
   );
 }
 
-/**
- * A result as a word on its win, loss or draw fill. An inferred one (result_source last_actor) adds the
- * word "inferred" in the ink around it, so it reads on a table and on a banner alike.
- */
-export function Result({ won, inferred = false }: { won: boolean | null; inferred?: boolean }) {
+/** A result as a word on its win, loss or draw fill. */
+export function Result({ won }: { won: boolean | null }) {
   const [label, tone] = won === null ? ["No result", "bg-draw text-on-draw"] : won ? ["Won", "bg-win text-on-win"] : ["Lost", "bg-loss text-on-loss"];
-  const chip = <span className={`chip ${tone}`}>{label}</span>;
-  if (!inferred || won === null) return chip;
-  const who = won ? "the other player" : "this player";
-  return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap" title={`Inferred: ${who} stopped first; the file has no leave record`}>
-      {chip} <span className="text-sm italic">inferred</span>
-    </span>
-  );
+  return <span className={`chip ${tone}`}>{label}</span>;
 }
 
 /** The 2 px line key of a player's series. */
@@ -109,16 +99,6 @@ export function ObjIcon({ code, objects, size, alt, title }: { code: string; obj
       />
     );
   return <img src={icon} width={size} height={size} alt={alt} title={title} className="block shrink-0 rounded-sm" />;
-}
-
-/** A checkbox in a filter row: its label beside it, as tall as a field. */
-export function Check({ label, ...props }: Omit<ComponentProps<"input">, "type"> & { label: string }) {
-  return (
-    <label className="flex h-[38px] cursor-pointer items-center gap-2 text-sm whitespace-nowrap">
-      <input type="checkbox" className="size-4 shrink-0 cursor-pointer accent-primary-text" {...props} />
-      {label}
-    </label>
-  );
 }
 
 const nameOf = (objects: Objects, code: string) => objects[code]?.name ?? "Unknown skill";
