@@ -11,21 +11,29 @@ export const KINDS = {
 } as const;
 export type Kind = keyof typeof KINDS;
 
-/** An object a step can name: a mappings row of a step kind, with its icon path. */
-export type StepObject = { code: string; name: string; kind: Kind; hero: string; icon: string | null };
+/** An object a step can name: a mappings row of a step kind, with its icon path and race letter. */
+export type StepObject = { code: string; name: string; kind: Kind; hero: string; icon: string | null; letter: string };
 
 /** The race letter in an object code, per GNL race; Night Elf is e. */
 export const LETTERS: Record<string, string> = { HU: "h", OC: "o", NE: "e", UD: "u" };
 
-/** The letter that names a code's race: first for a building, unit or hero, after R or A for an upgrade or skill. */
-export const letterOf = (code: string, kind: Kind) => code[kind === "upgrade" || kind === "hero_skill" ? 1 : 0]?.toLowerCase() ?? "";
+// Codes whose letter names no race: War Drums Damage Increase (w) is Orc's.
+const OWN_LETTER: Record<string, string> = { Rwdm: "o" };
 
-/** Whether a race can order a code. An item, n (neutral) and any other letter fit every race; so does no race or Random. */
-export function fits(code: string, kind: Kind, race: string) {
+/**
+ * The letter of an object's race: first in a building, unit or hero code, after R in an upgrade code.
+ * A skill takes its hero's letter, so Searing Arrows (AHfa) is the Priestess of the Moon's.
+ */
+export function letterOf(o: Omit<StepObject, "icon" | "letter">, heroCodes: Record<string, string>) {
+  const code = o.kind === "hero_skill" ? (heroCodes[o.hero] ?? "") : o.code;
+  return OWN_LETTER[code] ?? code[o.kind === "upgrade" ? 1 : 0]?.toLowerCase() ?? "";
+}
+
+/** Whether a race can order an object. An item, n (neutral) and any other letter fit every race; so does no race or Random. */
+export function fits(o: StepObject, race: string) {
   const own = LETTERS[race];
-  if (!own || kind === "item") return true;
-  const letter = letterOf(code, kind);
-  return letter === own || !Object.values(LETTERS).includes(letter);
+  if (!own || o.kind === "item") return true;
+  return o.letter === own || !Object.values(LETTERS).includes(o.letter);
 }
 
 /** A step as the URL holds it: whole seconds, null for no limit. */
@@ -48,9 +56,14 @@ export function encodeSteps(steps: Step[]) {
     .join(",");
 }
 
-/** "5" (minutes) or "5:30" as whole seconds; null when blank or not a time. */
+// The API's bounds on a step: at most 7200 s after the previous one, inside the first 600 minutes.
+export const MAX_WITHIN = 7200;
+const MAX_TIME = 36000;
+
+/** "5" (minutes) or "5:30" as whole seconds; null when blank, not a time or past 600:00. */
 export function parseMss(v: string): number | null {
   const m = /^\s*(\d+(?:\.\d+)?)(?::([0-5]?\d))?\s*$/.exec(v);
   if (!m || (m[2] !== undefined && m[1].includes("."))) return null;
-  return Math.round(Number(m[1]) * 60 + Number(m[2] ?? 0));
+  const s = Math.round(Number(m[1]) * 60 + Number(m[2] ?? 0));
+  return s <= MAX_TIME ? s : null;
 }

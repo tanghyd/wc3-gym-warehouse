@@ -1,6 +1,6 @@
 "use client";
 import { useId, useMemo, useRef, useState } from "react";
-import { encodeSteps, fits, KINDS, type Kind, LETTERS, letterOf, parseMss, type Step, type StepObject } from "@/lib/steps";
+import { encodeSteps, fits, KINDS, type Kind, LETTERS, MAX_WITHIN, parseMss, type Step, type StepObject } from "@/lib/steps";
 import { Field, mss, ObjIcon, RaceIcon, RaceSelect } from "@/lib/ui";
 
 /** A step being edited: the field text as typed. */
@@ -15,7 +15,8 @@ const OUTCOMES = [["", "Any"], ["won", "Won"], ["lost", "Lost"]] as const;
 const MAX_STEPS = 10; // the API's limit per player
 const RACE_OF: Record<string, string> = Object.fromEntries(Object.entries(LETTERS).map(([race, l]) => [l, race]));
 
-const whole = (v: string) => (v.trim() !== "" && Number(v) >= 0 ? Math.round(Number(v)) : null);
+// seconds as typed; a number past the API's bound reads as blank
+const whole = (v: string) => (v.trim() !== "" && Number(v) >= 0 && Number(v) <= MAX_WITHIN ? Math.round(Number(v)) : null);
 const toStep = (d: Draft): Step => ({ code: d.code, within: whole(d.within), from: parseMss(d.from), to: parseMss(d.to) });
 const toText = (s: number | null) => (s === null ? "" : mss(s * 1000));
 
@@ -53,7 +54,7 @@ function Picker(props: { label: string; kind: Kind; race: string; objects: StepO
   const { kind, race, byCode, onPick } = props;
   const [q, setQ] = useState("");
   const t = q.trim().toLowerCase();
-  const list = props.objects.filter((o) => o.kind === kind && fits(o.code, kind, race) && (!t || o.name.toLowerCase().includes(t)));
+  const list = props.objects.filter((o) => o.kind === kind && fits(o, race) && (!t || o.name.toLowerCase().includes(t)));
   // with no race, or Random, each object shows the race it belongs to
   const mixed = !LETTERS[race] && kind !== "item";
   return (
@@ -92,7 +93,7 @@ function Picker(props: { label: string; kind: Kind; race: string; objects: StepO
                   <span className="block truncate">{o.name}</span>
                   {o.hero && <span className="block truncate text-xs text-muted">{o.hero}</span>}
                 </span>
-                {mixed && <RaceIcon race={RACE_OF[letterOf(o.code, o.kind)] ?? ""} size="1.1em" />}
+                {mixed && <RaceIcon race={RACE_OF[o.letter] ?? ""} size="1.1em" />}
               </button>
             </li>
           ))}
@@ -239,7 +240,7 @@ export function PlayerSlot(props: { n: 1 | 2; race: string; name: string; outcom
                     {open && (
                       <div className="mt-2 grid gap-2 pl-7 sm:grid-cols-3">
                         <Field label="Within previous (s)" className="min-w-0">
-                          <input type="number" min={0} step={1} inputMode="numeric" className="field" disabled={i === 0} value={s.within} onChange={(e) => edit(s.key, { within: e.target.value })} />
+                          <input type="number" min={0} max={MAX_WITHIN} step={1} inputMode="numeric" className="field" disabled={i === 0} value={s.within} onChange={(e) => edit(s.key, { within: e.target.value })} />
                         </Field>
                         <Field label="Not before (m:ss)" className="min-w-0">
                           <input className="field" value={s.from} onChange={(e) => edit(s.key, { from: e.target.value })} />

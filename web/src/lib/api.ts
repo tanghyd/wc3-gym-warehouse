@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cache } from "react";
-import { KINDS, type StepObject } from "./steps";
+import { KINDS, letterOf, type StepObject } from "./steps";
 
 const API_URL = process.env.API_URL ?? "http://api:8000";
 
@@ -18,6 +18,13 @@ export type ReplayRow = Header & { focus_player_id: number; players: Player[] };
 /** Name and icon path per object code; a code in no mappings row has no name. */
 export type Objects = Record<string, { name?: string; icon: string | null }>;
 
+/** A request the API refused (400, 422), with the API's own text. */
+class Refused extends Error {}
+
+// A 400 detail is text; FastAPI's 422 detail is a list of {loc, msg}, loc led by "body".
+type Detail = string | { loc: (string | number)[]; msg: string }[];
+const detailText = (d: Detail) => (typeof d === "string" ? d : d.map((e) => `${e.loc.slice(1).join(".")}: ${e.msg}`).join("; "));
+
 /** One API call; null on 404. */
 async function api<T>(path: string, body?: object): Promise<T | null> {
   const res = await fetch(API_URL + path, {
@@ -25,6 +32,7 @@ async function api<T>(path: string, body?: object): Promise<T | null> {
     ...(body && { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
   });
   if (res.status === 404) return null;
+  if (res.status === 400 || res.status === 422) throw new Refused(detailText((await res.json()).detail));
   if (!res.ok) throw new Error(`${path} answered ${res.status}`);
   return res.json();
 }
@@ -36,9 +44,16 @@ export const getReplay = cache((id: string) => api<Replay>(`/replays/${encodeURI
 export type Filters = Record<string, string[] | { gte?: number; lte?: number }>;
 export type ApiStep = { type: string; code: string; within_prev_s: number | null; from_min: number | null; to_min: number | null };
 
-/** POST /search: the focus player's filters and steps, then other players of the same game. */
-export async function searchReplays(body: { filters: Filters; steps?: ApiStep[]; others?: { filters: Filters; steps: ApiStep[] }[] }) {
-  return (await api<{ replays: ReplayRow[]; sql: string; params: Record<string, string> }>("/search", body))!;
+type Search = { replays: ReplayRow[]; sql: string; params: Record<string, string>; refused?: string };
+
+/** POST /search: the focus player's filters and steps, then his opponent's. A refused request answers its reason. */
+export async function searchReplays(body: { filters: Filters; steps?: ApiStep[]; others?: { filters: Filters; steps: ApiStep[] }[]; limit: number }): Promise<Search> {
+  try {
+    return (await api<Search>("/search", body))!;
+  } catch (e) {
+    if (e instanceof Refused) return { replays: [], sql: "", params: {}, refused: e.message };
+    throw e;
+  }
 }
 
 /** The rows of POST /query. */
@@ -62,14 +77,15 @@ function iconOf(code: string) {
 
 /** Every object a build-order step can name, by name. */
 export async function stepObjects(): Promise<StepObject[]> {
-  const rows = await query<Omit<StepObject, "icon">>({
+  const rows = await query<Omit<StepObject, "icon" | "letter">>({
     model: "mappings",
     dimensions: ["code", "name", "kind", "hero"],
     filters: { kind: Object.keys(KINDS) },
     order_by: ["name", "code"],
     limit: 10000,
   });
-  return rows.filter((r) => r.name).map((r) => ({ ...r, icon: iconOf(r.code) }));
+  const heroCodes = Object.fromEntries(rows.filter((r) => r.kind === "hero").map((r) => [r.name, r.code]));
+  return rows.filter((r) => r.name).map((r) => ({ ...r, icon: iconOf(r.code), letter: letterOf(r, heroCodes) }));
 }
 
 /** Names from the mappings model in one read, icons from public/icons.json. */

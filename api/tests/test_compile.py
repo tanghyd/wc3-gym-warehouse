@@ -57,13 +57,13 @@ def test_dimensions_without_measures_are_distinct() -> None:
     assert sql == "SELECT DISTINCT code FROM w3g.mappings ORDER BY code LIMIT 100"
 
 
-def test_search_adds_one_membership_test_per_other_player() -> None:
+def test_search_matches_each_other_player_as_the_focus_opponent() -> None:
     req = SearchRequest(filters={"race": ["N"]}, others=[{"filters": {"player": ["a'b"]}}], limit=5)
     sql, params = compile_search(req, PG)
     assert sql == (
         "SELECT replay_id, min(player_id) AS focus_player_id FROM w3g.player_games"
         " WHERE has({p0:Array(String)}, race)"
-        " AND replay_id IN (SELECT replay_id FROM w3g.player_games WHERE has({p1:Array(String)}, player))"
+        " AND (replay_id, player) IN (SELECT replay_id, opponent FROM w3g.player_games WHERE has({p1:Array(String)}, player))"
         " GROUP BY replay_id ORDER BY replay_id LIMIT 5"
     )
     assert params["p1"] == "['a\\'b']"

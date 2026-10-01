@@ -56,7 +56,8 @@
 
   a { color: rgb(var(--v-theme-primary-text)); text-decoration: none; }
   a:hover { text-decoration: underline; }
-  :focus-visible { outline: 2px solid rgb(var(--v-theme-primary)); outline-offset: 2px; }
+  /* primary-text: gold in dark, dark gold in light, where gold is under 3:1 on the surface */
+  :focus-visible { outline: 2px solid rgb(var(--v-theme-primary-text)); outline-offset: 2px; }
 }
 
 @layer components {

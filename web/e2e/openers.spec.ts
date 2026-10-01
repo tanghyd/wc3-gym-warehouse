@@ -3,20 +3,30 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 // The openers tree on /openers: each level equals POST /query's answer for that prefix.
 const API = process.env.API_URL ?? "http://api:8000";
 
-type Level = { code: string; replays: number; games: number; wins: number; losses: number; minutes_total: number }[];
+type Level = { code: string; games: number; wins: number; losses: number; minutes_total: number }[];
 const rows = (page: Page) => page.locator("tbody tr");
 const mss = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 const record = (w: number, l: number) => (w + l ? `${w} – ${l}` + (w + l >= 10 ? ` (${Math.round((100 * w) / (w + l))}%)` : "") : "—");
+const DECIDED = { result: ["win", "loss"] };
 
-/** The buildings after a prefix: games are replays, record and minutes count each player-game. Most played first. */
-async function level(request: APIRequestContext, filters: Record<string, string[]>, prefix: string[]): Promise<Level> {
+/**
+ * The buildings after a prefix, every figure over player-games won or lost. Most played first, or
+ * with sort=winrate rows from 10 games up first, by win share. Ties by win share, then games, then code.
+ */
+async function level(request: APIRequestContext, filters: Record<string, string[]>, prefix: string[], sort = "popular"): Promise<Level> {
   const next = `opener_${prefix.length + 1}`;
+  filters = { ...filters, ...DECIDED };
   prefix.forEach((c, i) => (filters = { ...filters, [`opener_${i + 1}`]: [c] }));
   const res = await request.post(`${API}/query`, {
-    data: { dimensions: [next], measures: ["replays", "games", "wins", "losses", "minutes_total"], filters, limit: 10000 },
+    data: { dimensions: [next], measures: ["games", "wins", "losses", "minutes_total"], filters, limit: 10000 },
   });
   const out: Level = (await res.json()).rows.filter((r: Record<string, string>) => r[next]).map((r: Record<string, number>) => ({ ...r, code: r[next] }));
-  return out.sort((a, b) => b.replays - a.replays || a.code.localeCompare(b.code));
+  const share = (r: Level[number]) => r.wins / r.games;
+  return out.sort(
+    (a, b) =>
+      (sort === "winrate" ? Number(b.games >= 10) - Number(a.games >= 10) || share(b) - share(a) || b.games - a.games : b.games - a.games || share(b) - share(a)) ||
+      a.code.localeCompare(b.code),
+  );
 }
 
 async function names(request: APIRequestContext, codes: string[]): Promise<Record<string, string>> {
@@ -27,7 +37,7 @@ async function names(request: APIRequestContext, codes: string[]): Promise<Recor
 /** The cells as the page reads them: opener name, games, record, average length. */
 const cells = (page: Page) => rows(page).evaluateAll((trs) => trs.map((tr) => [...(tr as HTMLTableRowElement).cells].map((c) => c.innerText.trim())));
 const expected = (lvl: Level, name: Record<string, string>) =>
-  lvl.map((r) => [name[r.code], String(r.replays), record(r.wins, r.losses), mss((r.minutes_total / r.games) * 60000)]);
+  lvl.map((r) => [name[r.code], String(r.games), record(r.wins, r.losses), mss((r.minutes_total / r.games) * 60000)]);
 
 test.describe("openers tree", () => {
   test("Night Elf by default: the first level's games, record and length equal POST /query's", async ({ page, request }) => {
@@ -39,8 +49,50 @@ test.describe("openers tree", () => {
     await expect(page.getByRole("combobox", { name: "Race", exact: true })).toHaveValue("NE");
     await expect(page.getByRole("link", { name: "Openers" })).toHaveAttribute("aria-current", "page");
     expect(await cells(page)).toEqual(expected(root, name));
-    const total = (await (await request.post(`${API}/query`, { data: { measures: ["replays"], filters: { race: ["NE"] } } })).json()).rows[0].replays;
-    await expect(page.locator(".bar .chip")).toHaveText(`${total} games`);
+    // one unit per row: its games are its wins plus its losses
+    for (const r of root) expect(r.games).toBe(r.wins + r.losses);
+    const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { race: ["NE"], ...DECIDED } } })).json()).rows[0].games;
+    await expect(page.locator(".bar .chip")).toHaveText(`${total} games won or lost`);
+  });
+
+  test("best win rate puts rows from 10 games up first and keeps the sort while a row opens", async ({ page, request }) => {
+    const root = await level(request, { race: ["NE"] }, [], "winrate");
+    expect(root.some((r) => r.games < 10)).toBeTruthy();
+    const name = await names(request, root.map((r) => r.code));
+    await page.goto("/openers");
+    await page.getByRole("combobox", { name: "Sort by" }).selectOption({ label: "Best win rate" });
+    await page.getByRole("button", { name: "Show openers" }).click();
+    await expect(page).toHaveURL(/[?&]sort=winrate(&|$)/);
+    expect(await cells(page)).toEqual(expected(root, name));
+    const top = root.find((r) => r.games >= 10)!.code;
+    await page.getByRole("link", { name: name[top], exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`[?&]sort=winrate&open=${top}$`));
+    await expect(page.getByRole("combobox", { name: "Sort by" })).toHaveValue("winrate");
+  });
+
+  test("a deep path fits a phone, each name whole on its lines", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const path = ["eate", "eaom", "eden", "etoa", "edob"];
+    await page.goto(`/openers?race=NE&${path.map((_, i) => `open=${path.slice(0, i + 1).join(".")}`).join("&")}`);
+    // six levels on screen: the deepest rows sit five indents in
+    await expect(rows(page).locator('a[aria-expanded="true"]')).toHaveCount(5);
+    const table = page.locator("table");
+    expect(await table.evaluate((t) => t.scrollWidth <= t.parentElement!.clientWidth)).toBeTruthy();
+    // a name breaks between words only: no word of it spans two lines
+    const broken = await rows(page).evaluateAll((trs) =>
+      trs.flatMap((tr) => {
+        const text = tr.querySelector("td:first-child :is(a, span) > span:last-child")!.firstChild as Text;
+        let at = 0;
+        return text.data.split(" ").flatMap((word) => {
+          const range = document.createRange();
+          range.setStart(text, at);
+          range.setEnd(text, at + word.length);
+          at += word.length + 1;
+          return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size > 1 ? [word] : [];
+        });
+      }),
+    );
+    expect(broken).toEqual([]);
   });
 
   test("expanding a row shows the next level under it and puts the path in the URL", async ({ page, request }) => {
@@ -78,11 +130,18 @@ test.describe("openers tree", () => {
     await page.goto(`/openers?race=NE&opponent_race=OC&open=${root[0].code}`);
     const row = rows(page).nth(1);
     await expect(row).toContainText(name[kids[0].code]);
-    await row.getByRole("link", { name: `List ${kids[0].replays} games` }).click();
+    const link = row.getByRole("link", { name: `List the games of ${name[kids[0].code]}` });
+    await expect(link).toHaveText(String(kids[0].games));
+    await link.click();
     await expect(page).toHaveURL(new RegExp(`/\\?race=NE&opponent_race=OC&opener_1=${root[0].code}&opener_2=${kids[0].code}$`));
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Replays");
-    await expect(page.locator("tbody tr")).toHaveCount(kids[0].replays);
-    await expect(page.locator(".bar .chip")).toHaveText(String(kids[0].replays));
+    // the list is POST /search's games of that opener, each game once and any result
+    const res = await request.post(`${API}/search`, { data: { filters: { ...filters, opener_1: [root[0].code], opener_2: [kids[0].code] } } });
+    const want: string[] = (await res.json()).replays.map((r: { replay_id: string }) => r.replay_id);
+    expect(want.length).toBeGreaterThan(0);
+    await expect(page.locator("tbody tr")).toHaveCount(want.length);
+    expect(await page.locator('tbody a[href^="/replays/"]').evaluateAll((as) => as.map((a) => a.getAttribute("href")!.split("/").pop()))).toEqual(want);
+    await expect(page.locator(".bar .chip")).toHaveText(String(want.length));
     await expect(page.getByRole("group", { name: "Opener" }).getByRole("img")).toHaveCount(2);
   });
 

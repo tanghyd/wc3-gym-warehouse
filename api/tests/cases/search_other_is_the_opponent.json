@@ -1,0 +1,86 @@
+{
+  "route": "/search",
+  "request": {
+    "filters": {
+      "gnl_series_id": [
+        9001,
+        9002,
+        9003
+      ]
+    },
+    "others": [
+      {
+        "filters": {
+          "race": [
+            "OC"
+          ]
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "replays": [
+        {
+          "replay_id": "0ddbb4abacfb6b62d88223ac6bb3902edc0bdc3a2eac55e29ffe367405cffa60",
+          "map": "Springtime 1.3",
+          "matchup": "NvO",
+          "duration_ms": 403900,
+          "winning_team_id": 1,
+          "gnl": {
+            "series_id": 9001,
+            "game_no": 1
+          },
+          "download_url": null,
+          "focus_player_id": 2,
+          "players": [
+            {
+              "player_id": 1,
+              "name": "FoCuS#31324",
+              "race": "OC",
+              "team_id": 0,
+              "won": false
+            },
+            {
+              "player_id": 2,
+              "name": "Medusa#31315",
+              "race": "NE",
+              "team_id": 1,
+              "won": true
+            }
+          ]
+        },
+        {
+          "replay_id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
+          "map": "Concealed Hill",
+          "matchup": "NvO",
+          "duration_ms": 937219,
+          "winning_team_id": 0,
+          "gnl": {
+            "series_id": 9003,
+            "game_no": 1
+          },
+          "download_url": null,
+          "focus_player_id": 1,
+          "players": [
+            {
+              "player_id": 1,
+              "name": "thanks#11187",
+              "race": "NE",
+              "team_id": 0,
+              "won": true
+            },
+            {
+              "player_id": 2,
+              "name": "Okeanos#22605",
+              "race": "OC",
+              "team_id": 1,
+              "won": false
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

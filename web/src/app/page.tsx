@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { type Filters, pickerValues, searchReplays, stepObjects } from "@/lib/api";
 import { decodeSteps, KINDS } from "@/lib/steps";
-import { Field, matchup, mss, ObjIcon, PlayerName, Result } from "@/lib/ui";
+import { Field, matchup, mss, ObjIcon, PlayerName, record, Result } from "@/lib/ui";
 import { PlayerSlot } from "./PlayerSlot";
 
 const OPENERS = ["opener_1", "opener_2", "opener_3", "opener_4", "opener_5", "opener_6"];
 const RESULTS: Record<string, string> = { won: "win", lost: "loss" };
+const LIMIT = 100; // games a search lists
 
 export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
@@ -44,9 +45,15 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const others = p2.result || p2Steps.length ? [{ filters: p2, steps: p2Steps }] : [];
   const p1Steps = apiSteps("steps");
 
-  const { replays, sql, params } = await searchReplays({ filters, steps: p1Steps, others });
+  const answer = await searchReplays({ filters, steps: p1Steps, others, limit: LIMIT + 1 });
+  const { sql, params, refused } = answer;
+  // The API keeps the first LIMIT + 1 by replay id; the one past LIMIT only says that more exist.
+  const more = answer.replays.length > LIMIT;
+  const past = more ? answer.replays.map((r) => r.replay_id).sort().at(-1) : undefined;
+  const replays = answer.replays.filter((r) => r.replay_id !== past);
   // with no condition on a player there is no focus, and players stay in slot order
   const focused = Object.keys(filters).some((k) => k !== "map" && k !== "duration_ms") || p1Steps.length > 0 || others.length > 0;
+  const won = replays.map((r) => r.players.find((p) => p.player_id === r.focus_player_id)?.won);
   const set = Object.values(sp).some((v) => v);
   const withoutOpener = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" && v && !OPENERS.includes(k) ? [[k, v]] : [])));
 
@@ -116,9 +123,19 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
       <section className="card mt-4">
         <div className="bar">
           <h2>Games</h2>
-          <span className="chip bg-primary text-on-primary">{replays.length}</span>
+          {!refused && <span className="chip bg-primary text-on-primary">{more ? `${LIMIT}+` : replays.length}</span>}
+          {focused && replays.length > 0 && (
+            <span className="text-sm">
+              Player 1 record {record(won.filter((w) => w === true).length, won.filter((w) => w === false).length)}
+            </span>
+          )}
         </div>
-        {replays.length === 0 ? (
+        {more && <p className="border-b px-4 py-3 text-sm text-muted">Showing the first {LIMIT}. Narrow the filters to see the rest.</p>}
+        {refused ? (
+          <p role="alert" className="p-8 text-center">
+            The API refused this search: {refused}
+          </p>
+        ) : replays.length === 0 ? (
           <p className="p-8 text-center text-muted">No replay matches. {p1Steps.length || p2Steps.length ? "Drop a step or widen the filters." : "Widen the filters."}</p>
         ) : (
           <div className="overflow-x-auto">
@@ -170,12 +187,14 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
             </table>
           </div>
         )}
-        <details className="border-t">
-          <summary className="cursor-pointer px-4 py-3 text-sm text-muted">Show SQL</summary>
-          <pre className="overflow-x-auto px-4 pb-4 text-xs leading-relaxed">
-            {sql + Object.entries(params).map(([k, v]) => `\n-- ${k} = ${v}`).join("")}
-          </pre>
-        </details>
+        {sql && (
+          <details className="border-t">
+            <summary className="cursor-pointer px-4 py-3 text-sm text-muted">Show SQL</summary>
+            <pre className="overflow-x-auto px-4 pb-4 text-xs leading-relaxed">
+              {sql + Object.entries(params).map(([k, v]) => `\n-- ${k} = ${v}`).join("")}
+            </pre>
+          </details>
+        )}
       </section>
     </main>
   );

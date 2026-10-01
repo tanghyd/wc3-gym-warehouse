@@ -196,14 +196,16 @@ def compile_query(req: QueryRequest, model: Model) -> tuple[str, dict[str, str]]
 
 
 def compile_search(req: SearchRequest, model: Model) -> tuple[str, dict[str, str]]:
-    """Replay ids that hold a focus player matching filters+steps, plus every
-    `others` player. Answers the focus player's id with each replay."""
+    """Replay ids that hold a focus player matching filters+steps whose opponent
+    matches each `others` entry. Answers the focus player's id with each replay."""
     params = Params()
     conds = _row_conditions(model, req.filters, req.steps, params)
     for other in req.others:
         inner = _row_conditions(model, other.filters, other.steps, params)
         where = f" WHERE {' AND '.join(inner)}" if inner else ""
-        conds.append(f"replay_id IN (SELECT replay_id FROM {model.table}{where})")
+        # The other player is the focus's opponent, never the focus himself. A
+        # player_games game is 1v1, so the opponent is the one other player.
+        conds.append(f"(replay_id, player) IN (SELECT replay_id, opponent FROM {model.table}{where})")
     sql = f"SELECT replay_id, min(player_id) AS focus_player_id FROM {model.table}"
     if conds:
         sql += " WHERE " + " AND ".join(conds)

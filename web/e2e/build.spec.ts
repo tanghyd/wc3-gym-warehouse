@@ -10,6 +10,7 @@ const slot = (page: Page, n: number) => page.getByRole("region", { name: `Player
 const steps = (card: Locator) => card.locator("ol > li");
 /** The replay ids the list shows, in order. */
 const shown = (page: Page) => rows(page).locator('a[href^="/replays/"]').evaluateAll((as) => as.map((a) => a.getAttribute("href")!.split("/").pop()));
+const record = (w: number, l: number) => (w + l ? `${w} – ${l}` + (w + l >= 10 ? ` (${Math.round((100 * w) / (w + l))}%)` : "") : "—");
 
 async function search(request: APIRequestContext, body: object): Promise<Row[]> {
   const res = await request.post(`${API}/search`, { data: body });
@@ -73,6 +74,9 @@ test.describe("build-order search", () => {
     const focus = want.map((r) => r.players.find((p) => p.player_id === r.focus_player_id)!);
     expect(await rows(page).locator("td:nth-child(5)").allInnerTexts()).toEqual(focus.map((p) => (p.won === null ? "" : p.won ? "Won" : "Lost")));
     expect(await rows(page).locator("td:nth-child(4) li:first-child .font-name").allInnerTexts()).toEqual(focus.map((p) => p.name));
+    // and his record over the list sits beside the count
+    const [w, l] = [focus.filter((p) => p.won === true).length, focus.filter((p) => p.won === false).length];
+    await expect(page.locator(".bar").filter({ hasText: "Games" })).toContainText(`Player 1 record ${record(w, l)}`);
 
     // the request's SQL sits behind a disclosure
     await page.getByText("Show SQL").click();
@@ -114,6 +118,26 @@ test.describe("build-order search", () => {
     await expect(picker.getByRole("button")).toHaveText(["War Mill"]);
     await picker.getByRole("searchbox", { name: "Find by name" }).press("Enter");
     await expect(step.getByRole("button", { name: "Step 1: War Mill" })).toBeFocused();
+  });
+
+  test("a skill fits its hero's race, and War Drums only the Orc", async ({ page }) => {
+    /** The codes the picker lists for one race and order kind. */
+    const codes = async (race: string, kind: string) => {
+      await page.goto(`/?race=${race}`);
+      const p1 = slot(page, 1);
+      await p1.getByRole("button", { name: "Add step" }).click();
+      const step = steps(p1).first();
+      await step.getByRole("combobox", { name: "Step 1 order" }).selectOption({ label: kind });
+      const buttons = step.getByRole("group", { name: "Objects for step 1" }).getByRole("button");
+      await expect(buttons.first()).toBeVisible();
+      return buttons.evaluateAll((bs) => bs.map((b) => (b as HTMLButtonElement).value));
+    };
+    // Searing Arrows (AHfa) is the Priestess of the Moon's; War Drums Damage Increase (Rwdm) is Orc
+    expect(await codes("NE", "Used skill")).toContain("AHfa");
+    expect(await codes("HU", "Used skill")).not.toContain("AHfa");
+    expect(await codes("HU", "Researched")).not.toContain("Rwdm");
+    expect(await codes("NE", "Researched")).not.toContain("Rwdm");
+    expect(await codes("OC", "Researched")).toContain("Rwdm");
   });
 
   test("a search keeps its state over a reload", async ({ page }) => {
@@ -177,6 +201,48 @@ test.describe("build-order search", () => {
       const r = await (await request.get(`${API}/replays/${id}`)).json();
       expect(r.events.some((e: { event_type: string; code: string }) => e.event_type === "hero_trained" && e.code === "Obla"), id).toBeTruthy();
     }
+  });
+
+  test("Player 2's outcome is his own, never Player 1's", async ({ page, request }) => {
+    await page.goto("/?opp_result=won");
+    // every game with a known winner, its loser listed as Player 1
+    const res = await request.post(`${API}/query`, { data: { measures: ["replays"], filters: { result: ["win"] } } });
+    const decided: number = (await res.json()).rows[0].replays;
+    expect(decided).toBeGreaterThan(0);
+    await expect(rows(page)).toHaveCount(decided);
+    expect(new Set(await rows(page).locator("td:nth-child(5)").allInnerTexts())).toEqual(new Set(["Lost"]));
+    // two winners in one game: none
+    await page.goto("/?result=won&opp_result=won");
+    await expect(page.getByText("No replay matches. Widen the filters.")).toBeVisible();
+  });
+
+  test("Player 2's steps are his own, never Player 1's", async ({ page, request }) => {
+    await page.goto("/?opp_steps=Edem");
+    // every game where someone trained a Demon Hunter
+    const res = await request.post(`${API}/query`, { data: { measures: ["replays"], steps: [{ type: "hero_trained", code: "Edem" }] } });
+    const ids = await shown(page);
+    expect(ids.length).toBeGreaterThan(0);
+    expect(ids.length).toBe((await res.json()).rows[0].replays);
+    // and the player listed second, Player 1's opponent, is one who did
+    const second = await rows(page).locator("td:nth-child(4) li:nth-child(2) .font-name").allInnerTexts();
+    for (const [i, id] of ids.entries()) {
+      const r = await (await request.get(`${API}/replays/${id}`)).json();
+      const p2 = r.players.find((p: { name: string }) => p.name === second[i]);
+      expect(r.events.some((e: { player_id: number; event_type: string; code: string }) => e.player_id === p2.player_id && e.event_type === "hero_trained" && e.code === "Edem"), id).toBeTruthy();
+    }
+  });
+
+  test("a value past the API's bounds shows the API's text, not an outage", async ({ page }) => {
+    await page.goto("/?steps=eate@36001-");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Replays");
+    await expect(page.getByText("The API refused this search: steps.0.from_min")).toBeVisible();
+    await page.goto("/?steps=eate~9999,eaom~9999");
+    await expect(page.getByText("The API refused this search: steps.0.within_prev_s")).toBeVisible();
+    // the form reads the bad gap as blank, so a new search runs
+    await expect(steps(slot(page, 1)).nth(1)).not.toContainText("ordered");
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await expect.poll(() => new URL(page.url()).searchParams.get("steps")).toBe("eate,eaom");
+    await expect(rows(page).first()).toBeVisible();
   });
 
   test("an empty search says what to widen", async ({ page }) => {

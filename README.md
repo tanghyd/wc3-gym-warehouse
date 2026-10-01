@@ -77,7 +77,7 @@ The catalog lives on the dbt models. `meta.semantic` in `dbt/models/marts/marts.
 |---|---|
 | `GET /catalog` | every semantic model, its dimensions with types, its measures |
 | `POST /query` | measures grouped by dimensions, under filters and an optional build order |
-| `POST /search` | the replays holding a player who matches, plus other players in the same game |
+| `POST /search` | the replays holding a player who matches and whose opponent matches `others` |
 
 ```
 POST /query
@@ -93,7 +93,7 @@ A filter is a list of values or a `{gte, lte}` range. A step names an event type
 
 ## The replay inspector (`web/`)
 
-A Next.js app in the wc3-gym-frontend look, light and dark, at http://localhost:3000. `/` lists the replays and searches build orders (`POST /search`): Player 1, whose result the list reports, and his opponent each take a race, a name, an outcome and ordered steps, each step an order of one object with optional timing; map and length scope the game. `/openers` is the opener tree of one race, a level per building, each row linking to its games on `/` (`POST /query` on `player_games.opener_N`). The URL holds every filter, step and open row, so a link rebuilds the page. `/replays/<id>` shows one game: the players, their heroes and skills, APM per minute, both build orders and the chat (`GET /replays/{id}`, plus one `POST /query` on `mappings` for the names). Server components read the API at `API_URL` (`http://api:8000` in compose), so the browser never calls it. The object and race icons live in `web/public/`.
+A Next.js app in the wc3-gym-frontend look, light and dark, at http://localhost:3000. `/` lists the replays and searches build orders (`POST /search`): Player 1, whose result the list reports, and his opponent each take a race, a name, an outcome and ordered steps, each step an order of one object with optional timing; map and length scope the game. `/openers` is the opener tree of one race, a level per building, most played or best win rate first; a row counts games won or lost, one per player, and links to its games on `/` (`POST /query` on `player_games.opener_N`). The URL holds every filter, step and open row, so a link rebuilds the page. `/replays/<id>` shows one game: the players, their heroes and skills, APM per minute, both build orders and the chat (`GET /replays/{id}`, plus one `POST /query` on `mappings` for the names). Server components read the API at `API_URL` (`http://api:8000` in compose), so the browser never calls it. The object and race icons live in `web/public/`.
 
 | Recipe | Does |
 |---|---|
