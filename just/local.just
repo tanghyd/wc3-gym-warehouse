@@ -36,6 +36,10 @@ sql *args:
 dbt *args:
     docker compose run --rm --build dbt "$@"
 
+# write dbt's docs site (models, columns, tests, lineage) for http://127.0.0.1:8080
+docs:
+    docker compose run --rm --build dbt docs generate
+
 # parse every new or changed replay in the bucket once, with the drain image
 drain-once:
     docker compose run --rm --build drain drain --once
@@ -43,6 +47,23 @@ drain-once:
 # the parser's melee object tables as JSONEachRow on stdout
 export-mappings:
     @docker compose run --rm --no-deps -T drain export-mappings /dev/stdout
+
+# the drain's unit tests and parser goldens, in the test stage of the drain image
+drain-test:
+    docker build --target test --progress plain -f infrastructure/docker/Dockerfile.drain .
+
+# copy every .w3g under a folder changed since a date into the bucket's replays/local/, keeping
+# subfolders, such as `just local::upload-replays "/mnt/c/Users/Daniel/Documents/Warcraft III/BattleNet/51230813/Replays" 2026-09-01`
+[positional-arguments]
+upload-replays dir since:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    stage=$(mktemp -d); trap 'rm -rf "$stage"' EXIT
+    (cd "$1" && find . -type f -name '*.w3g' -newermt "$2" -exec cp --parents -p {} "$stage/" \;)
+    echo "uploading $(find "$stage" -type f | wc -l) replays"
+    docker compose run --rm --no-deps -v "$stage:/upload:ro" -e KEY="$W3WAREHOUSE_S3_ACCESS_KEY" \
+      -e SECRET="$W3WAREHOUSE_S3_SECRET_KEY" --entrypoint sh minio-setup -c \
+      'mc alias set local http://minio:9000 "$KEY" "$SECRET" >/dev/null && mc cp -q -r /upload/ "local/$BUCKET/${PREFIX:+$PREFIX/}replays/local/"'
 
 # rewrite the melee mappings seed from the parser's tables (after a w3grs bump)
 mappings:

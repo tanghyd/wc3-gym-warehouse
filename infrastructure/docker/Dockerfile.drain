@@ -12,6 +12,10 @@ WORKDIR /build
 COPY pipeline/parse-rs ./pipeline/parse-rs
 RUN cargo build --release --manifest-path pipeline/parse-rs/Cargo.toml
 
+# `just local::drain-test`: the unit tests and parser goldens on the compiled deps above.
+FROM build AS test
+RUN cargo test --release --manifest-path pipeline/parse-rs/Cargo.toml
+
 FROM debian:bookworm-slim
 # ca-certificates is for TLS to R2 in production; local MinIO is plain http.
 RUN apt-get update \

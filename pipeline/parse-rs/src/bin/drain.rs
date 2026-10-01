@@ -108,8 +108,14 @@ async fn main() {
     }
 }
 
-/// `<prefix>replays/<series id>/game<n>.w3g` → (series id, game number). Any
-/// other shape answers None and the drain skips the key.
+/// Every `.w3g` under `<prefix>replays/` is a replay to parse.
+fn is_replay(raw_prefix: &str, key: &str) -> bool {
+    key.starts_with(raw_prefix) && key.ends_with(".w3g")
+}
+
+/// `<prefix>replays/<series id>/game<n>.w3g` → (series id, game number), the
+/// key the GNL backend writes. Any other replay (such as `replays/local/...`)
+/// answers None and gets no `gnl` field.
 fn parse_key(raw_prefix: &str, key: &str) -> Option<(u32, u8)> {
     let rest = key.strip_prefix(raw_prefix)?;
     let (series, game) = rest.split_once('/')?;
@@ -147,8 +153,8 @@ async fn drain_once(client: &Client, cfg: &Cfg) -> usize {
     let todo: Vec<(String, String)> = raw
         .into_iter()
         .filter(|(key, etag)| {
-            if parse_key(&raw_prefix, key).is_none() {
-                log(&format!("skipping {key}: not {raw_prefix}<series id>/game<n>.w3g"));
+            if !is_replay(&raw_prefix, key) {
+                log(&format!("skipping {key}: not a .w3g under {raw_prefix}"));
                 return false;
             }
             done.get(key) != Some(etag)
@@ -174,8 +180,7 @@ async fn drain_once(client: &Client, cfg: &Cfg) -> usize {
 
 async fn process_one(client: &Client, cfg: &Cfg, raw_key: &str, etag: &str) -> Result<(), String> {
     let bucket = &cfg.bucket;
-    let (series_id, game_no) =
-        parse_key(&cfg.raw(), raw_key).ok_or("key does not name a series and game")?;
+    let gnl = parse_key(&cfg.raw(), raw_key);
     let status_key = status_key(cfg, raw_key);
     let bytes = get_object(client, bucket, raw_key).await?;
 
@@ -198,12 +203,13 @@ async fn process_one(client: &Client, cfg: &Cfg, raw_key: &str, etag: &str) -> R
     // them out of the same s3() load as every other field.
     let mut doc: serde_json::Value =
         serde_json::from_str(&parsed.json).map_err(|e| e.to_string())?;
-    doc.as_object_mut()
-        .ok_or("parsed doc is not a JSON object")?
-        .insert(
+    let fields = doc.as_object_mut().ok_or("parsed doc is not a JSON object")?;
+    if let Some((series_id, game_no)) = gnl {
+        fields.insert(
             "gnl".to_string(),
             serde_json::json!({"series_id": series_id, "game_no": game_no}),
         );
+    }
 
     // Land the parsed doc content-addressed by replay id under the parser-version
     // prefix (PARSE_VERSION in lib.rs) so a parser change re-derives incrementally.
@@ -227,8 +233,9 @@ async fn process_one(client: &Client, cfg: &Cfg, raw_key: &str, etag: &str) -> R
     });
     put_json(client, bucket, &status_key, &status).await?;
     log(&format!(
-        "parsed {raw_key} → {} (series={series_id} game={game_no} type={})",
+        "parsed {raw_key} → {} ({} type={})",
         parsed.replay_id,
+        gnl.map_or("not GNL".to_string(), |(s, g)| format!("series={s} game={g}")),
         if parsed.replay_type.is_empty() { "?" } else { &parsed.replay_type }
     ));
     Ok(())
@@ -342,6 +349,18 @@ mod tests {
         assert_eq!(parse_key(&c.raw(), "replays/12/game2.txt"), None);
         assert_eq!(parse_key(&c.raw(), "replays/12/notgame2.w3g"), None);
         assert_eq!(status_key(&c, "replays/12/game2.w3g"), "status/12/game2.json");
+    }
+
+    #[test]
+    fn any_w3g_under_replays_is_drained_and_only_gnl_keys_carry_a_series() {
+        let c = cfg("preview");
+        let local = "preview/replays/local/Autosaved/Multiplayer/w3c-20260922152242.w3g";
+        assert!(is_replay(&c.raw(), local));
+        assert_eq!(parse_key(&c.raw(), local), None);
+        assert_eq!(status_key(&c, local), "preview/status/local/Autosaved/Multiplayer/w3c-20260922152242.json");
+        assert!(is_replay(&c.raw(), "preview/replays/435/game1.w3g"));
+        assert!(!is_replay(&c.raw(), "preview/replays/local/notes.txt"));
+        assert!(!is_replay(&c.raw(), "production/replays/435/game1.w3g"));
     }
 
     #[test]

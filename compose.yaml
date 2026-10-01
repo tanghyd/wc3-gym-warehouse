@@ -66,9 +66,10 @@ services:
     environment:
       CLICKHOUSE_HOST: clickhouse
       CLICKHOUSE_PASSWORD: "${CLICKHOUSE_PASSWORD:-}"
-      # Output goes to a volume the API reads, never into the bind mount as root.
+      # Output goes to a volume the API and the docs site read, never into the bind mount as root.
+      # Logs stay in the container, so the docs site serves dbt's artifacts only.
       DBT_TARGET_PATH: /target
-      DBT_LOG_PATH: /target/logs
+      DBT_LOG_PATH: /tmp/dbt-logs
       DBT_SEND_ANONYMOUS_USAGE_STATS: "false"
     volumes:
       - ./dbt:/dbt
@@ -98,6 +99,15 @@ services:
       clickhouse:
         condition: service_healthy
 
+  # dbt's docs site (`just local::docs` writes it into the target volume). Loopback only.
+  docs:
+    image: nginx:alpine
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - dbt_target:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
   # The replay inspector (web/). It reads the API over the compose network. Loopback only.
   web:
     build:
@@ -123,10 +133,11 @@ services:
       WEB_URL: http://web:3000
       API_URL: http://api:8000
       GRAFANA_URL: http://grafana:3000
+      DOCS_URL: http://docs
     entrypoint: ["sh", "-c", "npm install --no-audit --no-fund --loglevel=error && exec node_modules/.bin/playwright test \"$$@\"", "e2e"]
     volumes:
       - ./web/e2e:/e2e
-    depends_on: [web, grafana]
+    depends_on: [web, grafana, docs]
 
   # ClickHouse observability: Grafana with the ClickHouse plugin, reading as the
   # read-only `grafana` user. The datasource and the dashboards are provisioned

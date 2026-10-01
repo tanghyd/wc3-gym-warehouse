@@ -18,11 +18,14 @@ just dbt build   # seed the mappings, load the parsed docs, build and test every
 just ch          # a clickhouse-client shell
 ```
 
-The replay inspector is at http://localhost:3000, the API at http://localhost:8000 (docs at http://localhost:8000/docs) and Grafana at http://localhost:3001.
+The replay inspector is at http://localhost:3000, the API at http://localhost:8000 (docs at http://localhost:8000/docs), Grafana at http://localhost:3001 and dbt's docs at http://localhost:8080 (after `just local::docs`).
 
 | Recipe | Does |
 |---|---|
 | `just dbt <args>` | any dbt command in the dbt container, such as `build`, `test` or `docs generate` |
+| `just local::docs` | writes dbt's docs site (models, columns, tests, lineage) into the target volume that http://localhost:8080 serves |
+| `just local::upload-replays <folder> <date>` | copies every `.w3g` under a folder changed since a date into the bucket's `replays/local/`; then `just drain-once` and `just dbt build` |
+| `just local::drain-test` | the drain's unit tests and parser goldens, in its image |
 | `just local::mappings` | rewrites `dbt/seeds/mappings_melee.csv` from the parser's tables, after a w3grs bump |
 | `just local::api-test` | the API tests in its container: compiler goldens, then the live cases |
 | `just local::api-cases-update` | rewrites the answers in `api/tests/cases/` from the live stack |
@@ -36,7 +39,7 @@ replays/<series>/game<n>.w3g ─drain─▶ parsed/v2/dt=<date>/<id>.json ─dbt
                                                                                               /search
 ```
 
-1. The GNL backend writes a reported replay to `<env>/replays/<series id>/game<n>.w3g`; `<env>` is the Vercel environment (`app/services/r2.py`), set as `W3WAREHOUSE_S3_PREFIX`. Locally, `minio-setup` puts the 3 goldens there as series 9001-9003.
+1. The GNL backend writes a reported replay to `<env>/replays/<series id>/game<n>.w3g`; `<env>` is the Vercel environment (`app/services/r2.py`), set as `W3WAREHOUSE_S3_PREFIX`. Locally, `minio-setup` puts the 3 goldens there as series 9001-9003. Any other `.w3g` under `replays/` (such as `replays/local/`, which `just local::upload-replays` fills) is drained too, with no `gnl` field.
 2. The drain (`pipeline/parse-rs`, w3grs) parses each new or changed file and writes the parsed document under `parsed/v2/`. It never moves or deletes a raw file.
 3. `just dbt build`:
    - `raw_replays` is an incremental model. It reads every parsed document through ClickHouse's `s3()` and appends the ones it does not have yet. The URL and the keys come from the `parsed_docs` named collection (`infrastructure/docker/clickhouse/named-collections.xml`), filled from the server's environment, so no secret lands in SQL.
