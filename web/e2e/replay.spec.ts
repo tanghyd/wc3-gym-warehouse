@@ -38,12 +38,12 @@ test.describe("replay detail", () => {
     await expect(page.getByRole("link", { name: "Download replay" })).toHaveCount(0);
   });
 
-  test("players line: name then race icon, trophy after the winner", async ({ page }) => {
+  test("players line: name then race icon, Won after the winner", async ({ page }) => {
     const line = page.locator("section").filter({ has: page.getByRole("heading", { level: 1 }) }).locator("p").filter({ hasText: "Okeanos#22605" });
-    await expect(line).toHaveText(/thanks#11187\s*v\s*Okeanos#22605/, { useInnerText: true });
+    await expect(line).toHaveText(/thanks#11187\s*Won\s*v\s*Okeanos#22605/, { useInnerText: true });
     await expect(line.locator('span:text-is("thanks#11187") + img')).toHaveAttribute("alt", "Night Elf");
     await expect(line.locator('span:text-is("Okeanos#22605") + img')).toHaveAttribute("alt", "Orc");
-    await expect(line.getByRole("img", { name: "Won" })).toHaveCount(1);
+    await expect(line.getByText("Won", { exact: true })).toHaveCount(1);
   });
 
   test("player cards: result, APM, heroes and the skill trail", async ({ page }) => {

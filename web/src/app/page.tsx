@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { pickerValues, searchReplays } from "@/lib/api";
-import { mss, PlayerName, RACES, Trophy } from "@/lib/ui";
+import { mss, PlayerName, RACES, Result } from "@/lib/ui";
 
 const FIELDS = ["race", "opponent_race", "map", "player"] as const;
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex min-w-40 flex-1 flex-col gap-1 text-sm">
+    <label className="flex min-w-36 flex-1 flex-col gap-1 text-sm">
       <span className="text-muted">{label}</span>
       {children}
     </label>
@@ -30,7 +30,12 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
   const value = (k: string) => (typeof sp[k] === "string" ? sp[k] : "");
   // Filters apply to the focus player's row: race is his, opponent race the other side's.
-  const filters = Object.fromEntries(FIELDS.filter((k) => value(k)).map((k) => [k, [value(k)]]));
+  const filters: Record<string, string[] | { gte?: number; lte?: number }> = Object.fromEntries(
+    FIELDS.filter((k) => value(k)).map((k) => [k, [value(k)]]),
+  );
+  // ?min= and ?max= are the game length in minutes, both ends included
+  const [min, max] = [value("min"), value("max")].map((v) => (v && Number.isFinite(Number(v)) ? Number(v) : undefined));
+  if (min !== undefined || max !== undefined) filters.minutes = { gte: min, lte: max };
   const [replays, maps, players] = await Promise.all([searchReplays(filters), pickerValues("map"), pickerValues("player")]);
 
   return (
@@ -60,56 +65,76 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
             ))}
           </datalist>
         </Field>
+        <div role="group" aria-labelledby="minutes" className="flex min-w-36 flex-1 flex-col gap-1 text-sm">
+          <span id="minutes" className="text-muted">
+            Minutes
+          </span>
+          <div className="flex items-center gap-2">
+            <input name="min" type="number" min={0} step="any" inputMode="decimal" placeholder="from" aria-label="Minutes from" defaultValue={value("min")} className="field w-full" />
+            <span aria-hidden className="text-muted">
+              –
+            </span>
+            <input name="max" type="number" min={0} step="any" inputMode="decimal" placeholder="to" aria-label="Minutes to" defaultValue={value("max")} className="field w-full" />
+          </div>
+        </div>
         <div className="flex items-center gap-4">
-          <button type="submit" className="btn">
+          <button type="submit" className="btn btn-gold">
             Search
           </button>
           {Object.keys(filters).length > 0 && <Link href="/">Clear</Link>}
         </div>
       </form>
 
-      <section className="card mt-4 overflow-x-auto">
+      <section className="card mt-4">
+        <div className="bar">
+          <h2>Games</h2>
+          <span className="chip bg-primary text-on-primary">{replays.length}</span>
+        </div>
         {replays.length === 0 ? (
           <p className="p-8 text-center text-muted">No replay matches. Widen the filters.</p>
         ) : (
-          <table className="w-full text-left [&_td]:px-4 [&_td]:py-2.5 [&_th]:px-4 [&_th]:py-2.5">
-            <thead className="text-sm text-muted">
-              <tr>
-                <th className="hidden font-medium sm:table-cell">GNL</th>
-                <th className="font-medium">Map</th>
-                <th className="hidden font-medium sm:table-cell">Matchup</th>
-                <th className="font-medium">Players</th>
-                <th className="text-right font-medium">Length</th>
-              </tr>
-            </thead>
-            <tbody>
-              {replays.map((r) => (
-                <tr key={r.replay_id} className="border-t align-top">
-                  <td className="hidden whitespace-nowrap sm:table-cell">{r.gnl ? `S${r.gnl.series_id} G${r.gnl.game_no}` : ""}</td>
-                  <td>
-                    {/* no prefetch: it runs generateMetadata, a full replay read per row */}
-                    <Link href={`/replays/${r.replay_id}`} prefetch={false} className="font-medium">
-                      {r.map || "Unknown map"}
-                    </Link>
-                  </td>
-                  <td className="hidden sm:table-cell">{r.matchup}</td>
-                  <td>
-                    <ul>
-                      {[...r.players]
-                        .sort((a, b) => a.player_id - b.player_id)
-                        .map((p) => (
-                          <li key={p.player_id} className="flex items-center gap-1.5">
-                            <PlayerName name={p.name} race={p.race} />
-                            {p.won && <Trophy className="text-win" label="Won" />}
-                          </li>
-                        ))}
-                    </ul>
-                  </td>
-                  <td className="text-right">{mss(r.duration_ms)}</td>
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th className="hidden sm:table-cell">GNL</th>
+                  <th>Map</th>
+                  <th className="hidden sm:table-cell">Matchup</th>
+                  <th>Players</th>
+                  <th className="hidden text-right sm:table-cell">Length</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {replays.map((r) => (
+                  <tr key={r.replay_id} className="align-top">
+                    <td className="hidden whitespace-nowrap sm:table-cell">{r.gnl ? `S${r.gnl.series_id} G${r.gnl.game_no}` : ""}</td>
+                    <td>
+                      {/* no prefetch: it runs generateMetadata, a full replay read per row */}
+                      <Link href={`/replays/${r.replay_id}`} prefetch={false} className="block max-w-28 font-bold break-words sm:max-w-none">
+                        {r.map || "Unknown map"}
+                      </Link>
+                      {/* a phone has no room for the Length column, so the length sits under the map */}
+                      <span className="mt-0.5 block text-sm text-muted sm:hidden">{mss(r.duration_ms)}</span>
+                    </td>
+                    <td className="hidden sm:table-cell">{r.matchup}</td>
+                    <td>
+                      <ul className="flex flex-col gap-1">
+                        {[...r.players]
+                          .sort((a, b) => a.player_id - b.player_id)
+                          .map((p) => (
+                            <li key={p.player_id} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                              <PlayerName name={p.name} race={p.race} className="max-w-48 sm:max-w-none" />
+                              {p.won && <Result won />}
+                            </li>
+                          ))}
+                      </ul>
+                    </td>
+                    <td className="hidden text-right sm:table-cell">{mss(r.duration_ms)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>

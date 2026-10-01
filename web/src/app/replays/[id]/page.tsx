@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Fragment } from "react";
 import { getObjects, getReplay } from "@/lib/api";
-import { mss, ObjIcon, PlayerName, SeriesKey, SkillTrail, Timer, Trophy } from "@/lib/ui";
+import { mss, ObjIcon, PlayerName, Result, SeriesKey, SkillTrail, Timer } from "@/lib/ui";
 import { ApmChart } from "./ApmChart";
 import { BuildOrders } from "./BuildOrders";
 
@@ -22,30 +22,30 @@ export default async function ReplayPage({ params, searchParams }: PageProps<"/r
 
   return (
     <>
-      <section className="bg-band text-on-band">
+      <section className="banner">
         <div className="wrap py-7">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            <h1 className="mr-auto text-on-band">{r.map || "Unknown map"}</h1>
+            <h1 className="mr-auto min-w-0 text-primary [overflow-wrap:anywhere]">{r.map || "Unknown map"}</h1>
             {r.download_url ? (
-              <a className="btn" href={r.download_url}>
+              <a className="btn btn-gold" href={r.download_url}>
                 Download replay
               </a>
             ) : (
-              <span className="text-band-muted">No file</span>
+              <span className="text-banner-muted">No file</span>
             )}
           </div>
-          <p className="mt-3 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-lg [&_img]:rounded-full [&_img]:ring-1 [&_img]:ring-band-muted">
+          <p className="mt-3 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-lg [&_img]:rounded-full [&_img]:ring-1 [&_img]:ring-banner-muted">
             {players.map((p, i) => (
               <Fragment key={p.player_id}>
-                {i > 0 && <span className="text-band-muted">v</span>}
-                <span className="inline-flex items-center gap-1.5">
-                  <PlayerName name={p.name} race={p.race} className={p.won ? "font-bold" : ""} />
-                  {p.won && <Trophy className="text-band-muted" label="Won" />}
+                {i > 0 && <span className="text-banner-muted">v</span>}
+                <span className="inline-flex min-w-0 items-center gap-2">
+                  <PlayerName name={p.name} race={p.race} />
+                  {p.won && <Result won />}
                 </span>
               </Fragment>
             ))}
           </p>
-          <p className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-band-muted">
+          <p className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-banner-muted">
             <span className="inline-flex items-center gap-1.5">
               <Timer label="Length" />
               {mss(r.duration_ms)}
@@ -65,18 +65,18 @@ export default async function ReplayPage({ params, searchParams }: PageProps<"/r
         <div className="grid gap-4 md:grid-cols-2">
           {players.map((p, i) => (
             <section key={p.player_id} className="card">
-              <div className="flex items-center gap-2.5 border-b px-4 py-3">
+              <div className="bar">
                 <SeriesKey i={i} />
                 <h3 className="min-w-0">
                   <PlayerName name={p.name} race={p.race} />
                 </h3>
-                <span className="ml-auto inline-flex items-center gap-1">
-                  {p.won === null ? "No result" : p.won ? <><Trophy />Won</> : "Lost"}
+                <span className="ml-auto">
+                  <Result won={p.won} />
                 </span>
               </div>
               <div className="p-4">
                 <p className="flex items-baseline gap-2">
-                  <span className="text-[2.5rem] leading-none font-medium">{p.apm}</span>
+                  <span className="text-[2.5rem] leading-none font-bold">{p.apm}</span>
                   <span className="text-muted">APM</span>
                 </p>
                 <ul className="mt-4 flex flex-col gap-3.5 border-t pt-4">
@@ -87,7 +87,7 @@ export default async function ReplayPage({ params, searchParams }: PageProps<"/r
                         <ObjIcon code={h.code} objects={objects} size={40} alt="" />
                         <div>
                           <p>
-                            <span className="font-medium">{objects[h.code]?.name ?? h.code}</span>
+                            <span className="font-bold">{objects[h.code]?.name ?? h.code}</span>
                             <span className="ml-2 text-muted">Level {h.final_level}</span>
                           </p>
                           <SkillTrail
@@ -119,7 +119,7 @@ export default async function ReplayPage({ params, searchParams }: PageProps<"/r
                 return (
                   <li key={i} className="grid grid-cols-[44px_1fr] items-baseline gap-x-3 py-1 sm:grid-cols-[44px_auto_1fr]">
                     <span className="text-muted">{mss(c.time_ms)}</span>
-                    {p ? <PlayerName name={p.name} race={p.race} className="font-medium" /> : <span className="font-medium">Observer</span>}
+                    {p ? <PlayerName name={p.name} race={p.race} /> : <span className="font-name">Observer</span>}
                     <span className="col-start-2 min-w-0 break-words sm:col-start-auto">{c.message}</span>
                   </li>
                 );

@@ -9,25 +9,34 @@
   --color-on-surface-variant: rgb(var(--v-theme-on-surface-variant));
   --color-on-surface: rgb(var(--v-theme-on-surface));
   --color-primary: rgb(var(--v-theme-primary));
-  --color-band: rgb(var(--v-theme-band));
-  --color-on-band: rgb(var(--v-theme-on-band));
-  --color-band-muted: rgb(var(--v-theme-band-muted));
+  --color-on-primary: rgb(var(--v-theme-on-primary));
+  --color-primary-text: rgb(var(--v-theme-primary-text));
+  --color-banner: rgb(var(--v-theme-banner));
+  --color-on-banner: rgb(var(--v-theme-on-banner));
+  /* second-level text on a banner */
+  --color-banner-muted: rgba(var(--v-theme-on-banner), 0.72);
   --color-win: rgb(var(--v-theme-win));
+  --color-loss: rgb(var(--v-theme-loss));
+  --color-draw: rgb(var(--v-theme-draw));
+  --color-on-win: rgb(var(--v-theme-on-win));
+  --color-on-loss: rgb(var(--v-theme-on-loss));
+  --color-on-draw: rgb(var(--v-theme-on-draw));
   --color-series-1: rgb(var(--v-theme-series-1));
   --color-series-2: rgb(var(--v-theme-series-2));
   /* second-level text: ink at medium emphasis */
   --color-muted: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
   --color-border: rgba(var(--v-border-color), var(--v-border-opacity));
 
-  --font-sans: var(--font-body), "Alegreya Sans", "Helvetica Neue", Arial, sans-serif;
-  --font-heading: var(--font-display), Alegreya, Georgia, serif;
+  --font-sans: var(--font-lato), Lato, "Helvetica Neue", Arial, sans-serif;
+  --font-heading: var(--font-cardo), Cardo, Georgia, serif;
+  --font-title: var(--font-cinzel), Cinzel, Georgia, serif;
 }
 
 @layer base {
   /* A border with no colour draws the theme hairline, not the text colour. */
   *, ::before, ::after { border-color: var(--color-border); }
 
-  /* Numbers use lining, equal-width digits, so figures line up in a column. */
+  /* Lato for text, controls and every figure; lining, equal-width digits line up in a column. */
   html, body {
     background-color: rgb(var(--v-theme-background));
     color: rgb(var(--v-theme-on-background));
@@ -35,8 +44,9 @@
     font-variant-numeric: lining-nums tabular-nums;
   }
 
-  h1, h2, h3 { font-family: var(--font-heading); font-weight: 700; line-height: 1.2; }
-  h1 { font-weight: 800; font-size: 2.125rem; }
+  /* Cardo for headings, Cinzel for the page title. Cinzel has capitals only, so a name never takes it. */
+  h1, h2, h3 { font-family: var(--font-heading); font-weight: 700; line-height: 1.25; }
+  h1 { font-family: var(--font-title); font-size: 2.125rem; line-height: 1.2; }
   h2 { font-size: 1.5rem; }
   h3 { font-size: 1.125rem; }
   @media (max-width: 959px) {
@@ -44,46 +54,85 @@
     h2 { font-size: 1.3rem; }
   }
 
-  a { color: rgb(var(--v-theme-primary-text)); }
-  a:hover { color: rgb(var(--v-theme-primary)); }
+  a { color: rgb(var(--v-theme-primary-text)); text-decoration: none; }
+  a:hover { text-decoration: underline; }
   :focus-visible { outline: 2px solid rgb(var(--v-theme-primary)); outline-offset: 2px; }
 }
 
 @layer components {
-  .wrap { max-width: 1200px; margin-inline: auto; padding-inline: 16px; }
+  .wrap { max-width: 1280px; margin-inline: auto; padding-inline: 16px; }
   @media (min-width: 640px) { .wrap { padding-inline: 24px; } }
 
-  .card { min-width: 0; background: rgb(var(--v-theme-surface)); border: 1px solid var(--color-border); border-radius: 0.25rem; }
+  /* A player name reads in Cardo 700, in its own case. */
+  .font-name { font-family: var(--font-heading); font-weight: 700; text-transform: none; }
 
-  /* A card title bar is bronze. */
-  .bar {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
-    min-height: 52px; padding: 8px 16px; border-radius: 0.25rem 0.25rem 0 0;
-    background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary));
+  /* A near-square panel with a hairline edge. */
+  .card {
+    min-width: 0; overflow: hidden; border-radius: 0.35rem;
+    background: rgb(var(--v-theme-surface)); border: 1px solid var(--color-border);
   }
-  .bar h2 { font-size: 1.375rem; }
-  .bar :focus-visible { outline-color: rgb(var(--v-theme-on-primary)); }
 
-  /* A chip on the title bar: outlined when off, filled when on. */
+  /* A banner is a dark warm bar with cream text and a gold title, embossed, over a gold hairline. */
+  .banner, .bar {
+    background: rgb(var(--v-theme-banner)); color: rgb(var(--v-theme-on-banner));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.55);
+    border-bottom: 1px solid oklch(80% 0.06 80 / 0.35);
+  }
+  .banner :focus-visible, .bar :focus-visible { outline-color: rgb(var(--v-theme-on-banner)); }
+
+  /* A card's title bar. */
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-height: 52px; padding: 10px 16px; }
+  .bar h2 { font-size: 1.25rem; line-height: 1.3; color: rgb(var(--v-theme-primary)); }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.25rem; border-radius: 9999px;
+    padding: 0 0.5rem; font-size: 0.75rem; line-height: 1.5rem; font-weight: 700; white-space: nowrap;
+  }
+
+  /* A chip on a title bar: on-banner with a 40% edge when off, flat gold when on. */
   .toggle {
     display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 12px;
-    border: 1px solid rgba(var(--v-theme-on-primary), 0.5); border-radius: 9999px;
-    font-size: 0.875rem; color: rgb(var(--v-theme-on-primary)); cursor: pointer;
+    border: 1px solid rgba(var(--v-theme-on-banner), 0.4); border-radius: 9999px;
+    font-size: 0.875rem; color: rgb(var(--v-theme-on-banner)); cursor: pointer;
   }
   .toggle[aria-pressed="true"] {
-    background: rgb(var(--v-theme-on-primary)); border-color: rgb(var(--v-theme-on-primary));
-    color: rgb(var(--v-theme-primary-text));
+    background: rgb(var(--v-theme-primary)); border-color: rgb(var(--v-theme-primary));
+    color: rgb(var(--v-theme-on-primary)); font-weight: 700;
   }
 
   .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 18px;
-    border-radius: 0.25rem; background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary));
-    font-weight: 500; text-decoration: none; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 18px;
+    border-radius: 0.35rem; font-weight: 700; white-space: nowrap; text-decoration: none; cursor: pointer;
   }
-  .btn:hover { background: rgb(var(--v-theme-primary-darken-1)); color: rgb(var(--v-theme-on-primary)); }
+  .btn:hover { text-decoration: none; }
+  .btn:active { transform: translateY(1px); }
+  @media (prefers-reduced-motion: reduce) { .btn:active { transform: none; } }
+
+  /* The filled button is embossed gold, the public site's recipe. */
+  .btn-gold {
+    color: oklch(22% 0.04 60);
+    background-image: linear-gradient(180deg, oklch(88% 0.13 90) 0%, oklch(78% 0.14 84) 48%, oklch(68% 0.13 78) 100%);
+    box-shadow: inset 0 1px 0 oklch(97% 0.06 95 / 0.8), inset 0 -1px 0 var(--btn-gold-edge), var(--btn-gold-drop);
+  }
+  .btn-gold:hover { color: oklch(22% 0.04 60); filter: brightness(1.05); }
 
   .field {
-    height: 40px; padding: 0 8px; border: 1px solid var(--color-border); border-radius: 0.25rem;
+    height: 38px; min-width: 0; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 0.35rem;
     background: rgb(var(--v-theme-surface)); color: inherit;
   }
+  .field:focus-visible { outline-offset: 0; }
+
+  /* A data table: hairline rows, a quiet hover, numbers right-aligned by the cell. */
+  .table { width: 100%; text-align: left; }
+  .table th { height: 40px; padding: 0 12px; font-size: 0.875rem; font-weight: 700; white-space: nowrap; }
+  .table td { padding: 10px 12px; }
+  .table tbody tr { border-top: 1px solid var(--color-border); }
+  .table tbody tr:hover { background: rgba(var(--v-theme-on-surface), 0.04); }
+}
+
+/* The gold button's lower edge and drop shadow: softer on the light ground. */
+:root { --btn-gold-edge: oklch(50% 0.1 70 / 0.35); --btn-gold-drop: 0 1px 1px oklch(20% 0.04 60 / 0.22); }
+:root[data-theme="dark"] { --btn-gold-edge: oklch(50% 0.1 70 / 0.6); --btn-gold-drop: 0 1px 2px oklch(0% 0 0 / 0.6); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) { --btn-gold-edge: oklch(50% 0.1 70 / 0.6); --btn-gold-drop: 0 1px 2px oklch(0% 0 0 / 0.6); }
 }

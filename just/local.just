@@ -89,6 +89,12 @@ web-lock:
     docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
       -v "$PWD/web:/web" -w /web node:22-slim corepack pnpm install --lockfile-only --store-dir /tmp/pnpm-store
 
+# a node script from an absolute folder, mounted read-only, such as the dataviz palette check
+# `just local::node /tmp/vp validate_palette.js "#02927B,#C061D6" --mode light --surface "#F4F5F1"`
+[positional-arguments]
+node dir *args:
+    d="$1"; shift; docker run --rm --user "$(id -u):$(id -g)" -v "$d:/work:ro" -w /work node:22-slim node "$@"
+
 # eslint over web/, in the lint stage of the web image
 web-lint:
     docker build --target lint --output type=cacheonly --progress plain -f infrastructure/docker/Dockerfile.web .

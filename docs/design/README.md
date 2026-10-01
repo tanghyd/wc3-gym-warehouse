@@ -27,7 +27,7 @@ Written 2026-09-11. Numbers: 26.9 host binary, 6,567-replay dev load. PR 2 re-me
 | Stack | Docker first: just modules `local`, `fixtures` (PR 1), `box` (with the box) |
 | ClickHouse | PR 2 pins `clickhouse/clickhouse-server:26.8.2`, the 26.8 LTS line (today 24.10), for local, CI and the box |
 | Races | Wire ids are the GNL ids `HU OC NE UD RANDOM`; storage keeps the parser letters; the API maps at its boundary |
-| Style | GNL stone and bronze, light and dark, with the gnl theme menu. Charts: `win` blue, `loss` red, player 2 magenta, one-series bars jade |
+| Style | GNL stone and gold (wc3-gym-frontend `palette.mjs`), light and dark, with a theme menu. Charts: `win` blue, `loss` red; the two players jade and orchid (`web/src/app/palette.ts`) |
 | Hosting | None yet (Daniel, 2026-09-11). Local Docker deploys for now; later GCP, or Hetzner with Cloudflare R2. The box PR and the tunnel move wait for that. |
 | Names | `{name} {race}` until the dims loader |
 

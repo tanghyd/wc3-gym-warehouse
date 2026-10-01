@@ -11,9 +11,9 @@ export default function ErrorPage({ reset }: { error: Error; reset: () => void }
       reset();
     });
   return (
-    <main className="wrap py-12 text-center">
-      <h2>Warehouse offline</h2>
-      <button type="button" className="btn mt-4" onClick={retry}>
+    <main className="wrap flex flex-col items-center gap-6 py-16 text-center">
+      <h1>Warehouse offline</h1>
+      <button type="button" className="btn btn-gold" onClick={retry}>
         Retry
       </button>
     </main>

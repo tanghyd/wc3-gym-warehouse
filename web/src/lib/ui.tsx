@@ -24,14 +24,20 @@ export function RaceIcon({ race, size = "1.4em" }: { race: string; size?: string
   return <img src={`/race-icons/${r[1]}.png`} alt={r[0]} title={r[0]} className="shrink-0" style={{ width: size, height: size }} />;
 }
 
-/** A player as name then race icon. */
+/** A player as name, in Cardo 700, then race icon. */
 export function PlayerName({ name, race, className = "" }: { name: string; race: string; className?: string }) {
   return (
     <span className={`inline-flex min-w-0 items-center gap-1.5 ${className}`}>
-      <span className="truncate">{name}</span>
+      <span className="font-name truncate">{name}</span>
       <RaceIcon race={race} />
     </span>
   );
+}
+
+/** A result as a word on its win, loss or draw fill. */
+export function Result({ won }: { won: boolean | null }) {
+  const [label, tone] = won === null ? ["No result", "bg-draw text-on-draw"] : won ? ["Won", "bg-win text-on-win"] : ["Lost", "bg-loss text-on-loss"];
+  return <span className={`chip ${tone}`}>{label}</span>;
 }
 
 /** The 2 px line key of a player's series. */
@@ -63,22 +69,6 @@ export function SkillTrail({ skills, objects, className = "" }: { skills: GameEv
         </li>
       ))}
     </ol>
-  );
-}
-
-export function Trophy({ className = "", label }: { className?: string; label?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" width="1em" height="1em" className={`shrink-0 ${className}`} role={label ? "img" : undefined} aria-hidden={!label} aria-label={label}>
-      {label && <title>{label}</title>}
-      <path
-        d="M7 4h10v4.5a5 5 0 0 1-10 0zM7 6H4.5v1.5A3 3 0 0 0 7.5 10.5M17 6h2.5v1.5a3 3 0 0 1-3 3M12 13.5V18M8.5 20.5h7"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }
 

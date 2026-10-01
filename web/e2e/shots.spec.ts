@@ -5,10 +5,12 @@ import { expect, test } from "@playwright/test";
 const PAGES = [
   ["search", "/"],
   ["replay", "/replays/dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8"],
+  // Shallow Grave, 31 minutes, NE v OC: the longest human game
+  ["replay-long", "/replays/a9872674567c6389f3d912b5f053f7e2af4a87de3378d5229a90f091bd219d88"],
   ["missing", "/replays/nope"],
 ] as const;
 // The `background` token, light and dark.
-const BACKGROUND = { light: "rgb(232, 233, 227)", dark: "rgb(25, 26, 22)" };
+const BACKGROUND = { light: "rgb(232, 233, 227)", dark: "rgb(8, 5, 3)" };
 
 for (const width of [1280, 390]) {
   for (const theme of ["light", "dark"] as const) {
@@ -19,7 +21,7 @@ for (const width of [1280, 390]) {
         test(name, async ({ page }) => {
           await page.goto(url);
           await page.evaluate(() => document.fonts.ready);
-          if (name === "replay") await expect(page.getByRole("img", { name: /^APM per minute/ }).locator("path")).toHaveCount(2);
+          if (name.startsWith("replay")) await expect(page.getByRole("img", { name: /^APM per minute/ }).locator("path")).toHaveCount(2);
           const shot = (suffix: string) => path.join(__dirname, "shots", `${name}-${theme}-${width}${suffix}.png`);
           await page.screenshot({ path: shot(""), fullPage: true });
           // a tall page also in parts, small enough to read

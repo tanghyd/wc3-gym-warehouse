@@ -31,7 +31,7 @@ async function api<T>(path: string, body?: object): Promise<T | null> {
 // cache(): the page and its metadata share one read per request.
 export const getReplay = cache((id: string) => api<Replay>(`/replays/${encodeURIComponent(id)}`));
 
-export async function searchReplays(filters: Record<string, string[]>) {
+export async function searchReplays(filters: Record<string, string[] | { gte?: number; lte?: number }>) {
   return (await api<{ replays: ReplayRow[] }>("/search", { filters }))!.replays;
 }
 
