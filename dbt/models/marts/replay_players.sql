@@ -11,7 +11,7 @@ SELECT
     JSONExtractString(p, 'name')                                 AS name,
     toLowCardinality(JSONExtractString(p, 'color'))              AS color,
     coalesce(JSONExtract(p, 'teamid', 'Nullable(Int8)'), -1)     AS team_id,
-    {{ gnl_race("JSONExtractString(p, 'race')") }}           AS race,
+    {{ race_code("JSONExtractString(p, 'race')") }}           AS race,
     toLowCardinality(JSONExtractString(p, 'raceDetected'))       AS race_detected,
     toUInt32(JSONExtractUInt(p, 'apm'))                          AS apm,
     toUInt32(JSONExtractUInt(p, 'actions', 'rightclick'))        AS actions_rightclick,

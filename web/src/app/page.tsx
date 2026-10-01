@@ -150,7 +150,6 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
             <table className="table">
               <thead>
                 <tr>
-                  <th className="hidden sm:table-cell">GNL</th>
                   <th>Map</th>
                   <th className="hidden sm:table-cell">Matchup</th>
                   <th>Players</th>
@@ -166,7 +165,6 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                   const focus = r.players.find((p) => p.player_id === r.focus_player_id);
                   return (
                     <tr key={r.replay_id} className="align-top">
-                      <td className="hidden whitespace-nowrap sm:table-cell">{r.gnl ? `S${r.gnl.series_id} G${r.gnl.game_no}` : ""}</td>
                       <td>
                         {/* no prefetch: it runs generateMetadata, a full replay read per row */}
                         <Link href={`/replays/${r.replay_id}`} prefetch={false} className="block max-w-28 font-bold break-words sm:max-w-none">

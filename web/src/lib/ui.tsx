@@ -2,7 +2,7 @@
 import type { ComponentProps, ReactNode } from "react";
 import type { GameEvent, Objects } from "./api";
 
-/** GNL race id -> name, race-icons/ file and matchup letter. */
+/** Race code -> name, race-icons/ file and matchup letter. */
 export const RACES: Record<string, [string, string, string]> = {
   HU: ["Human", "HUMAN", "H"],
   OC: ["Orc", "ORC", "O"],

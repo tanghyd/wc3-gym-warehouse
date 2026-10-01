@@ -19,10 +19,6 @@ WITH
        arrayFirst(t -> t != team_ids[indexOf(player_ids, quitters[first_quit])], team_ids), -1) AS winner
 SELECT
     r.replay_id                                                          AS replay_id,
-    -- The GNL series and game number the object key carried, written into the
-    -- parsed document by the drain. 0 for a replay from any other source.
-    toUInt32(JSONExtractUInt(r.doc, 'gnl', 'series_id'))                 AS gnl_series_id,
-    toUInt8(JSONExtractUInt(r.doc, 'gnl', 'game_no'))                    AS gnl_game_no,
     -- The map segment of a w3c filename, then "_v1.3" and camelCase into spaces.
     toLowCardinality(replaceRegexpAll(
         replaceRegexpAll(

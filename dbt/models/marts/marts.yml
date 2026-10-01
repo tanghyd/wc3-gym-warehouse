@@ -15,7 +15,7 @@ models:
         semantic:
           dimensions: [replay_id, player_id, player, race, opponent, opponent_race, matchup, map,
                        patch, duration_ms, minutes, result, apm, first_hero, opener_1, opener_2,
-                       opener_3, opener_4, opener_5, opener_6, gnl_series_id, gnl_game_no]
+                       opener_3, opener_4, opener_5, opener_6]
           measures:
             games: count()
             wins: countIf(result = 'win')
@@ -55,16 +55,16 @@ models:
         description: "{{ doc('race') }}"
         data_tests:
           - accepted_values:
-              description: Race is a GNL race id.
+              description: Race is a race code.
               arguments:
                 values: [HU, OC, NE, UD, RANDOM]
       - name: opponent
         description: The opponent's battle tag, the player on the other team.
       - name: opponent_race
-        description: The opponent's GNL race id (HU, OC, NE, UD, RANDOM).
+        description: The opponent's race code (HU, OC, NE, UD, RANDOM).
         data_tests:
           - accepted_values:
-              description: Opponent race is a GNL race id.
+              description: Opponent race is a race code.
               arguments:
                 values: [HU, OC, NE, UD, RANDOM]
       - name: matchup
@@ -104,10 +104,6 @@ models:
         description: The fifth building in opener, or '' past its end.
       - name: opener_6
         description: The sixth building in opener, or '' past its end.
-      - name: gnl_series_id
-        description: "{{ doc('gnl_series_id') }}"
-      - name: gnl_game_no
-        description: "{{ doc('gnl_game_no') }}"
 
   - name: mappings
     description: >-
@@ -160,10 +156,6 @@ models:
               description: One row per replay.
           - not_null:
               description: Every replay has an id.
-      - name: gnl_series_id
-        description: "{{ doc('gnl_series_id') }}"
-      - name: gnl_game_no
-        description: "{{ doc('gnl_game_no') }}"
       - name: map
         description: "{{ doc('map') }}"
       - name: map_json
@@ -189,7 +181,7 @@ models:
       - name: parse_time_ms
         description: How long the parser took on this replay, in milliseconds.
       - name: source_key
-        description: The raw replay's object key in the bucket, such as preview/replays/9003/game1.w3g, written into the parsed document by the drain.
+        description: The raw replay's object key in the bucket, such as preview/replays/goldens/w3c-20260501062910.w3g, written into the parsed document by the drain.
       - name: winning_team_id
         description: >-
           The team opposite the first player to quit: the first player leave in the parser's
@@ -253,7 +245,7 @@ models:
         description: "{{ doc('race') }}"
         data_tests:
           - accepted_values:
-              description: Race is a GNL race id.
+              description: Race is a race code.
               arguments:
                 values: [HU, OC, NE, UD, RANDOM]
       - name: matchup
@@ -324,7 +316,7 @@ models:
         description: "{{ doc('race') }}"
         data_tests:
           - accepted_values:
-              description: Race is a GNL race id.
+              description: Race is a race code.
               arguments:
                 values: [HU, OC, NE, UD, RANDOM]
       - name: race_detected

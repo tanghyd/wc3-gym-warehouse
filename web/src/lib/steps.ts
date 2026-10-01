@@ -14,7 +14,7 @@ export type Kind = keyof typeof KINDS;
 /** An object a step can name: a mappings row of a step kind, with its icon path and race letter. */
 export type StepObject = { code: string; name: string; kind: Kind; hero: string; icon: string | null; letter: string };
 
-/** The race letter in an object code, per GNL race; Night Elf is e. */
+/** The race letter in an object code, per race code; Night Elf is e. */
 export const LETTERS: Record<string, string> = { HU: "h", OC: "o", NE: "e", UD: "u" };
 
 // Codes whose letter names no race: War Drums Damage Increase (w) is Orc's.

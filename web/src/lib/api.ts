@@ -6,7 +6,6 @@ import { KINDS, letterOf, type StepObject } from "./steps";
 
 const API_URL = process.env.API_URL ?? "http://api:8000";
 
-export type Gnl = { series_id: number; game_no: number } | null;
 export type Player = { player_id: number; name: string; race: string; team_id: number; won: boolean | null };
 export type Hero = { slot: number; code: string; final_level: number };
 export type ReplayPlayer = Player & { apm: number; apm_per_minute: number[]; heroes: Hero[] };
@@ -14,7 +13,7 @@ export type ReplayPlayer = Player & { apm: number; apm_per_minute: number[]; her
 export type RowPlayer = Player & { heroes: Omit<Hero, "slot">[] };
 export type GameEvent = { player_id: number; time_ms: number; event_type: string; code: string; hero_code: string | null };
 export type Chat = { time_ms: number; player_id: number; mode: string; message: string };
-type Header = { replay_id: string; map: string; matchup: string; duration_ms: number; winning_team_id: number; gnl: Gnl; download_url: string | null };
+type Header = { replay_id: string; map: string; matchup: string; duration_ms: number; winning_team_id: number; download_url: string | null };
 /** patch: the game patch from the build number, such as "3.0"; "" for a build with no patch row. */
 export type Replay = Header & { patch: string; players: ReplayPlayer[]; events: GameEvent[]; chat: Chat[] };
 export type ReplayRow = Header & { focus_player_id: number; players: RowPlayer[] };

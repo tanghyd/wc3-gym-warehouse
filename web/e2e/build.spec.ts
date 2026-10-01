@@ -3,9 +3,15 @@ import { expect, test, type APIRequestContext, type Locator, type Page } from "@
 // The build-order search on /: each list equals POST /search's answer to the same request.
 const API = process.env.API_URL ?? "http://api:8000";
 
-type Row = { replay_id: string; gnl: unknown; focus_player_id: number; players: { player_id: number; name: string; won: boolean | null }[] };
+type Row = { replay_id: string; focus_player_id: number; players: { player_id: number; name: string; won: boolean | null }[] };
 const rows = (page: Page) => page.locator("tbody tr");
-const goldens = (page: Page) => rows(page).filter({ hasText: /\bS900[123] G\d/ });
+// The three parser goldens, by replay id.
+const GOLDENS = [
+  "0ddbb4abacfb6b62d88223ac6bb3902edc0bdc3a2eac55e29ffe367405cffa60",
+  "92336fe5a392d0043442e75ad4a5097086d6451a35b3d68d99c3093e65b8d8f6",
+  "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
+];
+const goldens = (page: Page) => rows(page).filter({ has: page.locator(GOLDENS.map((id) => `a[href="/replays/${id}"]`).join(", ")) });
 const slot = (page: Page, n: number) => page.getByRole("region", { name: `Player ${n}` });
 const steps = (card: Locator) => card.locator("ol > li");
 /** The replay ids the list shows, in order. */
@@ -67,16 +73,16 @@ test.describe("build-order search", () => {
     // the timing narrows: fewer games than the race alone, the three goldens kept
     expect(found.length).toBeGreaterThan(0);
     expect(found.length).toBeLessThan(all.length);
-    expect(found.filter((r) => r.gnl)).toHaveLength(3);
+    expect(found.filter((r) => GOLDENS.includes(r.replay_id))).toHaveLength(3);
     await expect(rows(page)).toHaveCount(want.length);
     expect(await shown(page)).toEqual(want.map((r) => r.replay_id));
-    await expect(goldens(page)).toHaveCount(want.filter((r) => r.gnl).length);
+    await expect(goldens(page)).toHaveCount(want.filter((r) => GOLDENS.includes(r.replay_id)).length);
     await expect(page.locator(".bar .chip")).toHaveText(found.length > PAGE ? `${PAGE}+` : String(found.length));
 
     // the Player 1 column reports the focus player, who is listed first
     const focus = want.map((r) => r.players.find((p) => p.player_id === r.focus_player_id)!);
-    expect(await rows(page).locator("td:nth-child(5)").allInnerTexts()).toEqual(focus.map((p) => (p.won === null ? "" : p.won ? "Won" : "Lost")));
-    expect(await rows(page).locator("td:nth-child(4) li:first-child .font-name").allInnerTexts()).toEqual(focus.map((p) => p.name));
+    expect(await rows(page).locator("td:nth-child(4)").allInnerTexts()).toEqual(focus.map((p) => (p.won === null ? "" : p.won ? "Won" : "Lost")));
+    expect(await rows(page).locator("td:nth-child(3) li:first-child .font-name").allInnerTexts()).toEqual(focus.map((p) => p.name));
     // and his record over the list sits beside the count
     const [w, l] = [focus.filter((p) => p.won === true).length, focus.filter((p) => p.won === false).length];
     await expect(page.locator(".bar").filter({ hasText: "Games" })).toContainText(`Player 1 record ${record(w, l)}`);
@@ -218,7 +224,7 @@ test.describe("build-order search", () => {
     const decided: number = (await res.json()).rows[0].replays;
     expect(decided).toBeGreaterThan(0);
     await expect(rows(page)).toHaveCount(Math.min(decided, PAGE));
-    expect(new Set(await rows(page).locator("td:nth-child(5)").allInnerTexts())).toEqual(new Set(["Lost"]));
+    expect(new Set(await rows(page).locator("td:nth-child(4)").allInnerTexts())).toEqual(new Set(["Lost"]));
     // two winners in one game: none
     await page.goto("/?result=won&opp_result=won");
     await expect(page.getByText("No replay matches. Widen the filters.")).toBeVisible();
@@ -232,7 +238,7 @@ test.describe("build-order search", () => {
     expect(ids.length).toBeGreaterThan(0);
     expect(ids.length).toBe(Math.min((await res.json()).rows[0].replays, PAGE));
     // and the player listed second, Player 1's opponent, is one who did
-    const second = await rows(page).locator("td:nth-child(4) li:nth-child(2) .font-name").allInnerTexts();
+    const second = await rows(page).locator("td:nth-child(3) li:nth-child(2) .font-name").allInnerTexts();
     for (const [i, id] of ids.entries()) {
       const r = await (await request.get(`${API}/replays/${id}`)).json();
       const p2 = r.players.find((p: { name: string }) => p.name === second[i]);

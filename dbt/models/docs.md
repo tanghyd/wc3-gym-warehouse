@@ -10,7 +10,7 @@ The player's id in the replay, unique within a replay: 1 and up for a human play
 {% enddocs %}
 
 {% docs race %}
-GNL race id: HU, OC, NE, UD or RANDOM, from the parser's race letter (H, O, N, U, R) by the gnl_race macro. The race the player picked in the lobby, so a random player stays RANDOM.
+Race code: HU, OC, NE, UD or RANDOM, from the parser's race letter (H, O, N, U, R) by the race_code macro. The race the player picked in the lobby, so a random player stays RANDOM.
 {% enddocs %}
 
 {% docs matchup %}
@@ -23,14 +23,6 @@ Game time in milliseconds from the start of the game.
 
 {% docs seq %}
 Position of the row in its parser list, from 1: the order in which the parser wrote it. It breaks ties between rows on the same millisecond.
-{% enddocs %}
-
-{% docs gnl_series_id %}
-The GNL series this replay was reported on, from the bucket key replays/<series id>/game<n>.w3g. 0 for a replay from any other source.
-{% enddocs %}
-
-{% docs gnl_game_no %}
-The game number within the GNL series (game<n> in the bucket key). 0 outside GNL.
 {% enddocs %}
 
 {% docs map %}

@@ -11,10 +11,10 @@
       "minutes": {
         "gte": 10
       },
-      "gnl_series_id": [
-        9001,
-        9002,
-        9003
+      "replay_id": [
+        "0ddbb4abacfb6b62d88223ac6bb3902edc0bdc3a2eac55e29ffe367405cffa60",
+        "92336fe5a392d0043442e75ad4a5097086d6451a35b3d68d99c3093e65b8d8f6",
+        "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8"
       ]
     },
     "order_by": [

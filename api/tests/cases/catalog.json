@@ -39,9 +39,7 @@
           "opener_3": "LowCardinality(String)",
           "opener_4": "LowCardinality(String)",
           "opener_5": "LowCardinality(String)",
-          "opener_6": "LowCardinality(String)",
-          "gnl_series_id": "UInt32",
-          "gnl_game_no": "UInt8"
+          "opener_6": "LowCardinality(String)"
         },
         "measures": [
           "games",

@@ -84,6 +84,13 @@ upload-replays dir since dest='local':
       -e SECRET="$W3WAREHOUSE_S3_SECRET_KEY" --entrypoint sh minio-setup -c \
       "mc alias set local http://minio:9000 \"\$KEY\" \"\$SECRET\" >/dev/null && mc cp -q -r /upload/ \"local/\$BUCKET/\${PREFIX:+\$PREFIX/}replays/$3/\""
 
+# the MinIO client against the local bucket, aliased `local`, such as
+# `just local::mc ls -r local/warehouse/preview/replays/goldens`
+[positional-arguments]
+mc *args:
+    docker compose run --rm --no-deps -e KEY="$W3WAREHOUSE_S3_ACCESS_KEY" -e SECRET="$W3WAREHOUSE_S3_SECRET_KEY" \
+      --entrypoint sh minio-setup -c 'mc alias set local http://minio:9000 "$KEY" "$SECRET" >/dev/null && mc "$@"' mc "$@"
+
 # rewrite the melee mappings seed from the parser's tables (after a w3grs bump)
 mappings:
     #!/usr/bin/env bash

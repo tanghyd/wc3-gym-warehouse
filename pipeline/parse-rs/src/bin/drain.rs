@@ -3,19 +3,19 @@
 //! `parsed/v<PARSE_VERSION>/dt=<date>/<replay_id>.json`, the prefix ClickHouse
 //! reads with s3() (db/w3g/backfill.sql).
 //!
-//! The GNL backend writes every key under its Vercel environment, so a real key
-//! is `preview/replays/12/game1.w3g` (wc3-gym-backend app/services/r2.py). Set
+//! Every key sits under an environment segment (production, preview or
+//! development), such as `preview/replays/goldens/w3c-20260501062910.w3g`. Set
 //! W3WAREHOUSE_S3_PREFIX to that leading segment and all three prefixes move
 //! together, which keeps one environment's parsed output out of another's.
 //!
 //! A raw object is never moved or deleted: the site's download URLs point at it.
-//! Work already done is recorded by a breadcrumb at
-//! `status/<series id>/game<n>.json` holding the raw object's ETag and the
+//! Work already done is recorded by a breadcrumb at `status/<path>.json`, the
+//! raw key's path under `replays/`, holding the raw object's ETag and the
 //! PARSE_VERSION that wrote it, so a pass processes a key only when it has no
 //! breadcrumb, the ETag has changed or the breadcrumb has another version.
 //!
-//! The drain writes the raw object key into the parsed document as `source_key`.
-//! A GNL key also carries the series and game number, written as a `gnl` object.
+//! Every `.w3g` under `replays/` is drained the same way. The drain writes the raw
+//! object key into the parsed document as `source_key`.
 //!
 //! Two run modes: default loops every WORKER_POLL_MS as a SINGLE instance (two
 //! instances race on the same keys); `--once` drains the bucket once and exits.
@@ -115,19 +115,6 @@ fn is_replay(raw_prefix: &str, key: &str) -> bool {
     key.starts_with(raw_prefix) && key.ends_with(".w3g")
 }
 
-/// `<prefix>replays/<series id>/game<n>.w3g` → (series id, game number), the
-/// key the GNL backend writes. Any other replay (such as `replays/local/...`)
-/// answers None and gets no `gnl` field.
-fn parse_key(raw_prefix: &str, key: &str) -> Option<(u32, u8)> {
-    let rest = key.strip_prefix(raw_prefix)?;
-    let (series, game) = rest.split_once('/')?;
-    let n = game.strip_prefix("game")?.strip_suffix(".w3g")?;
-    if n.len() != 1 || !series.chars().all(|c| c.is_ascii_digit()) {
-        return None;
-    }
-    Some((series.parse().ok()?, n.parse().ok()?))
-}
-
 /// The breadcrumb for a raw key: `replays/12/game2.w3g` → `status/12/game2.json`.
 fn status_key(cfg: &Cfg, raw_key: &str) -> String {
     let rest = raw_key.strip_prefix(&cfg.raw()).unwrap_or(raw_key);
@@ -193,28 +180,17 @@ async fn drain_once(client: &Client, cfg: &Cfg) -> usize {
     outcomes.into_iter().filter(|ok| *ok).count()
 }
 
-/// The doc the drain writes: w3grs's JSON plus `source_key`, and `gnl` for a GNL
-/// key, so ClickHouse reads them out of the same s3() load as every other field.
-fn landed_doc(
-    json: &str,
-    raw_key: &str,
-    gnl: Option<(u32, u8)>,
-) -> Result<serde_json::Value, String> {
+/// The doc the drain writes: w3grs's JSON plus `source_key`, so ClickHouse reads
+/// it out of the same s3() load as every other field.
+fn landed_doc(json: &str, raw_key: &str) -> Result<serde_json::Value, String> {
     let mut doc: serde_json::Value = serde_json::from_str(json).map_err(|e| e.to_string())?;
     let fields = doc.as_object_mut().ok_or("parsed doc is not a JSON object")?;
     fields.insert("source_key".to_string(), raw_key.into());
-    if let Some((series_id, game_no)) = gnl {
-        fields.insert(
-            "gnl".to_string(),
-            serde_json::json!({"series_id": series_id, "game_no": game_no}),
-        );
-    }
     Ok(doc)
 }
 
 async fn process_one(client: &Client, cfg: &Cfg, raw_key: &str, etag: &str) -> Result<(), String> {
     let bucket = &cfg.bucket;
-    let gnl = parse_key(&cfg.raw(), raw_key);
     let status_key = status_key(cfg, raw_key);
     let bytes = get_object(client, bucket, raw_key).await?;
 
@@ -233,7 +209,7 @@ async fn process_one(client: &Client, cfg: &Cfg, raw_key: &str, etag: &str) -> R
         return Err("parsed doc has no id".to_string());
     }
 
-    let doc = landed_doc(&parsed.json, raw_key, gnl)?;
+    let doc = landed_doc(&parsed.json, raw_key)?;
 
     // Land the parsed doc content-addressed by replay id under the parser-version
     // prefix (PARSE_VERSION in lib.rs) so a parser change re-derives incrementally.
@@ -256,9 +232,8 @@ async fn process_one(client: &Client, cfg: &Cfg, raw_key: &str, etag: &str) -> R
     status["type"] = parsed.replay_type.as_str().into();
     put_json(client, bucket, &status_key, &status).await?;
     log(&format!(
-        "parsed {raw_key} → {} ({} type={})",
+        "parsed {raw_key} → {} (type={})",
         parsed.replay_id,
-        gnl.map_or("not GNL".to_string(), |(s, g)| format!("series={s} game={g}")),
         if parsed.replay_type.is_empty() { "?" } else { &parsed.replay_type }
     ));
     Ok(())
@@ -368,21 +343,16 @@ mod tests {
     }
 
     #[test]
-    fn keys_parse_and_map_to_breadcrumbs() {
+    fn keys_map_to_breadcrumbs() {
         let c = cfg("");
-        assert_eq!(parse_key(&c.raw(), "replays/12/game2.w3g"), Some((12, 2)));
-        assert_eq!(parse_key(&c.raw(), "replays/x/notes.txt"), None);
-        assert_eq!(parse_key(&c.raw(), "replays/12/game2.txt"), None);
-        assert_eq!(parse_key(&c.raw(), "replays/12/notgame2.w3g"), None);
         assert_eq!(status_key(&c, "replays/12/game2.w3g"), "status/12/game2.json");
     }
 
     #[test]
-    fn any_w3g_under_replays_is_drained_and_only_gnl_keys_carry_a_series() {
+    fn any_w3g_under_replays_is_drained() {
         let c = cfg("preview");
         let local = "preview/replays/local/Autosaved/Multiplayer/w3c-20260922152242.w3g";
         assert!(is_replay(&c.raw(), local));
-        assert_eq!(parse_key(&c.raw(), local), None);
         assert_eq!(status_key(&c, local), "preview/status/local/Autosaved/Multiplayer/w3c-20260922152242.json");
         assert!(is_replay(&c.raw(), "preview/replays/435/game1.w3g"));
         assert!(!is_replay(&c.raw(), "preview/replays/local/notes.txt"));
@@ -394,9 +364,6 @@ mod tests {
         let c = cfg("preview");
         assert_eq!(c.raw(), "preview/replays/");
         assert_eq!(c.status(), "preview/status/");
-        assert_eq!(parse_key(&c.raw(), "preview/replays/435/game1.w3g"), Some((435, 1)));
-        // Another environment's keys are not this drain's work.
-        assert_eq!(parse_key(&c.raw(), "production/replays/435/game1.w3g"), None);
         assert_eq!(
             status_key(&c, "preview/replays/435/game1.w3g"),
             "preview/status/435/game1.json"
@@ -418,16 +385,12 @@ mod tests {
     }
 
     #[test]
-    fn the_landed_doc_carries_the_raw_key_and_gnl_only_for_a_gnl_key() {
-        let key = "preview/replays/435/game1.w3g";
-        let gnl = landed_doc(r#"{"id":"r1"}"#, key, Some((435, 1))).unwrap();
-        assert_eq!(gnl["id"], "r1");
-        assert_eq!(gnl["source_key"], key);
-        assert_eq!(gnl["gnl"], serde_json::json!({"series_id": 435, "game_no": 1}));
-        let local = landed_doc(r#"{"id":"r2"}"#, "preview/replays/local/w3c-1.w3g", None).unwrap();
-        assert_eq!(local["source_key"], "preview/replays/local/w3c-1.w3g");
-        assert!(local.get("gnl").is_none());
-        assert!(landed_doc("[]", "k", None).is_err());
+    fn the_landed_doc_carries_the_raw_key() {
+        let key = "preview/replays/local/w3c-1.w3g";
+        let doc = landed_doc(r#"{"id":"r1"}"#, key).unwrap();
+        assert_eq!(doc["id"], "r1");
+        assert_eq!(doc["source_key"], key);
+        assert!(landed_doc("[]", "k").is_err());
     }
 
     #[test]

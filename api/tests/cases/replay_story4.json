@@ -10,10 +10,6 @@
       "winning_team_id": 0,
       "version": "2.00",
       "patch": "2.0",
-      "gnl": {
-        "series_id": 9003,
-        "game_no": 1
-      },
       "download_url": null,
       "players": [
         {

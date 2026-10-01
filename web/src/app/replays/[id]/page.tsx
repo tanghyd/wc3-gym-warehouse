@@ -50,11 +50,6 @@ export default async function ReplayPage({ params, searchParams }: PageProps<"/r
             </span>
             <span>{matchup(players)}</span>
             {r.patch && <span>Patch {r.patch}</span>}
-            {r.gnl && (
-              <span>
-                GNL S{r.gnl.series_id} G{r.gnl.game_no}
-              </span>
-            )}
           </p>
         </div>
       </section>

@@ -14,7 +14,7 @@ WITH orders AS (
         toLowCardinality(JSONExtractString(o, 'id'))  AS object_code,
         toUInt32(JSONExtractUInt(o, 'ms'))            AS time_ms,
         toUInt32(o_idx)                               AS seq,
-        {{ gnl_race("JSONExtractString(p, 'race')") }} AS race,
+        {{ race_code("JSONExtractString(p, 'race')") }} AS race,
         toLowCardinality(JSONExtractString(r.doc, 'matchup')) AS matchup
     FROM {{ ref('raw_replays') }} AS r
     ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p

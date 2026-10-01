@@ -181,9 +181,9 @@ services:
       timeout: 3s
       retries: 20
 
-  # Makes the bucket and puts the 3 parser goldens where the GNL backend would
-  # put a reported replay: <prefix>/replays/<series>/game1.w3g, series 9001-9003.
-  # Re-running uploads the same bytes, so the drain sees nothing new.
+  # Makes the bucket and puts the 3 parser goldens under <prefix>/replays/goldens/,
+  # each with its own file name. Re-running uploads the same bytes, so the drain
+  # sees nothing new.
   minio-setup:
     image: minio/mc
     profiles: ["local"]
@@ -194,8 +194,7 @@ services:
       /bin/sh -c "
       mc alias set local http://minio:9000 '${W3WAREHOUSE_S3_ACCESS_KEY}' '${W3WAREHOUSE_S3_SECRET_KEY}' &&
       mc mb --ignore-existing local/$$BUCKET &&
-      n=9000 && for f in /fixtures/*.w3g; do n=$$((n+1));
-      mc cp -q \"$$f\" \"local/$$BUCKET/$${PREFIX:+$$PREFIX/}replays/$$n/game1.w3g\" || exit 1; done &&
+      mc cp -q /fixtures/*.w3g \"local/$$BUCKET/$${PREFIX:+$$PREFIX/}replays/goldens/\" &&
       echo 'bucket ready with the goldens'
       "
     volumes:

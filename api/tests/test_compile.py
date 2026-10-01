@@ -7,7 +7,7 @@ from compile import BadRequest, Model, QueryRequest, SearchRequest, Step, compil
 PG = Model(
     table="w3g.player_games",
     dimensions={"replay_id": "String", "player_id": "UInt8", "race": "LowCardinality(String)", "map": "String",
-                "minutes": "Float64", "player": "String", "gnl_series_id": "UInt32"},
+                "minutes": "Float64", "player": "String", "apm": "UInt32"},
     measures={"games": "count()", "wins": "countIf(result = 'win')"},
 )
 MAPPINGS = Model(table="w3g.mappings", dimensions={"code": "String"}, measures={})
@@ -24,12 +24,12 @@ def test_pattern_bounds_only_the_gap_it_names() -> None:
 
 def test_query_groups_filters_and_matches_steps() -> None:
     req = QueryRequest(dimensions=["race"], measures=["games", "wins"],
-                       filters={"map": ["Springtime"], "minutes": {"gte": 5}, "gnl_series_id": [435]},
+                       filters={"map": ["Springtime"], "minutes": {"gte": 5}, "apm": [435]},
                        steps=[step("eaom"), step("edob", within_prev_s=30, to_min=4)])
     sql, params = compile_query(req, PG)
     assert sql == (
         "SELECT race, count() AS games, countIf(result = 'win') AS wins FROM w3g.player_games"
-        " WHERE has({p0:Array(String)}, map) AND minutes >= {p1:Float64} AND has({p2:Array(UInt32)}, gnl_series_id)"
+        " WHERE has({p0:Array(String)}, map) AND minutes >= {p1:Float64} AND has({p2:Array(UInt32)}, apm)"
         " AND (replay_id, player_id) IN (SELECT replay_id, player_id FROM w3g.replay_events"
         " WHERE has({p3:Array(String)}, event_type) AND has({p4:Array(String)}, subject_code)"
         " GROUP BY replay_id, player_id HAVING sequenceMatch('(?1)(?t<=30000)(?2)')(time_ms,"

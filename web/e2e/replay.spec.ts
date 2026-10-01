@@ -71,7 +71,8 @@ test.describe("replay detail", () => {
     await expect(page).toHaveTitle(/^Concealed Hill/);
     const meta = page.locator("p").filter({ has: page.getByRole("img", { name: "Length" }) });
     // the game patch from the build number, never the file format version 2.00
-    for (const text of ["15:37", "NvO", "Patch 2.0", "GNL S9003 G1"]) await expect(meta).toContainText(text);
+    for (const text of ["15:37", "NvO", "Patch 2.0"]) await expect(meta).toContainText(text);
+    await expect(meta).not.toContainText("GNL");
     await expect(meta).not.toContainText("2.00");
     await expect(page.getByText("No file", { exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Download replay" })).toHaveCount(0);

@@ -114,10 +114,6 @@ def _won(team_id: int, winning_team_id: int) -> bool | None:
     return None if winning_team_id < 0 else team_id == winning_team_id
 
 
-def _gnl(row: dict[str, Any]) -> dict[str, int] | None:
-    return {"series_id": row["gnl_series_id"], "game_no": row["gnl_game_no"]} if row["gnl_series_id"] else None
-
-
 @app.post("/search")
 def search(req: SearchRequest) -> dict[str, Any]:
     try:
@@ -131,7 +127,7 @@ def search(req: SearchRequest) -> dict[str, Any]:
             rows.append({
                 "replay_id": r["replay_id"], "map": r["map"], "matchup": r["matchup"],
                 "duration_ms": r["duration_ms"], "winning_team_id": r["winning_team_id"],
-                "gnl": _gnl(r), "download_url": None,  # no public file host for source_key yet
+                "download_url": None,  # no public file host for source_key yet
                 "focus_player_id": focus[r["replay_id"]],
                 "players": [
                     {
@@ -165,7 +161,7 @@ def replay(replay_id: str) -> dict[str, Any]:
     return {
         "replay_id": h["replay_id"], "map": h["map"], "matchup": h["matchup"], "duration_ms": h["duration_ms"],
         "winning_team_id": h["winning_team_id"], "version": h["version"],
-        "patch": h["patch"], "gnl": _gnl(h), "download_url": None,
+        "patch": h["patch"], "download_url": None,
         "players": players,
         "events": run(REPLAY_SQL["events"], p),
         "chat": run(REPLAY_SQL["chat"], p),

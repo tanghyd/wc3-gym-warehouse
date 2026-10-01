@@ -45,9 +45,7 @@ SELECT
     o.opener                                          AS opener,
     toLowCardinality(o.opener[1]) AS opener_1, toLowCardinality(o.opener[2]) AS opener_2,
     toLowCardinality(o.opener[3]) AS opener_3, toLowCardinality(o.opener[4]) AS opener_4,
-    toLowCardinality(o.opener[5]) AS opener_5, toLowCardinality(o.opener[6]) AS opener_6,
-    r.gnl_series_id                                   AS gnl_series_id,
-    r.gnl_game_no                                     AS gnl_game_no
+    toLowCardinality(o.opener[5]) AS opener_5, toLowCardinality(o.opener[6]) AS opener_6
 FROM {{ ref('replay_players') }} AS rp
 INNER JOIN {{ ref('replays') }} AS r ON r.replay_id = rp.replay_id
 -- Any two distinct teams count as opponents; lobbies allow arbitrary team slots.

@@ -4,8 +4,10 @@ const ID = "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8";
 const API = process.env.API_URL ?? "http://api:8000";
 
 const rows = (page: Page) => page.locator("tbody tr");
-// The three parser goldens are the GNL rows: series 9001 to 9003.
-const goldens = (page: Page) => rows(page).filter({ hasText: /\bS900[123] G\d/ });
+// The three parser goldens, by replay id.
+const GOLDENS = ["0ddbb4abacfb6b62d88223ac6bb3902edc0bdc3a2eac55e29ffe367405cffa60", "92336fe5a392d0043442e75ad4a5097086d6451a35b3d68d99c3093e65b8d8f6", ID];
+const golden = (page: Page, ids: string[]) => rows(page).filter({ has: page.locator(ids.map((id) => `a[href="/replays/${id}"]`).join(", ")) });
+const goldens = (page: Page) => golden(page, GOLDENS);
 /** The rows with no race icon of this name: none, when a race filter holds. */
 const without = (page: Page, race: string) =>
   rows(page).evaluateAll((trs, alt) => trs.filter((tr) => !tr.querySelector(`img[alt="${alt}"]`)).map((tr) => tr.textContent), race);
@@ -21,7 +23,7 @@ const search = async (request: APIRequestContext, filters: object): Promise<Row[
 /** The replay ids the list shows, top first. */
 const listed = (page: Page) => page.locator('tbody a[href^="/replays/"]').evaluateAll((as) => as.map((a) => a.getAttribute("href")!.split("/").pop()));
 // The goldens' maps hold fewer games than the list's 100, so a list of one shows all of its goldens:
-// S9001 OvN and S9002 HvN on Springtime 1.3, S9003 NvO on Concealed Hill.
+// 0ddb… OvN and 9233… HvN on Springtime 1.3, dcd3… (ID) NvO on Concealed Hill.
 const SPRING = "/?map=Springtime%201.3";
 const HILL = "/?map=Concealed%20Hill";
 const record = (w: number, l: number) => (w + l ? `${w} – ${l}` + (w + l >= 10 ? ` (${Math.round((100 * w) / (w + l))}%)` : "") : "—");
@@ -139,11 +141,11 @@ test.describe("replay list", () => {
   test("each row's matchup reads in its players' order", async ({ page }) => {
     const LETTER: Record<string, string> = { Human: "H", Orc: "O", "Night Elf": "N", Undead: "U", Random: "R" };
     const got = await rows(page).evaluateAll((trs) =>
-      trs.map((tr) => [(tr as HTMLTableRowElement).cells[2].textContent, [...(tr as HTMLTableRowElement).cells[3].querySelectorAll<HTMLImageElement>(".font-name + img")].map((i) => i.alt)] as const),
+      trs.map((tr) => [(tr as HTMLTableRowElement).cells[1].textContent, [...(tr as HTMLTableRowElement).cells[2].querySelectorAll<HTMLImageElement>(".font-name + img")].map((i) => i.alt)] as const),
     );
     expect(got.length).toBeGreaterThan(0);
     expect(got.filter(([m, races]) => m !== races.map((r) => LETTER[r]).join("v"))).toEqual([]);
-    await expect(goldens(page).filter({ hasText: "S9001" }).locator("td").nth(2)).toHaveText("OvN");
+    await expect(golden(page, [GOLDENS[0]]).locator("td").nth(1)).toHaveText("OvN");
   });
 
   test(`${NAME} as player 1: the list, the Player 1 column and the record as the API's`, async ({ page, request }) => {
@@ -153,7 +155,7 @@ test.describe("replay list", () => {
     expect(await listed(page)).toEqual(replays.map((r) => r.replay_id));
     // the Player 1 column: his chip
     const focus = replays.map((r) => r.players.find((p) => p.player_id === r.focus_player_id)!.won);
-    const got = await rows(page).evaluateAll((trs) => trs.map((tr) => (tr as HTMLTableRowElement).cells[4].querySelector(".chip")?.textContent ?? null));
+    const got = await rows(page).evaluateAll((trs) => trs.map((tr) => (tr as HTMLTableRowElement).cells[3].querySelector(".chip")?.textContent ?? null));
     expect(got).toEqual(focus.map((won) => (won === null ? null : won ? "Won" : "Lost")));
     const [w, l] = [focus.filter((won) => won === true).length, focus.filter((won) => won === false).length];
     await expect(page.locator(".bar").filter({ hasText: "Games" })).toContainText(`Player 1 record ${record(w, l)}`);
