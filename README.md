@@ -59,6 +59,7 @@ replays/<folder>/<file>.w3g  ─drain─▶ parsed/v5/dt=<date>/<id>.json ─dbt
 | `player_order_events` | every order a player gave; a building placement keeps its map `x` and `y` |
 | `mappings` | object codes and names: the melee seed plus the custom-map seed |
 | `patches` (seed) | the game patch of each build number, kept by hand: 6117 is 2.0, 7000 is 3.0 |
+| `object_sources` (seed), `objects` | the building, altar, camp or shop each melee object comes from, kept by hand and checked against the orders; `objects` adds each skill under its hero and each building under its race, for the step pickers |
 | `player_heroes`, `player_group_hotkeys`, `chat`, `resource_transfers` | as named |
 
 The opener tree is a `GROUP BY` over `player_games.opener_N`, so the refreshable rollup and its 10-minute staleness are gone.
@@ -97,6 +98,7 @@ The catalog lives on the dbt models. `meta.semantic` in `dbt/models/marts/marts.
 |---|---|
 | `GET /catalog` | every semantic model, its dimensions with types, its measures |
 | `POST /query` | measures grouped by dimensions, under filters and an optional build order |
+| `POST /objects` | a step picker's groups for a kind (building, unit, hired, upgrade, hero, skill, item) and a side's race values, each object with the player-games in scope that ordered it |
 | `POST /search` | the replays holding a player who matches and whose opponent matches `others` |
 
 ```

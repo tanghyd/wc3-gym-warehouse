@@ -130,6 +130,81 @@ def where_filters(model: Model, filters: Filters, params: Params) -> list[str]:
     return out
 
 
+# A race value: a picked race (HU, OC, NE, UD), a Random player's played race (RH, RO, RN,
+# RU), or R for a Random player with no played race. NE is (race NE, random 0).
+type RaceValue = Literal["HU", "OC", "NE", "UD", "RH", "RO", "RN", "RU", "R"]
+type Races = Annotated[list[RaceValue], Field(max_length=9)]
+BASE_OF = {v: r for r, v in RANDOM_OF.items()}
+
+
+def race_pair(value: str) -> tuple[str, int]:
+    """The played race and random flag of a race value: RN is (NE, 1), R is (RANDOM, 1)."""
+    if value in BASE_OF:
+        return BASE_OF[value], 1
+    return (value, 0) if value in RANDOM_OF else ("RANDOM", 1)
+
+
+def race_condition(values: list[str], params: Params, race: str = "race", random: str = "random") -> list[str]:
+    """The player_games condition for race values: none for any race."""
+    if not values:
+        return []
+    pairs = "[" + ",".join(f"({_literal(r)},{f})" for r, f in dict.fromkeys(map(race_pair, values))) + "]"
+    return [f"has({params.add('Array(Tuple(String, UInt8))', pairs)}, ({race}, {random}))"]
+
+
+# The player_games dimensions that scope a replay, not a player.
+REPLAY_FILTERS = ("replay_id", "map", "patch", "minutes", "duration_ms")
+
+
+def replay_filters(model: Model, filters: Filters, params: Params) -> list[str]:
+    for name in filters:
+        if name not in REPLAY_FILTERS:
+            raise BadRequest(f"{name!r} is not a replay filter: use {', '.join(REPLAY_FILTERS)}")
+    return where_filters(model, filters, params)
+
+
+# The replay_events event types of each picker kind; hired names a unit order.
+EVENT_TYPES = {
+    "building": ["building"], "unit": ["unit"], "hired": ["unit"], "upgrade": ["upgrade"],
+    "item": ["item"], "hero": ["hero_trained"], "skill": ["hero_skill"],
+}
+
+
+class ObjectsRequest(BaseModel):
+    # The picker kind: Built, Trained, Hired, Researched, Hero, Learned skill, Bought.
+    kind: Literal["building", "unit", "hired", "upgrade", "hero", "skill", "item"]
+    # The side's race values; the picker lists their races' objects and the neutral ones.
+    race: Races = []
+    filters: Filters = {}
+
+
+def compile_objects(req: ObjectsRequest, model: Model) -> tuple[str, dict[str, str]]:
+    """The objects of a picker kind for a side's race, each with the player-games in scope (the
+    race values and the replay filters) that ordered it at least once. A race's own sources
+    come before the neutral ones (an altar before the Tavern), each most ordered first."""
+    params = Params()
+    scope = replay_filters(model, req.filters, params) + race_condition(req.race, params)
+    races = sorted({race_pair(v)[0] for v in req.race})
+    events = [f"has({params.add('Array(String)', array(EVENT_TYPES[req.kind]))}, event_type)"]
+    if races:  # race leads replay_events' sort key
+        events.append(f"has({params.add('Array(String)', array(races))}, race)")
+    events.append(f"(replay_id, player_id) IN (SELECT replay_id, player_id FROM {PLAYER_GAMES}{' WHERE ' + ' AND '.join(scope) if scope else ''})")
+    listed = [f"kind = {params.add('String', req.kind)}"]
+    if played := [r for r in races if r in RANDOM_OF]:  # a race's objects and the neutral ones
+        listed.append(f"has({params.add('Array(String)', array([*played, '']))}, race)")
+    sql = f"""SELECT o.source_code AS source_code, o.source_name AS source_name, o.code AS code, o.name AS name, c.games AS games
+FROM w3g.objects AS o
+LEFT JOIN (
+    SELECT subject_code, uniqExact(replay_id, player_id) AS games
+    FROM {EVENTS}
+    WHERE {' AND '.join(events)}
+    GROUP BY subject_code
+) AS c ON c.subject_code = o.code
+WHERE {' AND '.join(listed)}
+ORDER BY o.race = '', games DESC, name, code"""
+    return sql, params.values
+
+
 def _step_condition(s: Step, params: Params) -> str:
     parts = [f"event_type = {params.add('String', s.type)}", f"subject_code = {params.add('String', s.code)}"]
     if s.from_min is not None:

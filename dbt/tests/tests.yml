@@ -15,3 +15,5 @@ data_tests:
       build shows as a warning with patch '' until someone adds its row.
   - name: duplicates_point_to_their_game
     description: Every game_key has exactly one replay that stands for it, and each duplicate points to that replay.
+  - name: objects_are_named_and_complete
+    description: Every picker object has a name in mappings, and every melee skill sits under a hero.

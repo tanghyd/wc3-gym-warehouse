@@ -63,3 +63,40 @@ seeds:
               description: Every build names its patch.
       - name: description
         description: What the patch is, in a few words.
+
+  - name: object_sources
+    description: >-
+      The building, altar, camp or shop each melee object comes from, for the step pickers.
+      Units and upgrades by the building that trains or researches them, heroes by altar or
+      Tavern, mercenaries by camp, items by shop. Kept by hand from the game's tech tree and
+      checked against the orders: each unit or upgrade source is ordered before its object in
+      97% or more of the player-games that order it, except a starting hall. A Marketplace
+      item is one the replays show bought only there.
+    data_tests:
+      - unique:
+          name: object_sources_one_row_per_source
+          description: An object is listed once per kind and source.
+          arguments:
+            column_name: "code || ':' || kind || ':' || source_code"
+    columns:
+      - name: code
+        description: "{{ doc('object_code') }}"
+        data_tests:
+          - not_null:
+              description: Every row has a code.
+          - relationships:
+              description: Every object has a name in mappings.
+              arguments:
+                to: ref('mappings')
+                field: code
+      - name: kind
+        description: The picker kind. unit for a race's own unit, hired for a mercenary, then upgrade, hero and item.
+        data_tests:
+          - accepted_values:
+              description: Kind is a picker kind with a source.
+              arguments:
+                values: [unit, hired, upgrade, hero, item]
+      - name: source_code
+        description: The object code of the source, such as eaom for Ancient of War. Its first letter names the race (h o e u), n a neutral source.
+      - name: source_name
+        description: The source's display name, such as Ancient of War or Tavern.

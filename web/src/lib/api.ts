@@ -115,3 +115,15 @@ export async function raceCounts(filters: Filters): Promise<Record<string, numbe
   for (const r of rows) counts[raceValue(r.race, r.random)] = (counts[raceValue(r.race, r.random)] ?? 0) + r.games;
   return counts;
 }
+
+/** A picker kind: Built, Trained, Hired, Researched, Hero, Learned skill, Bought. */
+export type PickerKind = "building" | "unit" | "hired" | "upgrade" | "hero" | "skill" | "item";
+export type PickerObject = { code: string; name: string; games: number; icon: string | null };
+/** One source of a picker (a building, altar, camp, shop, hero or race) and its objects, most ordered first. */
+export type PickerGroup = { source: { code: string; name: string; icon: string | null }; objects: PickerObject[] };
+
+/** POST /objects: the groups of a picker for a side's race values, counted over the replay filters. */
+export async function pickerGroups(kind: PickerKind, race: string[], filters: Filters): Promise<PickerGroup[]> {
+  const { groups } = (await api<{ groups: { source: { code: string; name: string }; objects: Omit<PickerObject, "icon">[] }[] }>("/objects", { kind, race, filters }))!;
+  return groups.map((g) => ({ source: { ...g.source, icon: iconOf(g.source.code) }, objects: g.objects.map((o) => ({ ...o, icon: iconOf(o.code) })) }));
+}

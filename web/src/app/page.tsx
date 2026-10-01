@@ -47,6 +47,8 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
     if (value(from)) p2[k] = [value(from)];
   if (RESULTS[value("opp_result")]) p2.result = [RESULTS[value("opp_result")]];
   const p2Steps = apiSteps("opp_steps");
+  // the pickers count games on the replay filters
+  const scope: Filters = Object.fromEntries(Object.entries(filters).filter(([k]) => ["map", "patch", "duration_ms"].includes(k)));
   const others = p2.result || p2Steps.length ? [{ filters: p2, steps: p2Steps }] : [];
   const p1Steps = apiSteps("steps");
 
@@ -117,8 +119,8 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
           )}
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-          <PlayerSlot n={1} race={race} counts={counts} name={value("player")} outcome={value("result")} steps={steps("steps")} objects={objects} />
-          <PlayerSlot n={2} race={oppRace} counts={counts} name={value("opp_player")} outcome={value("opp_result")} steps={steps("opp_steps")} objects={objects} />
+          <PlayerSlot n={1} race={race} counts={counts} scope={scope} name={value("player")} outcome={value("result")} steps={steps("steps")} objects={objects} />
+          <PlayerSlot n={2} race={oppRace} counts={counts} scope={scope} name={value("opp_player")} outcome={value("opp_result")} steps={steps("opp_steps")} objects={objects} />
         </div>
         <div className="flex items-center justify-end gap-4">
           {set && <Link href="/">Clear</Link>}

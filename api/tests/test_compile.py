@@ -2,7 +2,19 @@
 
 import pytest
 
-from compile import BadRequest, Model, QueryRequest, SearchRequest, Step, compile_query, compile_search, sequence_pattern
+from compile import (
+    BadRequest,
+    Model,
+    ObjectsRequest,
+    QueryRequest,
+    SearchRequest,
+    Step,
+    compile_objects,
+    compile_query,
+    compile_search,
+    race_pair,
+    sequence_pattern,
+)
 
 PG = Model(
     table="w3g.player_games",
@@ -85,3 +97,22 @@ def test_names_outside_the_catalog_are_refused(req: QueryRequest, model: Model) 
 def test_codes_are_validated_at_the_boundary() -> None:
     with pytest.raises(ValueError):
         Step(type="building", code="x' OR 1=1")
+
+
+def test_race_values_name_a_played_race_and_the_random_flag() -> None:
+    assert [race_pair(v) for v in ["NE", "RN", "R"]] == [("NE", 0), ("NE", 1), ("RANDOM", 1)]
+
+
+def test_objects_count_the_side_race_and_list_its_and_neutral_objects() -> None:
+    req = ObjectsRequest(kind="hired", race=["NE", "RN"], filters={"map": ["Echo Isles"]})
+    sql, params = compile_objects(req, PG)
+    assert "FROM w3g.player_games WHERE has({p0:Array(String)}, map) AND has({p1:Array(Tuple(String, UInt8))}, (race, random))" in sql
+    assert params["p1"] == "[('NE',0),('NE',1)]"
+    assert params["p2"] == "['unit']"  # a mercenary is a unit order
+    assert "WHERE kind = {p4:String} AND has({p5:Array(String)}, race)" in sql
+    assert params["p5"] == "['NE','']"
+
+
+def test_objects_take_replay_filters_only() -> None:
+    with pytest.raises(BadRequest):
+        compile_objects(ObjectsRequest(kind="unit", filters={"player": ["a"]}), PG)

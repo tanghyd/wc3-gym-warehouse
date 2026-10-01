@@ -178,6 +178,30 @@
     .race-sub { position: static; width: auto; margin: 2px 0 4px 18px; padding: 0; border: 0; box-shadow: none; }
   }
 
+  /* A command-card icon in a dark bevelled frame, --s wide. */
+  .tile {
+    --s: 40px; display: inline-block; flex-shrink: 0; width: calc(var(--s) + 2px); height: calc(var(--s) + 2px);
+    padding: 1px; border-radius: 3px; background: var(--tile-edge);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 0 0 1px oklch(80% 0.06 80 / 0.25);
+  }
+  .tile img { display: block; width: var(--s); height: var(--s); border-radius: 2px; }
+  .tile.empty { background: rgb(var(--v-theme-surface-light)); box-shadow: inset 0 0 0 1px var(--color-border); }
+
+  /* A step picker: groups on the left, the open group's objects on the right; on a phone one
+     column at a time, the objects after a group is opened. */
+  .picker-list { max-height: 18rem; overflow-y: auto; }
+  .cascade { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: 8px; }
+  .cascade > .col-right { border-left: 1px solid var(--color-border); padding-left: 8px; }
+  .colhead { display: flex; align-items: center; gap: 8px; min-height: 24px; padding: 0 8px 4px; font-size: 0.8125rem; color: var(--color-muted); }
+  .colhead .back { display: none; margin-right: auto; }
+  @media (max-width: 639px) {
+    .cascade { grid-template-columns: minmax(0, 1fr); }
+    .cascade > .col-right { border-left: 0; padding-left: 0; }
+    .cascade:not([data-drilled]) > .col-right, .cascade[data-drilled] > .col-left { display: none; }
+    .colhead .back { display: inline-flex; }
+    .colhead .desk { display: none; }
+  }
+
   /* A native checkbox in the gold of a chosen control. */
   .check { width: 16px; height: 16px; accent-color: rgb(var(--v-theme-primary)); cursor: pointer; }
 
@@ -189,9 +213,9 @@
   .table tbody tr:hover { background: rgba(var(--v-theme-on-surface), 0.04); }
 }
 
-/* The gold button's lower edge and drop shadow: softer on the light ground. */
-:root { --btn-gold-edge: oklch(50% 0.1 70 / 0.35); --btn-gold-drop: 0 1px 1px oklch(20% 0.04 60 / 0.22); }
-:root[data-theme="dark"] { --btn-gold-edge: oklch(50% 0.1 70 / 0.6); --btn-gold-drop: 0 1px 2px oklch(0% 0 0 / 0.6); }
+/* The gold button's lower edge and drop shadow, softer on the light ground, and the dark frame of a tile. */
+:root { --btn-gold-edge: oklch(50% 0.1 70 / 0.35); --btn-gold-drop: 0 1px 1px oklch(20% 0.04 60 / 0.22); --tile-edge: rgba(10, 6, 2, 0.75); }
+:root[data-theme="dark"] { --btn-gold-edge: oklch(50% 0.1 70 / 0.6); --btn-gold-drop: 0 1px 2px oklch(0% 0 0 / 0.6); --tile-edge: rgba(231, 235, 227, 0.22); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]):not([data-theme="dark"]) { --btn-gold-edge: oklch(50% 0.1 70 / 0.6); --btn-gold-drop: 0 1px 2px oklch(0% 0 0 / 0.6); }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) { --btn-gold-edge: oklch(50% 0.1 70 / 0.6); --btn-gold-drop: 0 1px 2px oklch(0% 0 0 / 0.6); --tile-edge: rgba(231, 235, 227, 0.22); }
 }

@@ -1,0 +1,20 @@
+{
+  "route": "/objects",
+  "request": {
+    "kind": "hero",
+    "race": [
+      "OC"
+    ],
+    "filters": {
+      "player": [
+        "FoCuS#31324"
+      ]
+    }
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "detail": "'player' is not a replay filter: use replay_id, map, patch, minutes, duration_ms"
+    }
+  }
+}

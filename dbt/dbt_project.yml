@@ -34,3 +34,5 @@ seeds:
       +column_types: {code: String, name: String, kind: String, category: String}
     patches:
       +column_types: {build_number: UInt32, patch: String, description: String}
+    object_sources:
+      +column_types: {code: String, kind: String, source_code: String, source_name: String}

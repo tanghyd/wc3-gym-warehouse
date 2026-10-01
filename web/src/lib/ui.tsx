@@ -1,5 +1,5 @@
 // Marks, fields and formats shared by the server pages and the client components.
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { GameEvent, Objects } from "./api";
 import { RACES } from "./races";
 
@@ -107,5 +107,14 @@ export function Timer({ label }: { label: string }) {
         <path d="M12 9.5v4l2.5 2M9.5 3h5" />
       </g>
     </svg>
+  );
+}
+
+/** An object's command-card icon in a dark bevelled frame; an empty frame with no icon. */
+export function Tile({ icon, size, alt = "" }: { icon: string | null | undefined; size: number; alt?: string }) {
+  return (
+    <span className={`tile ${icon ? "" : "empty"}`} style={{ "--s": `${size}px` } as CSSProperties} role={alt ? "img" : undefined} aria-label={alt || undefined}>
+      {icon && <img src={icon} width={size} height={size} alt="" />}
+    </span>
   );
 }

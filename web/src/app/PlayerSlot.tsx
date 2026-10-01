@@ -1,8 +1,9 @@
 "use client";
 import { useId, useMemo, useRef, useState } from "react";
-import { encodeSteps, fits, KINDS, type Kind, LETTERS, MAX_WITHIN, parseMss, type Step, type StepObject } from "@/lib/steps";
-import { racePair } from "@/lib/races";
+import type { Filters, PickerKind } from "@/lib/api";
+import { encodeSteps, KINDS, type Kind, MAX_WITHIN, parseMss, type Step, type StepObject } from "@/lib/steps";
 import { Field, mss, ObjIcon, RaceIcon } from "@/lib/ui";
+import { Picker } from "./Picker";
 import { RaceMenu } from "./RaceMenu";
 
 /** A step being edited: the field text as typed. */
@@ -13,9 +14,10 @@ const FIELDS = {
   1: { race: ["race", "Race"], player: ["player", "Player"], result: "result", steps: "steps" },
   2: { race: ["opponent_race", "Opponent race"], player: ["opp_player", "Opponent"], result: "opp_result", steps: "opp_steps" },
 } as const;
+// the picker kind of each step kind
+const PICKER_KIND: Record<Kind, PickerKind> = { building: "building", unit: "unit", hired: "hired", upgrade: "upgrade", hero: "hero", hero_skill: "skill", item: "item" };
 const OUTCOMES = [["", "Any"], ["won", "Won"], ["lost", "Lost"]] as const;
 const MAX_STEPS = 10; // the API's limit per player
-const RACE_OF: Record<string, string> = Object.fromEntries(Object.entries(LETTERS).map(([race, l]) => [l, race]));
 
 // seconds as typed; a number past the API's bound reads as blank
 const whole = (v: string) => (v.trim() !== "" && Number(v) >= 0 && Number(v) <= MAX_WITHIN ? Math.round(Number(v)) : null);
@@ -51,71 +53,13 @@ function Glyph({ d }: { d: string }) {
 const focus = (...ids: string[]) =>
   requestAnimationFrame(() => ids.map((i) => document.getElementById(i) as HTMLButtonElement | null).find((el) => el && !el.disabled)?.focus());
 
-/** The objects of one kind a race can order, searchable by name; Enter picks the first. */
-function Picker(props: { label: string; kind: Kind; race: string; objects: StepObject[]; byCode: Record<string, StepObject>; onPick: (code: string) => void; onClose: () => void }) {
-  const { kind, race, byCode, onPick } = props;
-  const [q, setQ] = useState("");
-  const t = q.trim().toLowerCase();
-  const list = props.objects.filter((o) => o.kind === kind && fits(o, race) && (!t || o.name.toLowerCase().includes(t)));
-  // with no race, or Random, each object shows the race it belongs to
-  const mixed = !LETTERS[race] && kind !== "item";
-  return (
-    <div
-      role="group"
-      aria-label={props.label}
-      className="mt-2 rounded-[0.35rem] border p-2 sm:ml-7"
-      onKeyDown={(e) => {
-        if (e.key === "Escape") {
-          e.preventDefault();
-          props.onClose();
-        }
-      }}
-    >
-      <input
-        type="search"
-        autoFocus
-        aria-label="Find by name"
-        placeholder="Find by name"
-        className="field w-full"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter") return;
-          e.preventDefault(); // Enter picks, it does not submit the search
-          if (list[0]) onPick(list[0].code);
-        }}
-      />
-      {list.length ? (
-        <ul className="mt-2 grid max-h-72 gap-0.5 overflow-y-auto sm:grid-cols-2">
-          {list.map((o) => (
-            <li key={o.code}>
-              <button type="button" value={o.code} className="flex w-full items-center gap-2 rounded-[0.35rem] px-2 py-1.5 text-left hover:bg-on-surface/5" onClick={() => onPick(o.code)}>
-                <ObjIcon code={o.code} objects={byCode} size={28} alt="" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate">{o.name}</span>
-                  {o.hero && <span className="block truncate text-xs text-muted">{o.hero}</span>}
-                </span>
-                {mixed && <RaceIcon race={RACE_OF[o.letter] ?? ""} size="1.1em" />}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="p-2 text-sm text-muted">Nothing matches. Clear the search.</p>
-      )}
-    </div>
-  );
-}
-
 /** One player of the search: race, name, outcome and an ordered build, written to the form's fields. */
-export function PlayerSlot(props: { n: 1 | 2; race: string[]; name: string; outcome: string; steps: Step[]; objects: StepObject[]; counts: Record<string, number> }) {
+export function PlayerSlot(props: { n: 1 | 2; race: string[]; name: string; outcome: string; steps: Step[]; objects: StepObject[]; counts: Record<string, number>; scope: Filters }) {
   const { n, objects } = props;
   const f = FIELDS[n];
   const id = useId();
   const byCode = useMemo(() => Object.fromEntries(objects.map((o) => [o.code, o])), [objects]);
   const [races, setRaces] = useState(props.race);
-  // the played race the pickers list objects of; "" for any race or Random with no played race
-  const race = races.length ? racePair(races[0])[0] : "";
   const [steps, setSteps] = useState<Draft[]>(() =>
     props.steps.map((s, key) => ({ key, kind: byCode[s.code]?.kind ?? "building", code: s.code, within: s.within === null ? "" : String(s.within), from: toText(s.from), to: toText(s.to) })),
   );
@@ -256,11 +200,10 @@ export function PlayerSlot(props: { n: 1 | 2; race: string[]; name: string; outc
                     {picking === s.key && (
                       <Picker
                         label={`Objects for step ${i + 1}`}
-                        kind={s.kind}
-                        race={race}
-                        objects={objects}
-                        byCode={byCode}
-                        onPick={(code) => pick(s.key, code)}
+                        kind={PICKER_KIND[s.kind]}
+                        race={races}
+                        filters={props.scope}
+                        onPick={(p) => pick(s.key, p.codes[0])}
                         onClose={() => {
                           setPicking(null);
                           focus(sid(s.key, "obj"));

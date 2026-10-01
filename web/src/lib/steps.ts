@@ -4,9 +4,10 @@
 export const KINDS = {
   building: ["Built", "building"],
   unit: ["Trained", "unit"],
+  hired: ["Hired", "unit"],
   upgrade: ["Researched", "upgrade"],
-  hero: ["Got hero", "hero_trained"],
-  hero_skill: ["Used skill", "hero_skill"],
+  hero: ["Hero", "hero_trained"],
+  hero_skill: ["Learned skill", "hero_skill"],
   item: ["Bought", "item"],
 } as const;
 export type Kind = keyof typeof KINDS;

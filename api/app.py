@@ -18,12 +18,14 @@ from compile import (
     ROWS_SQL,
     BadRequest,
     Model,
-    race_value,
+    ObjectsRequest,
     QueryRequest,
     SearchRequest,
     array,
+    compile_objects,
     compile_query,
     compile_search,
+    race_value,
 )
 
 CH_URL = os.environ.get("CLICKHOUSE_URL", "http://clickhouse:8123")
@@ -109,6 +111,20 @@ def query(req: QueryRequest) -> dict[str, Any]:
     except BadRequest as e:
         raise HTTPException(400, str(e)) from e
     return {"rows": run(sql, params), "sql": sql, "params": params}
+
+
+@app.post("/objects")
+def objects(req: ObjectsRequest) -> dict[str, Any]:
+    """A step picker's groups: each source with its objects, most ordered first."""
+    try:
+        sql, params = compile_objects(req, model("player_games"))
+    except BadRequest as e:
+        raise HTTPException(400, str(e)) from e
+    groups: dict[str, dict[str, Any]] = {}
+    for r in run(sql, params):
+        group = groups.setdefault(r["source_code"], {"source": {"code": r["source_code"], "name": r["source_name"]}, "objects": []})
+        group["objects"].append({"code": r["code"], "name": r["name"], "games": r["games"]})
+    return {"groups": list(groups.values()), "sql": sql, "params": params}
 
 
 def _won(team_id: int, winning_team_id: int) -> bool | None:

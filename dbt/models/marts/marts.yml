@@ -535,3 +535,33 @@ models:
         description: "{{ doc('time_ms') }}"
       - name: seq
         description: "{{ doc('seq') }} Numbered within the sender's transfers."
+
+  - name: objects
+    description: >-
+      One row per object a step picker lists, with the source it comes from: units, mercenaries,
+      upgrades, heroes and items from the object_sources seed, each skill under the hero that
+      learns it, each building under its race. The query API's POST /objects reads it.
+    data_tests:
+      - unique:
+          name: objects_one_row_per_source
+          description: An object is listed once per picker kind and source.
+          arguments:
+            column_name: "kind || ':' || code || ':' || source_code"
+    columns:
+      - name: kind
+        description: The picker kind, building, unit, hired, upgrade, hero, skill or item.
+        data_tests:
+          - accepted_values:
+              description: Kind is a picker kind.
+              arguments:
+                values: [building, unit, hired, upgrade, hero, skill, item]
+      - name: code
+        description: "{{ doc('object_code') }}"
+      - name: name
+        description: The object's display name from mappings.
+      - name: source_code
+        description: The source's code, such as eaom, a hero code for a skill, or a race code (HU, OC, NE, UD) for a building.
+      - name: source_name
+        description: The source's display name, such as Ancient of War, Demon Hunter or Night Elf.
+      - name: race
+        description: The race whose players use the object (HU, OC, NE, UD), or '' for a neutral source that every race uses.
