@@ -31,6 +31,14 @@
  "expansion": true,
  "gamename": "w3c-20-pVJ4T9MAbO",
  "id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
+ "leaves": [
+  {
+   "playerId": 2,
+   "reason": "07000000",
+   "result": "07000000",
+   "timeMS": 937127
+  }
+ ],
  "map": {
   "checksum": "ffffffff",
   "checksumSha1": "a1283502c4b8243895deb4dce371e4d016e5a3f5",
@@ -1014,6 +1022,7 @@
   }
  ],
  "randomseed": 2729627562,
+ "saverPlayerId": 1,
  "settings": {
   "alwaysVisible": false,
   "fixedTeams": true,

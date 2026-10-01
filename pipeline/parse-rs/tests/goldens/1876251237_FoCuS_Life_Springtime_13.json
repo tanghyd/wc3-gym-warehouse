@@ -17,6 +17,50 @@
  "expansion": true,
  "gamename": "FLO-STREAM",
  "id": "0ddbb4abacfb6b62d88223ac6bb3902edc0bdc3a2eac55e29ffe367405cffa60",
+ "leaves": [
+  {
+   "playerId": 1,
+   "reason": "01000000",
+   "result": "07000000",
+   "timeMS": 393712
+  },
+  {
+   "playerId": 2,
+   "reason": "01000000",
+   "result": "09000000",
+   "timeMS": 393837
+  },
+  {
+   "playerId": 4,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 394827
+  },
+  {
+   "playerId": 3,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 394889
+  },
+  {
+   "playerId": 6,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 396104
+  },
+  {
+   "playerId": 5,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 398904
+  },
+  {
+   "playerId": 24,
+   "reason": "0c000000",
+   "result": "0b000000",
+   "timeMS": 403907
+  }
+ ],
  "map": {
   "checksum": "b6dae6fe",
   "checksumSha1": "86435da9c6aaae5970e80fa46fcbdfd7279779c4",
@@ -633,6 +677,7 @@
   }
  ],
  "randomseed": 1876251237,
+ "saverPlayerId": 1,
  "settings": {
   "alwaysVisible": false,
   "fixedTeams": true,

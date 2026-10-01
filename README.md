@@ -35,12 +35,12 @@ The replay inspector is at http://localhost:3000, the API at http://localhost:80
 
 ```
 R2 or MinIO                        ClickHouse (dbt builds w3g.*)                  API            page
-replays/<series>/game<n>.w3g ─drain─▶ parsed/v3/dt=<date>/<id>.json ─dbt─▶ raw_replays ─▶ marts ─▶ /query  ─▶ web :3000
+replays/<series>/game<n>.w3g ─drain─▶ parsed/v4/dt=<date>/<id>.json ─dbt─▶ raw_replays ─▶ marts ─▶ /query  ─▶ web :3000
                                                                                               /search
 ```
 
 1. The GNL backend writes a reported replay to `<env>/replays/<series id>/game<n>.w3g`; `<env>` is the Vercel environment (`app/services/r2.py`), set as `W3WAREHOUSE_S3_PREFIX`. Locally, `minio-setup` puts the 3 goldens there as series 9001-9003. Any other `.w3g` under `replays/` (such as `replays/w3warehouse-ladder/`, which `just local::upload-replays` fills) is drained too, with no `gnl` field.
-2. The drain (`pipeline/parse-rs`, w3grs) parses each new or changed file and writes the parsed document under `parsed/v3/`, with the raw object key as `source_key`. It never moves or deletes a raw file.
+2. The drain (`pipeline/parse-rs`, w3grs) parses each new or changed file and writes the parsed document under `parsed/v4/`, with the raw object key as `source_key`. It never moves or deletes a raw file.
 3. `just dbt build`:
    - `raw_replays` is an incremental model. It reads the dbt source `bucket.parsed_docs`, an S3 table over the `parsed_docs` named collection (`infrastructure/docker/clickhouse/named-collections.xml`) that dbt's `on-run-start` hook creates, and appends the documents it does not have yet. It skips a loaded document by its file name (`<replay_id>.json`) before ClickHouse fetches it. The URL and the keys come from the server's environment, so no secret lands in SQL.
    - The staging views flatten orders and hero skills.
@@ -61,7 +61,7 @@ replays/<series>/game<n>.w3g ─drain─▶ parsed/v3/dt=<date>/<id>.json ─dbt
 
 The opener tree is a `GROUP BY` over `player_games.opener_N`, so the refreshable rollup and its 10-minute staleness are gone.
 
-A 1v1 winner comes from the replay's leave blocks, which the parser reads into `winningTeamId`. A replay-service copy is recorded by the FLO observer, so it carries both players' leaves and names the winner. A player-saved w3c- file loses the saver's own leave, so a game the saver quit has no winner (`winning_team_id` -1, result `unknown`). Results for GNL games will come from the GNL report, through the dims loader. One game can arrive as two files: they share `game_key` (random seed and sorted names), `duplicate_of` points the others at one copy (a recorded winner first, then the lowest id), and only `player_games` leaves duplicates out. The per-replay tables keep every file, because the replay page opens any file by id and build-order steps always join `player_games`.
+The winner is the team opposite the first player to quit: the first player leave in the parser's `leaves` (observers skipped), or the saver (`saverPlayerId`) when no player leave is recorded, because a FLO player-saved w3c- file drops the saver's own leave. `winning_team_id` is -1 unless the game has exactly two teams. One game can arrive as two files: they share `game_key` (random seed and sorted names), `duplicate_of` points the others at one copy (a recorded winner first, then the lowest id), and only `player_games` leaves duplicates out. The per-replay tables keep every file, because the replay page opens any file by id and build-order steps always join `player_games`.
 
 ### dbt docs and tests
 

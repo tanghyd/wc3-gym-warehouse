@@ -11,7 +11,7 @@ use w3grs::{ParserOutput, W3GReplay};
 /// so after a bump the next pass re-parses every raw replay into the new prefix.
 /// The one hand copy is W3WAREHOUSE_PARSED_URL in .env and .env.example, the
 /// prefix ClickHouse loads; change it with the bump.
-pub const PARSE_VERSION: u32 = 3;
+pub const PARSE_VERSION: u32 = 4;
 
 /// A parsed replay: the canonical JSON doc the ClickHouse loader consumes, plus
 /// the `id` / `type` lifted from the typed output so callers don't re-extract

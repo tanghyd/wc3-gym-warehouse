@@ -17,6 +17,92 @@
  "expansion": true,
  "gamename": "FLO-STREAM",
  "id": "92336fe5a392d0043442e75ad4a5097086d6451a35b3d68d99c3093e65b8d8f6",
+ "leaves": [
+  {
+   "playerId": 1,
+   "reason": "01000000",
+   "result": "07000000",
+   "timeMS": 363930
+  },
+  {
+   "playerId": 2,
+   "reason": "01000000",
+   "result": "09000000",
+   "timeMS": 364083
+  },
+  {
+   "playerId": 3,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 364573
+  },
+  {
+   "playerId": 5,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 364633
+  },
+  {
+   "playerId": 7,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 364846
+  },
+  {
+   "playerId": 8,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 365183
+  },
+  {
+   "playerId": 10,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 365367
+  },
+  {
+   "playerId": 13,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 365458
+  },
+  {
+   "playerId": 4,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 366193
+  },
+  {
+   "playerId": 6,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 366253
+  },
+  {
+   "playerId": 9,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 369816
+  },
+  {
+   "playerId": 11,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 381943
+  },
+  {
+   "playerId": 12,
+   "reason": "01000000",
+   "result": "0b000000",
+   "timeMS": 397682
+  },
+  {
+   "playerId": 24,
+   "reason": "0c000000",
+   "result": "0b000000",
+   "timeMS": 406023
+  }
+ ],
  "map": {
   "checksum": "b6dae6fe",
   "checksumSha1": "86435da9c6aaae5970e80fa46fcbdfd7279779c4",
@@ -639,6 +725,7 @@
   }
  ],
  "randomseed": 3519601160,
+ "saverPlayerId": 1,
  "settings": {
   "alwaysVisible": false,
   "fixedTeams": true,

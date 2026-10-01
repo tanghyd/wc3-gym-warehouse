@@ -5,8 +5,18 @@
 WITH
     replaceRegexpOne(JSONExtractString(r.doc, 'map', 'file'), '\\.(w3x|w3m|w3g)$', '') AS stem,
     JSONExtractArrayRaw(r.doc, 'players') AS players,
-    -- -1 when the replay's leave blocks name no winner.
-    coalesce(JSONExtract(r.doc, 'winningTeamId', 'Nullable(Int8)'), -1) AS winner
+    arrayMap(p -> JSONExtractUInt(p, 'id'), players) AS player_ids,
+    arrayMap(p -> toInt8(JSONExtractInt(p, 'teamid')), players) AS team_ids,
+    -- Who quit, in order: each leave's player, then the saver. A FLO player-saved file
+    -- stops at the saver's own leave and drops it, so with no player leave recorded the
+    -- saver quit first.
+    arrayPushBack(arrayMap(l -> JSONExtractUInt(l, 'playerId'), JSONExtractArrayRaw(r.doc, 'leaves')),
+                  JSONExtractUInt(r.doc, 'saverPlayerId')) AS quitters,
+    -- The first player to quit lost, observers skipped. 0 when no quitter is a player.
+    arrayFirstIndex(id -> has(player_ids, id), quitters) AS first_quit,
+    -- The other team won. -1 unless the game has exactly two teams and a loser.
+    if(first_quit > 0 AND length(arrayDistinct(team_ids)) = 2,
+       arrayFirst(t -> t != team_ids[indexOf(player_ids, quitters[first_quit])], team_ids), -1) AS winner
 SELECT
     r.replay_id                                                          AS replay_id,
     -- The GNL series and game number the object key carried, written into the
@@ -39,6 +49,8 @@ SELECT
     toUInt32(JSONExtractUInt(r.doc, 'parseTime'))                        AS parse_time_ms,
     JSONExtractString(r.doc, 'source_key')                               AS source_key,
     winner                                                               AS winning_team_id,
+    arrayStringConcat(arraySort(arrayFilter((n, t) -> t = winner,
+        arrayMap(p -> JSONExtractString(p, 'name'), players), team_ids)), ',') AS winner_names,
     JSONExtractInt(r.doc, 'randomseed')                                  AS random_seed,
     concat(toString(random_seed), ':',
            arrayStringConcat(arraySort(arrayMap(p -> JSONExtractString(p, 'name'), players)), ',')) AS game_key,
