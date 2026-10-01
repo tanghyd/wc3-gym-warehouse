@@ -20,6 +20,10 @@ type Row = {
 const search = async (request: APIRequestContext, filters: object): Promise<Row[]> => (await (await request.post(`${API}/search`, { data: { filters } })).json()).replays;
 /** The replay ids the list shows, top first. */
 const listed = (page: Page) => page.locator('tbody a[href^="/replays/"]').evaluateAll((as) => as.map((a) => a.getAttribute("href")!.split("/").pop()));
+// The goldens' maps hold fewer games than the list's 100, so a list of one shows all of its goldens:
+// S9001 OvN and S9002 HvN on Springtime 1.3, S9003 NvO on Concealed Hill.
+const SPRING = "/?map=Springtime%201.3";
+const HILL = "/?map=Concealed%20Hill";
 const record = (w: number, l: number) => (w + l ? `${w} – ${l}` + (w + l >= 10 ? ` (${Math.round((100 * w) / (w + l))}%)` : "") : "—");
 const NAME = "thanks#11187";
 
@@ -28,11 +32,15 @@ test.describe("replay list", () => {
     await page.goto("/");
   });
 
-  test("lists every game, the three goldens among them", async ({ page, request }) => {
-    const all = (await search(request, {})).length;
+  test("lists the games POST /search answers, the three goldens on their maps' lists", async ({ page, request }) => {
+    const want = await search(request, {});
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Replays");
-    await expect(rows(page)).toHaveCount(all);
-    await expect(goldens(page)).toHaveCount(3);
+    await expect(rows(page)).toHaveCount(want.length);
+    expect(await listed(page)).toEqual(want.map((r) => r.replay_id));
+    await page.goto(SPRING);
+    await expect(goldens(page)).toHaveCount(2);
+    await page.goto(HILL);
+    await expect(goldens(page)).toHaveCount(1);
   });
 
   test("each player's heroes sit under his name in pick order, as the API row has them", async ({ page, request }) => {
@@ -58,6 +66,7 @@ test.describe("replay list", () => {
     expect(got).toEqual(want);
 
     // Concealed Hill: Demon Hunter then Keeper of the Grove against Far Seer, Shadow Hunter, Tauren Chieftain
+    await page.goto(HILL);
     const hill = goldens(page).filter({ hasText: "Concealed Hill" });
     const heroes = (player: string) => hill.getByRole("listitem").filter({ hasText: player }).getByRole("list", { name: "Heroes" }).getByRole("img");
     const named = async (player: string) => (await heroes(player).evaluateAll((es) => es.map((e) => e.getAttribute("alt") ?? e.getAttribute("aria-label")))).map((l) => l!.split(",")[0]);
@@ -66,23 +75,30 @@ test.describe("replay list", () => {
     expect(await heroes("thanks#11187").first().evaluate((e) => e.getBoundingClientRect().width)).toBe(20);
   });
 
-  // Golden rows per focus-player race, from POST /search on the goldens.
-  for (const [label, id, n] of [
-    ["Night Elf", "NE", 3],
-    ["Orc", "OC", 2],
-    ["Human", "HU", 1],
-    ["Undead", "UD", 0],
+  // Golden rows per focus-player race on Springtime 1.3 and on Concealed Hill, from POST /search on the goldens.
+  for (const [label, id, spring, hill] of [
+    ["Night Elf", "NE", 2, 1],
+    ["Orc", "OC", 1, 1],
+    ["Human", "HU", 1, 0],
+    ["Undead", "UD", 0, 0],
   ] as const) {
-    test(`race ${label} keeps ${n} goldens`, async ({ page }) => {
-      await page.getByRole("combobox", { name: "Race", exact: true }).selectOption({ label });
-      await page.getByRole("button", { name: "Search" }).click();
-      await expect(page).toHaveURL(new RegExp(`[?&]race=${id}(&|$)`));
-      await expect(goldens(page)).toHaveCount(n);
-      expect(await without(page, label), `rows with no ${label}`).toEqual([]);
+    test(`race ${label} keeps ${spring + hill} goldens`, async ({ page }) => {
+      for (const [url, n] of [
+        [SPRING, spring],
+        [HILL, hill],
+      ] as const) {
+        await page.goto(url);
+        await page.getByRole("combobox", { name: "Race", exact: true }).selectOption({ label });
+        await page.getByRole("button", { name: "Search" }).click();
+        await expect(page).toHaveURL(new RegExp(`[?&]race=${id}(&|$)`));
+        await expect(goldens(page)).toHaveCount(n);
+        expect(await without(page, label), `rows with no ${label}`).toEqual([]);
+      }
     });
   }
 
-  test("race and opponent race narrow to the NvH game; Clear drops them", async ({ page }) => {
+  test("race and opponent race narrow to the NvH game; Clear drops them", async ({ page, request }) => {
+    await page.goto(SPRING);
     await page.getByRole("combobox", { name: "Race", exact: true }).selectOption({ label: "Night Elf" });
     await page.getByRole("combobox", { name: "Opponent race" }).selectOption({ label: "Human" });
     await page.getByRole("button", { name: "Search" }).click();
@@ -90,11 +106,15 @@ test.describe("replay list", () => {
     await expect(goldens(page)).toContainText("Springtime 1.3");
     await expect(goldens(page).getByRole("img", { name: "Human" })).toBeVisible();
     for (const race of ["Night Elf", "Human"]) expect(await without(page, race), `rows with no ${race}`).toEqual([]);
+    // Clear drops every filter, the map too: the list is POST /search's with none
+    const all = await search(request, {});
     await page.getByRole("link", { name: "Clear" }).click();
-    await expect(goldens(page)).toHaveCount(3);
+    await expect(rows(page)).toHaveCount(all.length);
+    expect(await listed(page)).toEqual(all.map((r) => r.replay_id));
   });
 
   test("minutes from and to keep games of that length, ends included", async ({ page, request }) => {
+    await page.goto(HILL);
     await page.getByRole("spinbutton", { name: "Minutes from" }).fill("15");
     await page.getByRole("spinbutton", { name: "Minutes to" }).fill("16");
     await page.getByRole("button", { name: "Search" }).click();
@@ -104,8 +124,9 @@ test.describe("replay list", () => {
     const lengths = (await rows(page).locator("td:last-child").allInnerTexts()).map(secs);
     expect(lengths.length).toBeGreaterThan(0);
     expect(lengths.filter((s) => s < 15 * 60 || s > 16 * 60)).toEqual([]);
-    // exactly the games from 15:00.000 to 16:00.000, so a 16:02 game never rounds in
-    const all = await search(request, {});
+    // exactly the map's games from 15:00.000 to 16:00.000, so a 16:02 game never rounds in
+    const all = await search(request, { map: ["Concealed Hill"] });
+    expect(all.length).toBeLessThan(100);
     await expect(rows(page)).toHaveCount(all.filter((r) => r.duration_ms >= 900_000 && r.duration_ms <= 960_000).length);
 
     await page.getByRole("spinbutton", { name: "Minutes from" }).fill("999");
@@ -139,31 +160,33 @@ test.describe("replay list", () => {
   });
 
   test("the patch filter keeps that patch's games, as the API counts them", async ({ page, request }) => {
-    const [p2, p3] = await Promise.all([search(request, { patch: ["2.0"] }), search(request, { patch: ["3.0"] })]);
-    expect(p3.length).toBeGreaterThan(0);
     const patch = page.getByRole("combobox", { name: "Patch" });
     await expect(patch).toHaveValue("");
     const res = await request.post(`${API}/query`, { data: { dimensions: ["patch"], measures: ["games"], order_by: ["patch"] } });
-    const values = (await res.json()).rows.map((r: { patch: string }) => r.patch).filter(Boolean);
+    const values: string[] = (await res.json()).rows.map((r: { patch: string }) => r.patch).filter(Boolean);
+    expect(values).toContain("2.0");
     await expect(patch.locator("option")).toHaveText(["Any", ...values]);
 
-    await patch.selectOption("3.0");
-    await page.getByRole("button", { name: "Search" }).click();
-    await expect(page).toHaveURL(/[?&]patch=3\.0(&|$)/);
-    await expect(rows(page)).toHaveCount(p3.length);
-    expect(await listed(page)).toEqual(p3.map((r) => r.replay_id));
-    await expect(goldens(page)).toHaveCount(0);
-    // a patch names no player, so no Player 1 column
-    await expect(page.getByRole("columnheader", { name: "Player 1" })).toHaveCount(0);
+    for (const value of values) {
+      await patch.selectOption(value);
+      await page.getByRole("button", { name: "Search" }).click();
+      await expect(page).toHaveURL(new RegExp(`[?&]patch=${value.replace(".", "\\.")}(&|$)`));
+      const want = await search(request, { patch: [value] });
+      await expect(rows(page)).toHaveCount(want.length);
+      expect(await listed(page)).toEqual(want.map((r) => r.replay_id));
+      // a patch names no player, so no Player 1 column
+      await expect(page.getByRole("columnheader", { name: "Player 1" })).toHaveCount(0);
+    }
 
-    await patch.selectOption("2.0");
-    await page.getByRole("button", { name: "Search" }).click();
-    await expect(page).toHaveURL(/[?&]patch=2\.0(&|$)/);
-    await expect(rows(page)).toHaveCount(p2.length);
-    await expect(goldens(page)).toHaveCount(3);
+    // the goldens are build 6117, patch 2.0: its lists of their maps hold all three
+    await page.goto(`${SPRING}&patch=2.0`);
+    await expect(goldens(page)).toHaveCount(2);
+    await page.goto(`${HILL}&patch=2.0`);
+    await expect(goldens(page)).toHaveCount(1);
   });
 
   test("a row links to its replay page", async ({ page }) => {
+    await page.goto(HILL);
     await goldens(page).getByRole("link", { name: "Concealed Hill" }).click();
     await expect(page).toHaveURL(`/replays/${ID}`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Concealed Hill");

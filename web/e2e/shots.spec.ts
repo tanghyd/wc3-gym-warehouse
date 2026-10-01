@@ -12,12 +12,12 @@ const PAGES = [
   ["openers-undead", "/openers?race=UD&sort=winrate&open=usep&open=usep.uaod&open=usep.uaod.ugrv&open=usep.uaod.ugrv.utom&open=usep.uaod.ugrv.utom.unp1"],
   // Concealed Hill, 15:37, NE v OC: the story 4 golden
   ["replay", "/replays/dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8"],
-  // Shallow Grave, 31 minutes, NE v OC: the longest human game
-  ["replay-long", "/replays/a9872674567c6389f3d912b5f053f7e2af4a87de3378d5229a90f091bd219d88"],
-  // Tidehunters, 22 minutes, HU v NE
-  ["replay-tidehunters", "/replays/025d14359f58eac19f263f0dce880bc13bf9cf8d087158202addeb93474ac8c2"],
-  // Fading Autumn, 20 minutes, NE v UD
-  ["replay-autumn", "/replays/be7b97ee9668d1f441fa2973387ea4e02fa5a02d2adababec6cb3e7647871c32"],
+  // Springtime 1.4, 49 minutes, HU v UD: the longest game
+  ["replay-long", "/replays/d43bf84a43237df9ac301e8a3a883371d8068da2dabf2f76cdaa4993ccf5ffd4"],
+  // Tidehunters 1.2, 22 minutes, HU v NE
+  ["replay-tidehunters", "/replays/8981073e8fb05086fc0c15dc89ecdcef945bf0c5e980246ffe5bbbf2980661f8"],
+  // Fading Autumn 1.3, 31 minutes, HU v UD: a hero with no code
+  ["replay-autumn", "/replays/02f31fadbf6319d381151aa63f1e99a3d828c51056b0161b2cfecbbaa338f4ce"],
   ["missing", "/replays/nope"],
 ] as const;
 // The `background` token, light and dark.

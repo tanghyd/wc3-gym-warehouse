@@ -2,10 +2,11 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 // Story 4 (docs/design/stories.md "## 4. Replay detail") on the Concealed Hill golden.
 const ID = "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8";
-// Shallow Grave, 31 minutes, NE v OC: the longest human game
-const LONG = "a9872674567c6389f3d912b5f053f7e2af4a87de3378d5229a90f091bd219d88";
-// Fading Autumn, UD v NE: thanks's third hero and its skills AHpa and AHcr are in no mappings row
-const FADING = "be7b97ee9668d1f441fa2973387ea4e02fa5a02d2adababec6cb3e7647871c32";
+// Concealed Hill, 31 minutes, NE v OC: 54 and 60 unit orders
+const LONG = "aadf11f93e4e86b942973568335e7f7411cebc3cb3f22e241674ea4125d9d905";
+// Fading Autumn 1.3, HU v UD: the parser left UD's third hero with no code, and its skill AUa2 is in no mappings row
+const FADING = "02f31fadbf6319d381151aa63f1e99a3d828c51056b0161b2cfecbbaa338f4ce";
+const UD = "GOODOKOKOK#3144";
 const LETTER: Record<string, string> = { Human: "H", Orc: "O", "Night Elf": "N", Undead: "U", Random: "R" };
 const API = process.env.API_URL ?? "http://api:8000";
 const NE = "thanks#11187";
@@ -320,8 +321,8 @@ test("a 31-minute game keeps the Units lane a few rows high", async ({ page, req
   }
 });
 
-// Shallow Grave, Tidehunters and Fading Autumn; the last has a hero the parser left with no code
-for (const id of [LONG, "025d14359f58eac19f263f0dce880bc13bf9cf8d087158202addeb93474ac8c2", FADING]) {
+// Concealed Hill, Springtime 1.4 (49 minutes, the longest game) and Fading Autumn; the last has a hero the parser left with no code
+for (const id of [LONG, "d43bf84a43237df9ac301e8a3a883371d8068da2dabf2f76cdaa4993ccf5ffd4", FADING]) {
   test(`every mark of ${id.slice(0, 8)} has a name, never a raw code`, async ({ page, request }) => {
     const r: Replay = await (await request.get(`${API}/replays/${id}`)).json();
     await page.goto(`/replays/${id}`);
@@ -344,23 +345,23 @@ for (const id of [LONG, "025d14359f58eac19f263f0dce880bc13bf9cf8d087158202addeb9
   });
 }
 
-test("the list marks a retrain and a hero's arrival", async ({ page }) => {
-  await page.goto(`/replays/${LONG}`);
+// no replay in the data holds a hero_retrained event, so the Retrained chip has no case here
+test("the list marks a hero's arrival", async ({ page }) => {
+  await page.goto(`/replays/${FADING}`);
   await timeline(page).getByRole("button", { name: "List" }).click();
-  const rows = list(page, NE).locator(":scope > li > div");
-  await expect(rows.filter({ hasText: /^22:03Demon Hunter/ })).toHaveText("22:03Demon HunterRetrained");
-  await expect(rows.filter({ hasText: /^\d+:\d\dDemon Hunter/ }).first()).toHaveText(/^\d+:\d\dDemon HunterTrained by$/);
+  const rows = list(page, UD).locator(":scope > li > div");
+  await expect(rows.filter({ hasText: /^\d+:\d\dLich/ }).first()).toHaveText(/^\d+:\d\dLichTrained by$/);
 });
 
 test("a hero and skills in no mappings row read Unknown, on a ? tile", async ({ page }) => {
   await page.goto(`/replays/${FADING}`);
-  const h = hero(card(page, NE), "Unknown hero");
-  await expect(h).toContainText("Level 2");
-  await expect(h.locator("ol > li")).toHaveText(["15:31", "18:04"]);
-  await expect(h.locator("ol > li").first()).toHaveAttribute("title", "Unknown skill at 15:31");
-  const mark = lanes(page, NE).getByRole("img", { name: "Unknown skill. Unknown hero skill at 15:31" });
+  const h = hero(card(page, UD), "Unknown hero");
+  await expect(h).toContainText("Level 1");
+  await expect(h.locator("ol > li")).toHaveText(["29:06"]);
+  await expect(h.locator("ol > li").first()).toHaveAttribute("title", "Unknown skill at 29:06");
+  const mark = lanes(page, UD).getByRole("img", { name: "Unknown skill. Unknown hero skill at 29:06" });
   await expect(mark).toBeVisible();
-  await expect(lanes(page, NE).getByRole("img", { name: "Unknown hero. Trained by 15:31" })).toBeVisible();
+  await expect(lanes(page, UD).getByRole("img", { name: "Unknown hero. Trained by 29:06" })).toBeVisible();
   expect(await mark.locator("span").first().evaluate((e) => getComputedStyle(e, "::before").content)).toBe('"?"');
 });
 

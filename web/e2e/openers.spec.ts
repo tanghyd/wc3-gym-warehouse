@@ -55,25 +55,26 @@ test.describe("openers tree", () => {
     await expect(page.locator(".bar .chip")).toHaveText(`${total} games won or lost`);
   });
 
-  test("the patch filter narrows every figure, and a games link keeps it", async ({ page, request }) => {
-    const filters = { race: ["NE"], patch: ["3.0"] };
+  // 2.0 is the goldens' patch (build 6117), so it always has games
+  test("the patch filter sets every figure, and a games link keeps it", async ({ page, request }) => {
+    const filters = { race: ["NE"], patch: ["2.0"] };
     const root = await level(request, filters, []);
     expect(root.length).toBeGreaterThan(0);
     const name = await names(request, root.map((r) => r.code));
     await page.goto("/openers");
     const patch = page.getByRole("combobox", { name: "Patch" });
     await expect(patch).toHaveValue("");
-    await patch.selectOption("3.0");
+    await patch.selectOption("2.0");
     await page.getByRole("button", { name: "Show openers" }).click();
-    await expect(page).toHaveURL(/[?&]patch=3\.0(&|$)/);
+    await expect(page).toHaveURL(/[?&]patch=2\.0(&|$)/);
     expect(await cells(page)).toEqual(expected(root, name));
     const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { ...filters, ...DECIDED } } })).json()).rows[0].games;
     await expect(page.locator(".bar .chip")).toHaveText(`${total} games won or lost`);
 
     // the first row's games open on the replay list with the patch still set
     await rows(page).first().getByRole("link", { name: `List the games of ${name[root[0].code]}` }).click();
-    await expect(page).toHaveURL(/^[^?]*\/\?.*patch=3\.0/);
-    await expect(page.getByRole("combobox", { name: "Patch" })).toHaveValue("3.0");
+    await expect(page).toHaveURL(/^[^?]*\/\?.*patch=2\.0/);
+    await expect(page.getByRole("combobox", { name: "Patch" })).toHaveValue("2.0");
     const res = await request.post(`${API}/search`, { data: { filters: { ...filters, opener_1: [root[0].code] } } });
     await expect(page.locator("tbody tr")).toHaveCount((await res.json()).replays.length);
   });
@@ -158,13 +159,15 @@ test.describe("openers tree", () => {
     await link.click();
     await expect(page).toHaveURL(new RegExp(`/\\?race=NE&opponent_race=OC&opener_1=${root[0].code}&opener_2=${kids[0].code}$`));
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Replays");
-    // the list is POST /search's games of that opener, each game once and any result
-    const res = await request.post(`${API}/search`, { data: { filters: { ...filters, opener_1: [root[0].code], opener_2: [kids[0].code] } } });
+    // the list is POST /search's games of that opener, each game once and any result: the first 100 by id
+    const opened = { ...filters, opener_1: [root[0].code], opener_2: [kids[0].code] };
+    const res = await request.post(`${API}/search`, { data: { filters: opened } });
     const want: string[] = (await res.json()).replays.map((r: { replay_id: string }) => r.replay_id);
     expect(want.length).toBeGreaterThan(0);
     await expect(page.locator("tbody tr")).toHaveCount(want.length);
     expect(await page.locator('tbody a[href^="/replays/"]').evaluateAll((as) => as.map((a) => a.getAttribute("href")!.split("/").pop()))).toEqual(want);
-    await expect(page.locator(".bar .chip")).toHaveText(String(want.length));
+    const total: number = (await (await request.post(`${API}/query`, { data: { measures: ["replays"], filters: opened } })).json()).rows[0].replays;
+    await expect(page.locator(".bar .chip")).toHaveText(total > 100 ? "100+" : String(total));
     await expect(page.getByRole("group", { name: "Opener" }).getByRole("img")).toHaveCount(2);
   });
 
