@@ -30,3 +30,5 @@ SELECT
        arrayPushBack(arrayPopBack(timed), toUInt32(round(timed[-1] * 60000 / last_ms)))) AS apm_timed
 FROM {{ ref('raw_replays') }} AS r
 ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p
+-- raw_replays keeps a replaced document until a merge, so read it deduplicated.
+SETTINGS final = 1

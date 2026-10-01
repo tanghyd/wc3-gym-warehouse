@@ -37,3 +37,5 @@ SELECT
 FROM orders
 WINDOW same_code AS (PARTITION BY replay_id, player_id, kind, object_code ORDER BY time_ms, seq
                      ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)
+-- raw_replays keeps a replaced document until a merge, so read it deduplicated.
+SETTINGS final = 1

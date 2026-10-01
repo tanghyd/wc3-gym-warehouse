@@ -7,7 +7,8 @@
 use w3grs::{ParserOutput, W3GReplay};
 
 /// Parser output version. Bump it on any change to what the drain writes. `drain`
-/// writes parsed docs under `parsed/v<N>/…` and stamps N on each status breadcrumb,
+/// writes parsed docs under `parsed/v<N>/…`, stamps N into each as `parse_version`
+/// (the version raw_replays keeps the newest of) and on each status breadcrumb,
 /// so after a bump the next pass re-parses every raw replay into the new prefix.
 /// The one hand copy is W3WAREHOUSE_PARSED_URL in .env and .env.example, the
 /// prefix ClickHouse loads; change it with the bump.

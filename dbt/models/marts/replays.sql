@@ -70,3 +70,5 @@ FROM {{ ref('raw_replays') }} AS r
 LEFT JOIN {{ ref('patches') }} AS pt ON pt.build_number = toUInt32(JSONExtractUInt(r.doc, 'buildNumber'))
 WINDOW game AS (PARTITION BY game_key
                 ORDER BY winner >= 0 DESC, r.replay_id)
+-- raw_replays keeps a replaced document until a merge, so read it deduplicated.
+SETTINGS final = 1

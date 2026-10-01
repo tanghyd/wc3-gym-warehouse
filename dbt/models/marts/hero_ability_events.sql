@@ -22,3 +22,5 @@ ARRAY JOIN
 ARRAY JOIN
     JSONExtractArrayRaw(h, 'abilityOrder')                 AS ev,
     arrayEnumerate(JSONExtractArrayRaw(h, 'abilityOrder')) AS ev_idx
+-- raw_replays keeps a replaced document until a merge, so read it deduplicated.
+SETTINGS final = 1

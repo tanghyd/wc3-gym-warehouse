@@ -180,12 +180,14 @@ async fn drain_once(client: &Client, cfg: &Cfg) -> usize {
     outcomes.into_iter().filter(|ok| *ok).count()
 }
 
-/// The doc the drain writes: w3grs's JSON plus `source_key`, so ClickHouse reads
-/// it out of the same s3() load as every other field.
+/// The doc the drain writes: w3grs's JSON plus `source_key` and `parse_version`,
+/// so ClickHouse reads them out of the same s3() load as every other field.
+/// raw_replays keeps the document with the highest `parse_version` per replay.
 fn landed_doc(json: &str, raw_key: &str) -> Result<serde_json::Value, String> {
     let mut doc: serde_json::Value = serde_json::from_str(json).map_err(|e| e.to_string())?;
     let fields = doc.as_object_mut().ok_or("parsed doc is not a JSON object")?;
     fields.insert("source_key".to_string(), raw_key.into());
+    fields.insert("parse_version".to_string(), PARSE_VERSION.into());
     Ok(doc)
 }
 
@@ -385,11 +387,12 @@ mod tests {
     }
 
     #[test]
-    fn the_landed_doc_carries_the_raw_key() {
+    fn the_landed_doc_carries_the_raw_key_and_the_parser_version() {
         let key = "preview/replays/local/w3c-1.w3g";
         let doc = landed_doc(r#"{"id":"r1"}"#, key).unwrap();
         assert_eq!(doc["id"], "r1");
         assert_eq!(doc["source_key"], key);
+        assert_eq!(doc["parse_version"], PARSE_VERSION);
         assert!(landed_doc("[]", "k").is_err());
     }
 

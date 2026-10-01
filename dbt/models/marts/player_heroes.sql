@@ -12,3 +12,5 @@ ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p
 ARRAY JOIN
     JSONExtractArrayRaw(p, 'heroes')                 AS h,
     arrayEnumerate(JSONExtractArrayRaw(p, 'heroes')) AS h_idx
+-- raw_replays keeps a replaced document until a merge, so read it deduplicated.
+SETTINGS final = 1

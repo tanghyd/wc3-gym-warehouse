@@ -15,7 +15,7 @@
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "none", "graphMode": "none" },
       "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
         "editorType": "sql", "format": 1, "queryType": "table",
-        "rawSql": "SELECT count() AS replays FROM w3g.raw_replays" }]
+        "rawSql": "SELECT count() AS replays FROM w3g.raw_replays FINAL" }]
     },
     {
       "id": 2, "type": "timeseries", "title": "Replays loaded over time",
@@ -25,7 +25,7 @@
       "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "custom": { "drawStyle": "bars", "fillOpacity": 80 } }, "overrides": [] },
       "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
         "editorType": "sql", "format": 0, "queryType": "timeseries",
-        "rawSql": "SELECT $__timeInterval(ingested_at) AS time, count() AS replays\nFROM w3g.raw_replays\nWHERE $__timeFilter(ingested_at)\nGROUP BY time ORDER BY time" }]
+        "rawSql": "SELECT $__timeInterval(ingested_at) AS time, count() AS replays\nFROM w3g.raw_replays FINAL\nWHERE $__timeFilter(ingested_at)\nGROUP BY time ORDER BY time" }]
     },
     {
       "id": 3, "type": "table", "title": "Tables",

@@ -10,3 +10,5 @@ SELECT
 FROM {{ ref('raw_replays') }} AS r
 ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p
 ARRAY JOIN JSONExtractKeysAndValuesRaw(JSONExtractRaw(p, 'groupHotkeys')) AS kv
+-- raw_replays keeps a replaced document until a merge, so read it deduplicated.
+SETTINGS final = 1

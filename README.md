@@ -43,7 +43,7 @@ replays/<folder>/<file>.w3g  ─drain─▶ parsed/v4/dt=<date>/<id>.json ─dbt
 1. Raw replays sit under `<env>/replays/`, where `<env>` (production, preview or development) is set as `W3WAREHOUSE_S3_PREFIX`. Every `.w3g` under `replays/` is drained the same way. Locally, `minio-setup` puts the 3 goldens under `replays/goldens/` with their own file names, and `just local::upload-replays` adds a folder, such as `replays/w3warehouse-ladder/`.
 2. The drain (`pipeline/parse-rs`, w3grs) parses each new or changed file and writes the parsed document under `parsed/v4/`, with the raw object key as `source_key`. It never moves or deletes a raw file.
 3. `just dbt build`:
-   - `raw_replays` is an incremental model. It reads the dbt source `bucket.parsed_docs`, an S3 table over the `parsed_docs` named collection (`infrastructure/docker/clickhouse/named-collections.xml`) that dbt's `on-run-start` hook creates, and appends the documents it does not have yet. It skips a loaded document by its file name (`<replay_id>.json`) before ClickHouse fetches it. The URL and the keys come from the server's environment, so no secret lands in SQL.
+   - `raw_replays` is an incremental model. It reads the dbt source `bucket.parsed_docs`, an S3 table over the `parsed_docs` named collection (`infrastructure/docker/clickhouse/named-collections.xml`) that dbt's `on-run-start` hook creates, and appends each document whose replay it does not hold at the same or a newer parse version. It reads both from the file path (`parsed/v<N>/…/<replay_id>.json`), so it skips a loaded document before ClickHouse fetches it. The URL and the keys come from the server's environment, so no secret lands in SQL. See [Loading the same replay twice](#loading-the-same-replay-twice).
    - The staging views flatten orders and hero skills.
    - The marts are tables that rebuild with an atomic swap.
 4. The API reads the semantic catalog from dbt's `target/manifest.json` and queries ClickHouse as the read-only `api` user.
@@ -64,6 +64,17 @@ The opener tree is a `GROUP BY` over `player_games.opener_N`, so the refreshable
 
 The winner is the team opposite the first player to quit: the first player leave in the parser's `leaves` (observers skipped), or the saver (`saverPlayerId`) when no player leave is recorded, because a FLO player-saved w3c- file drops the saver's own leave. `winning_team_id` is -1 unless the game has exactly two teams. One game can arrive as two files: they share `game_key` (random seed and sorted names), `duplicate_of` points the others at one copy (a recorded winner first, then the lowest id), and only `player_games` leaves duplicates out. The per-replay tables keep every file, because the replay page opens any file by id and build-order steps always join `player_games`.
 
+### Loading the same replay twice
+
+`replay_id` is a hash of game facts, not of the file bytes: the parser's SHA-256 of the random seed, the players' names in player-id order and the game name. Two files with the same facts are the same replay, and a re-parse keeps the id. Two files of one game whose facts differ get two ids and share a `game_key`, and `player_games` counts the game once.
+
+`raw_replays` is a ReplacingMergeTree on `replay_id` with `parse_version` as its version, the ClickHouse pattern for replacing rows by version without `ALTER TABLE ... DELETE`:
+
+- A second insert of a document adds a row that the next merge collapses. A document at a newer parse version replaces the older one the same way.
+- Until that merge both rows are on disk, so every reader asks for the merged answer: each mart ends in `SETTINGS final = 1` and Grafana reads `raw_replays FINAL`. The uniqueness test is on `replays.replay_id`, which checks what the readers see.
+- A dbt run loads a document only when its replay is not loaded at the same or a newer parse version, so a re-run adds no row. It reads the version from the path (`parsed/v<N>/`) and the id from the file name, so it skips a loaded file before ClickHouse fetches it.
+- `OPTIMIZE TABLE w3g.raw_replays FINAL` merges at once. It is never needed for a correct answer.
+
 ### dbt docs and tests
 
 - Every model, seed and column has a description in YAML. Shared terms (replay_id, race, matchup, order kinds) are doc blocks in `dbt/models/docs.md`. `+persist_docs` in `dbt_project.yml` writes them into ClickHouse as table and column comments, so `system.tables.comment` and `system.columns.comment` carry them. A description must not contain a semicolon: dbt 2.0.6 splits the comment DDL on it.
@@ -71,7 +82,7 @@ The winner is the team opposite the first player to quit: the first player leave
 - The source `bucket.parsed_docs` has freshness on the S3 `_time` virtual column: `just dbt source freshness`.
 - Exposures in `dbt/models/exposures.yml` name the three readers: the replay inspector, the query API and Grafana.
 - dbt's docs site has no column-level lineage: dbt v2 builds it from static analysis, which is off for ClickHouse. It also lists the dbt and ClickHouse adapter macros, which dbt 2.0.6 cannot hide.
-- A parser change bumps `PARSE_VERSION` in `pipeline/parse-rs/src/lib.rs`. The drain stamps the version on each `status/` breadcrumb, so its next pass re-parses every raw replay into the new `parsed/v<N>/` prefix; no breadcrumb needs clearing. `raw_replays` keeps one document per replay, so an incremental run skips the re-parsed ones: set `W3WAREHOUSE_PARSED_URL` in `.env` to the new prefix, `just up` (ClickHouse reads it at start), `just drain-once`, then `just dbt build --full-refresh`.
+- A parser change bumps `PARSE_VERSION` in `pipeline/parse-rs/src/lib.rs`. The drain stamps the version on each `status/` breadcrumb and into each document as `parse_version`, so its next pass re-parses every raw replay into the new `parsed/v<N>/` prefix; no breadcrumb needs clearing. A re-parsed document replaces the older one in `raw_replays`: set `W3WAREHOUSE_PARSED_URL` in `.env` to the new prefix, `just up` (ClickHouse reads it at start), `just drain-once`, then `just dbt build`.
 
 ## The query API (`api/`)
 

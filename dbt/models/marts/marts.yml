@@ -153,7 +153,7 @@ models:
         description: "{{ doc('replay_id') }}"
         data_tests:
           - unique:
-              description: One row per replay.
+              description: One row per replay, however many copies of it raw_replays holds before a merge.
           - not_null:
               description: Every replay has an id.
       - name: map
