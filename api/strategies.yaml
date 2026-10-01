@@ -18,8 +18,8 @@
 #               for a guide whose core matched under 5 games
 
 # Undead
-- {id: ud-dk-expo, name: Death Knight expand, race: UD, source: w3warehouse, steps: [
-    {kind: hero, codes: [Udea], nth: 1},
+- {id: ud-dk, name: Death Knight first, race: UD, source: gym-replays, steps: [{kind: hero, codes: [Udea], nth: 1}]}
+- {id: ud-dk-expo, name: … fast expand, race: UD, parent_id: ud-dk, source: w3warehouse, steps: [
     {kind: building, codes: [unpl], to_s: 480}]}
 - {id: ud-lich, name: Lich first, race: UD, source: w3warehouse, steps: [{kind: hero, codes: [Ulic], nth: 1}]}
 - {id: ud-dl, name: Dreadlord first, race: UD, source: w3warehouse, steps: [{kind: hero, codes: [Udre], nth: 1}]}
@@ -37,14 +37,24 @@
     {kind: building, codes: [unpl], to_s: 480, negate: true}]}
 - {id: ud-fiend-heavy, name: Fiend-heavy, race: UD, source: w3warehouse, steps: [{kind: unit, codes: [ucry], count: 6}]}
 - {id: ud-gargoyle, name: Gargoyle opener, race: UD, source: w3warehouse, steps: [{kind: unit, codes: [ugar], count: 4}]}
+- {id: ud-tavern, name: Tavern hero first, race: UD, source: gym-replays, steps: [{kind: hero, codes: [Nalc, Nbrn, Nbst, Nfir, Nngs, Npbm, Nplh, Ntin], nth: 1}]}
+- {id: ud-expand, name: Fast expand, race: UD, source: gym-replays, steps: [{kind: building, codes: [unpl], to_s: 480}]}
 
 # Human
-- {id: hu-am-expo, name: Archmage expand, race: HU, source: w3warehouse, steps: [
-    {kind: hero, codes: [Hamg], nth: 1},
+- {id: hu-am, name: Archmage first, race: HU, source: gym-replays, steps: [{kind: hero, codes: [Hamg], nth: 1}]}
+- {id: hu-am-expo, name: … fast expand, race: HU, parent_id: hu-am, source: w3warehouse, steps: [
     {kind: building, codes: [htow], to_s: 360}]}
-- {id: hu-am-onebase, name: Archmage one-base, race: HU, source: w3warehouse, steps: [
-    {kind: hero, codes: [Hamg], nth: 1},
+- {id: hu-am-late, name: … late expand, race: HU, parent_id: hu-am, source: gym-replays, steps: [
+    {kind: building, codes: [htow], from_s: 360, to_s: 900},
+    {kind: building, codes: [htow], to_s: 360, negate: true}]}
+- {id: hu-am-onebase, name: … one base, race: HU, parent_id: hu-am, source: w3warehouse, steps: [
     {kind: building, codes: [htow], negate: true}]}
+- {id: hu-tavern, name: Tavern hero first, race: HU, source: gym-replays, steps: [{kind: hero, codes: [Nalc, Nbrn, Nbst, Nfir, Nngs, Npbm, Nplh, Ntin], nth: 1}]}
+- {id: hu-expand, name: Fast expand, race: HU, source: gym-replays, steps: [{kind: building, codes: [htow], to_s: 360}]}
+- {id: hu-rifle, name: Rifleman mass, race: HU, source: gym-replays, steps: [{kind: unit, codes: [hrif], count: 8}]}
+- {id: hu-knight, name: Knights, race: HU, source: gym-replays, steps: [{kind: unit, codes: [hkni], count: 4}]}
+- {id: hu-breaker, name: Spell Breakers, race: HU, source: gym-replays, steps: [{kind: unit, codes: [hspt], count: 4}]}
+- {id: hu-gryphon, name: Gryphon Riders, race: HU, source: gym-replays, steps: [{kind: unit, codes: [hgry], count: 4}]}
 - {id: hu-mk, name: Mountain King first, race: HU, source: w3warehouse, steps: [{kind: hero, codes: [Hmkg], nth: 1}]}
 - {id: hu-pala, name: Paladin first, race: HU, source: w3warehouse, steps: [{kind: hero, codes: [Hpal], nth: 1}]}
 - {id: hu-blm, name: Blood Mage first, race: HU, source: w3warehouse, steps: [{kind: hero, codes: [Hblm], nth: 1}]}
@@ -60,6 +70,7 @@
 - {id: or-tc, name: Tauren Chieftain first, race: OC, source: w3warehouse, steps: [{kind: hero, codes: [Otch], nth: 1}]}
 - {id: or-sh, name: Shadow Hunter first, race: OC, source: w3warehouse, steps: [{kind: hero, codes: [Oshd], nth: 1}]}
 - {id: or-expand, name: Expanding Orc, race: OC, source: w3warehouse, steps: [{kind: building, codes: [ogre], to_s: 630}]}
+- {id: or-tavern, name: Tavern hero first, race: OC, source: gym-replays, steps: [{kind: hero, codes: [Nalc, Nbrn, Nbst, Nfir, Nngs, Npbm, Nplh, Ntin], nth: 1}]}
 
 # Night Elf
 - {id: ne-dh, name: Demon Hunter first, race: NE, source: w3warehouse, steps: [{kind: hero, codes: [Edem], nth: 1}]}
@@ -67,6 +78,7 @@
 - {id: ne-potm, name: Priestess first, race: NE, source: w3warehouse, steps: [{kind: hero, codes: [Emoo], nth: 1}]}
 - {id: ne-warden, name: Warden first, race: NE, source: w3warehouse, steps: [{kind: hero, codes: [Ewar], nth: 1}]}
 - {id: ne-expand, name: Expanding Night Elf, race: NE, source: w3warehouse, steps: [{kind: building, codes: [etol], to_s: 540}]}
+- {id: ne-tavern, name: Tavern hero first, race: NE, source: gym-replays, steps: [{kind: hero, codes: [Nalc, Nbrn, Nbst, Nfir, Nngs, Npbm, Nplh, Ntin], nth: 1}]}
 
 # The wc3-gnl-website build orders, from scratch/warehouse-redesign/website-builds/presets.yaml
 # (2026-10-02): its core is the steps.
@@ -140,7 +152,7 @@
   steps:
     - {kind: hero, codes: [Hamg], nth: 1}
     - {kind: unit, codes: [hfoo], count: 4}          # Footman x4
-    - {kind: building, codes: [htow], link: then}    # Town Hall (expansion)
+    - {kind: building, codes: [htow], link: then, to_s: 360}   # Town Hall (expansion) by 6:00, the fast-expand time
   full:
     - {kind: hero, codes: [Hamg], nth: 1}
     - {kind: building, codes: [halt]}
@@ -601,6 +613,7 @@
     - {kind: unit, codes: [ugho], count: 4}          # Ghoul x4
     - {kind: building, codes: [unp1], link: then}
     - {kind: building, codes: [unp2], link: then}
+    - {kind: building, codes: [unpl], negate: true}  # one base: no Necropolis, as the old one-base builds
   full:
     - {kind: hero, codes: [Udea], nth: 1}
     - {kind: building, codes: [uaod]}

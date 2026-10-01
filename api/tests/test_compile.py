@@ -178,7 +178,7 @@ PRESETS = check_presets([Preset(**p) for p in yaml.safe_load((Path(__file__).par
 
 def test_the_presets_file_holds_the_three_sources() -> None:
     sources = [p.source for p in PRESETS.values()]
-    assert (sources.count("w3warehouse"), sources.count("gym-replays"), sources.count("wc3-gnl-website")) == (24, 1, 32)
+    assert (sources.count("w3warehouse"), sources.count("gym-replays"), sources.count("wc3-gnl-website")) == (24, 14, 32)
     # a variant holds its parent's steps, then its own
     late = PRESETS["ud-cl-necro-mw-late"]
     assert late.parent_id == "ud-cl-necro-mw" and len(PRESETS[late.parent_id].steps) == 3
