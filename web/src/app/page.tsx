@@ -96,7 +96,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
       ...presetList.flatMap((p) => p.steps.flatMap((s) => s.codes)),
     ]),
   ];
-  const groupKeys = [...new Map(steps.flatMap((s) => s.codes.filter((c) => c.startsWith("@")).map((c) => [`${s.kind}${c}`, { kind: s.kind, source: c.slice(1) }]))).values()];
+  const groupKeys = [...new Map([...steps, ...presetList.flatMap((p) => p.steps.map(urlStep))].flatMap((s) => s.codes.filter((c) => c.startsWith("@")).map((c) => [`${s.kind}${c}`, { kind: s.kind, source: c.slice(1) }]))).values()];
   const [names, groups, maps, patches, players, counts] = await Promise.all([
     getObjects(codes),
     stepGroups(groupKeys),

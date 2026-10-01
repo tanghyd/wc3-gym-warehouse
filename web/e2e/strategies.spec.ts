@@ -21,7 +21,7 @@ const whole = (p: Preset, all: Map<string, Preset>) => [...(p.parent_id ? all.ge
 
 /** Each row as the page prints it: name, games, share, record, length. */
 const rows = (page: Page) =>
-  page.locator("table.named tbody tr").evaluateAll((trs) =>
+  page.locator("table.named tbody tr:not(.rule-row)").evaluateAll((trs) =>
     trs.map((tr) => {
       const c = (tr as HTMLTableRowElement).cells;
       return [c[0].querySelector("p")!.firstChild!.textContent, c[1].innerText, c[2].innerText, c[3].innerText.replace(/\s+/g, " "), c[4].innerText].join(" | ");

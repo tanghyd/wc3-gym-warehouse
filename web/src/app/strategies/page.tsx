@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Fragment } from "react";
 import { getObjects, getPresets, pickerValues, raceCounts, strategyStats } from "@/lib/api";
 import { RACES } from "@/lib/races";
 import { encodeGroups, played } from "@/lib/steps";
@@ -67,6 +68,9 @@ export default async function StrategiesPage({ searchParams }: PageProps<"/strat
   // Replays with the preset's whole group in the Player side, and the page's race, opponent race, map and minutes
   const replays = (p: Preset) => `/?${new URLSearchParams([...s.pairs, ["steps", encodeGroups([presetSteps(p, byId).map(urlStep)])]])}`;
   const share = (f: Stats, of: number) => (of ? (100 * f.games) / of : 0);
+  // a guide's "vs" races show only when the opponent race picked is one of them, so the counts are those games
+  const opp = played(s.opp);
+  const guideFits = (p: Preset) => p.vs_races.length > 0 && opp.length > 0 && opp.every((r) => p.vs_races.includes(r));
 
   return (
     <main className="wrap flex flex-col gap-4 py-6">
@@ -87,7 +91,7 @@ export default async function StrategiesPage({ searchParams }: PageProps<"/strat
             <thead>
               <tr>
                 <th scope="col">Strategy</th>
-                <th scope="col" className="text-right" title="Player-games of the race that fit, one per player: a mirror game can count twice">
+                <th scope="col" className="text-right">
                   Games
                 </th>
                 <th scope="col" className="text-right">
@@ -112,55 +116,67 @@ export default async function StrategiesPage({ searchParams }: PageProps<"/strat
                 const kids = depth === 0 ? variants(p).length : 0;
                 const [score, percent] = record(f.wins, f.losses).split(" (");
                 const first = p.steps[0];
+                const rule = (
+                  <p className="rule">
+                    {first.kind !== "hero" || first.codes.length === 1 ? <ObjIcon code={first.codes[0]} objects={names} size={18} alt="" /> : null}
+                    <span>{ruleWords(p.steps, names)}</span>
+                  </p>
+                );
                 return (
-                  <tr key={p.id} className={depth ? "variant" : ""}>
-                    <td>
-                      <div className="flex items-start gap-2" style={{ paddingLeft: depth ? "var(--indent)" : kids ? 0 : 24 }}>
-                        {kids > 0 && (
-                          <Link href={toggle(p.id)} replace scroll={false} aria-expanded={open.has(p.id)} aria-label={`${open.has(p.id) ? "Hide" : "Show"} the variants of ${p.name}`} className="mt-0.5">
-                            <Chevron open={open.has(p.id)} />
-                          </Link>
-                        )}
-                        <div className="min-w-0">
-                          <p className={depth ? "" : "font-bold"}>
-                            {p.name}
-                            {p.vs_races.length > 0 && <span className="ml-2 text-sm font-normal text-muted">vs {p.vs_races.map((r) => RACES[r][0]).join(", ")}</span>}
-                          </p>
-                          <p className="rule">
-                            {first.kind !== "hero" || first.codes.length === 1 ? <ObjIcon code={first.codes[0]} objects={names} size={18} alt="" /> : null}
-                            <span>{ruleWords(p.steps, names)}</span>
-                          </p>
+                  <Fragment key={p.id}>
+                    <tr className={depth ? "variant" : ""}>
+                      <td>
+                        <div className="flex items-start gap-2" style={{ paddingLeft: depth ? "var(--indent)" : kids ? 0 : 24 }}>
+                          {kids > 0 && (
+                            <Link href={toggle(p.id)} replace scroll={false} aria-expanded={open.has(p.id)} aria-label={`${open.has(p.id) ? "Hide" : "Show"} the variants of ${p.name}`} className="mt-0.5">
+                              <Chevron open={open.has(p.id)} />
+                            </Link>
+                          )}
+                          <div className="min-w-0">
+                            <p className={depth ? "" : "font-bold"}>
+                              {p.name}
+                              {guideFits(p) && <span className="ml-2 text-sm font-normal text-muted">vs {p.vs_races.map((r) => RACES[r][0]).join(", ")}</span>}
+                            </p>
+                            {rule}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="text-right">
-                      <Link href={replays(p)} prefetch={false} className="font-bold" aria-label={`List the ${fmt(f.games)} games of ${p.name}`}>
-                        {fmt(f.games)}
-                      </Link>
-                    </td>
-                    <td className="text-right whitespace-nowrap" title={parent ? `Of ${fmt(parent.games)} games of ${byId.get(p.parent_id!)!.name}` : undefined}>
-                      <span className="meter" aria-hidden>
-                        <span style={{ width: `${pct}%` }} />
-                      </span>
-                      <span className="inline-block min-w-[3.25rem] text-right">{pct.toFixed(1)}%</span>
-                    </td>
-                    <td className={`text-right ${f.games < FLOOR ? "text-muted" : ""}`}>
-                      <span className="whitespace-nowrap">{score}</span>
-                      {percent && <span className="whitespace-nowrap max-sm:block"> ({percent}</span>}
-                    </td>
-                    <td className="c-len text-right">{f.games ? mss(f.duration_ms_total / f.games) : "—"}</td>
-                    <td className="c-go">
-                      <Link href={replays(p)} prefetch={false} className="inline-flex items-center gap-1.5" aria-label={`Search with ${p.name}`}>
-                        <SearchGlyph />
-                        Search
-                      </Link>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="text-right">
+                        <Link href={replays(p)} prefetch={false} className="font-bold" aria-label={`List the ${fmt(f.games)} games of ${p.name}`}>
+                          {fmt(f.games)}
+                        </Link>
+                      </td>
+                      <td className="text-right whitespace-nowrap" title={parent ? `Of ${fmt(parent.games)} games of ${byId.get(p.parent_id!)!.name}` : undefined}>
+                        <span className="meter" aria-hidden>
+                          <span style={{ width: `${pct}%` }} />
+                        </span>
+                        <span className="inline-block min-w-[3.25rem] text-right">{pct.toFixed(1)}%</span>
+                      </td>
+                      <td className={`text-right ${f.games < FLOOR ? "text-muted" : ""}`}>
+                        <span className="whitespace-nowrap">{score}</span>
+                        {percent && <span className="whitespace-nowrap max-sm:block"> ({percent}</span>}
+                      </td>
+                      <td className="c-len text-right">{f.games ? mss(f.duration_ms_total / f.games) : "—"}</td>
+                      <td className="c-go">
+                        <Link href={replays(p)} prefetch={false} className="inline-flex items-center gap-1.5" aria-label={`Search with ${p.name}`}>
+                          <SearchGlyph />
+                          Search
+                        </Link>
+                      </td>
+                    </tr>
+                    {/* a phone shows the rule here, across the row, so the figures keep their width */}
+                    <tr className={`rule-row ${depth ? "variant" : ""}`}>
+                      <td colSpan={6} style={{ paddingLeft: `calc(8px + ${depth ? "var(--indent)" : "24px"})` }}>
+                        {rule}
+                      </td>
+                    </tr>
+                  </Fragment>
                 );
               })}
             </tbody>
           </table>
         )}
+        {rows.length > 0 && <p className="border-t px-4 py-2.5 text-sm text-muted">Games: one per player, so a mirror game can count twice.</p>}
         <details className="border-t">
           <summary className="cursor-pointer px-4 py-3 text-sm text-muted">Show SQL</summary>
           <pre className="overflow-x-auto px-4 pb-4 text-xs leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">

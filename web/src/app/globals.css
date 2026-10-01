@@ -26,6 +26,7 @@
   --color-series-2: rgb(var(--v-theme-series-2));
   --color-amount: rgb(var(--v-theme-amount));
   --color-amount-track: rgb(var(--v-theme-amount-track));
+  --color-meter: rgb(var(--v-theme-meter));
   /* second-level text: ink at medium emphasis */
   --color-muted: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
   --color-border: rgba(var(--v-border-color), var(--v-border-opacity));
@@ -381,9 +382,11 @@
   .named tr.variant { background: rgb(var(--v-theme-surface-bright)); }
   .named .rule { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 0.875rem; color: var(--color-muted); }
   .named .c-go { width: 1%; white-space: nowrap; font-size: 0.875rem; }
+  /* a phone shows the rule in this row; wider, it sits under the name */
+  .named .rule-row { display: none; }
   /* A share of a whole: a 72 px gold fill on its lighter track. */
   .meter { display: inline-block; width: 72px; height: 6px; margin-right: 12px; vertical-align: middle; border-radius: 9999px; background: var(--color-amount-track); overflow: hidden; }
-  .meter > span { display: block; height: 100%; border-radius: 9999px; background: var(--color-amount); }
+  .meter > span { display: block; height: 100%; border-radius: 9999px; background: var(--color-meter); }
 
   /* A search step's number on the orders it matched: ink on a surface ring, on the mark's corner. */
   .step-no {
@@ -450,8 +453,12 @@
     .named { --indent: 10px; }
     .named th, .named td { padding-left: 8px; padding-right: 8px; }
     .named .c-len, .named .c-go, .named .meter { display: none; }
-    /* a long word of a rule breaks, so the figures keep their columns */
-    .named .rule { overflow-wrap: anywhere; }
+    /* the rule moves to a row of its own across the table, so the name cell holds the name only */
+    .named tr:not(.rule-row) .rule { display: none; }
+    .named tr:not(.rule-row) > td { padding-bottom: 4px; }
+    .named .rule-row { display: table-row; border-top: 0; }
+    .named .rule-row > td { padding-top: 0; }
+    .named .rule { overflow-wrap: break-word; }
   }
 }
 

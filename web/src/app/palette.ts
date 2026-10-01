@@ -35,6 +35,7 @@ const light: Theme = {
     // three heat map bins with the ink each takes. dataviz validate_palette.js: the bins pass as an
     // ordinal ramp (light end 2.87:1), the bar passes as one series. Ink on bin-2 is 4.76:1, the lowest.
     amount: "#8E6800",
+    meter: "#8E6800",
     "amount-track": "#F0D49B",
     "bin-1": "#B68B16",
     "bin-2": "#8E6800",
@@ -73,6 +74,8 @@ const dark: Theme = {
     // More is lighter on the dark ground. The bins pass as an ordinal ramp (light end 3.31:1); the bar
     // takes heat-3, since heat-4 #D3A329 is past the lightness band of a series mark (L 0.74).
     amount: "#AA7E00",
+    // A meter is no series mark and its percent sits beside it, so it takes heat-4: 3.97:1 on its track.
+    meter: "#D3A329",
     "amount-track": "#5E4300",
     "bin-1": "#805D00",
     "bin-2": "#AA7E00",
