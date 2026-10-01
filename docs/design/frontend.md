@@ -720,7 +720,7 @@ One `GET /replays/{id}` (api.md 3.8, A9).
 
 ### 12.1 Layout
 
-- Order: title (`map`) with a "Download replay" button (or "No file") at the right; players line; meta line; two player cards side by side; "APM per minute" with legend and chart/table toggle; "Build orders" with kind chips and chart/list toggle; chat.
+- Order: title (`map`) with a "Download replay" button (or "No file") at the right; players line; meta line; two player cards side by side; "Game Timeline" with kind chips and a chart/list toggle, which holds the APM chart (12.4) and the build timeline (12.3) on one game-time axis; chat.
 - Fixture example `dcd3…`: Concealed Hill, 15:37, NvO, Patch 2.00, no GNL series. thanks#11187 (N, Won, 140 APM, `Edem` Demon Hunter level 4, skills `AEim` 2:22, `AEmb` 4:06, `AEmb` 6:40, `AEim` 11:54) v Okeanos#22605 (O, 89 APM, `Ofar` Far Seer level 3, skills at 2:17, 6:49, 9:58). Chat: 0:09 thanks#11187 "glhf".
 
 ### 12.2 Parts and fields
@@ -744,41 +744,48 @@ One `GET /replays/{id}` (api.md 3.8, A9).
 
 ### 12.3 Build timeline
 
-Section title "Build orders". Two views behind a `v-btn-toggle` (`mdi-chart-timeline`, `mdi-format-list-bulleted`). The chart is the default at md and up. The list is the default below md and is the chart's table view (section 13).
+The reader asks: what did each player build, when, and how did the two builds compare at the same moment? Section title "Game Timeline" (`GameTimeline.tsx`). Two views behind a "Chart" / "List" toggle in the title bar. The chart is the default at md and up. The list is the default below md and is the chart's table view (section 13).
+
+Merging: orders of one object by one player up to 60 s after the first of them become one mark, "Wisp ×5" (`orders.ts`). The mark sits at the first order time; its tooltip and its list row give every time. On the 31-minute Shallow Grave game this keeps each Units lane at 2 or 3 rows.
+
+Tier-ups: the first order of Keep/Castle (`hkee`/`hcas`), Stronghold/Fortress (`ostr`/`ofrt`), Tree of Ages/Eternity (`etoa`/`etoe`) or Halls of the Dead/Black Citadel (`unp1`/`unp2`). All eight are `building` rows in the mappings model and in the orders of 6 to 37 games.
 
 Flagged repeats: the API leaves out rows with `is_repeat = 1` (same code, same player, under 1000 ms after the previous same-code order, for tier halls, research and hero training; PR 2; api.md 3.8). `events[]` has no flag field, so neither view filters. The kept row carries the first order time.
 
-Chart (`BuildTimeline.vue`), a swimlane:
+Chart (`TimelineChart.tsx`), a swimlane under the APM chart:
 
 | Item | Spec |
 |---|---|
 | Form | One block per player, lower `player_id` first. One lane per kind: Buildings, Units, Upgrades, Heroes, Items. A lane whose chip is off is not drawn. The Heroes lane holds `hero_trained`, `hero_skill`, `hero_retrained` (api.md 3.8). |
 | Block header | 2 px key in `series-1` or `series-2` and `PlayerName` |
-| x | Game minute, `scaleLinear([0, duration_ms / 60000], [gutter, width - 88])`. The same `gutter` as the APM chart. `axisBottom` on whole minutes as `m:00`, thinned by the density rule. A hairline grid line per tick. |
+| x | Game minute, `scaleLinear([0, duration_ms / 60000], [88, width - 88])`, the APM chart's scale: same 88 px gutter, same width. Whole-minute ticks as `m:00`, thinned by the density rule, under the APM plot and under the last block. A hairline grid line per tick. |
 | Lane label | Kind name, 13 px, medium emphasis, in the gutter |
-| Marks | The event's 24 px command-card icon, centred on its time |
+| Marks | The mark's 24 px command-card icon, centred on its first time. A merged mark carries "×N" in its bottom-right corner, on `banner` with `on-banner` ink. |
+| Tier ticks | A dashed ink line at 60% across the block and a 12 px label, "**T2** ordered 4:12", right of the tick, or left of it when the next label or the right edge is too close |
 | Stacking | First fit per lane: an icon takes the first row whose last icon ends at least 1 px before its left edge, else a new row. Row pitch 24 + 3 px. Lane height = rows × 27 + 5 px, at least one row. A hairline separates lanes. |
-| Hit targets | The icon: 24 px, `tabindex="0"`, `alt` = "{name} ordered at m:ss" |
-| Tooltip | Hover and focus: the name, then "Ordered at m:ss". A skill: "{hero} skill at m:ss". `hero_trained`: "Trained by m:ss" (the first cast, api.md 3.8). `hero_retrained`: "Retrained at m:ss". |
-| Width | At least 760 px. Below that the chart scrolls in its own `overflow-x: auto` box. |
+| Keyboard | Each block is one tab stop. Left and Right walk its marks in time order; Escape leaves. Each mark is `role="img"` with its tooltip text as its name. |
+| Tooltip | Hover and focus: the name with its count, then "Ordered at m:ss, m:ss". A skill: "{hero} skill at m:ss". `hero_trained`: "Trained by m:ss" (the first cast, api.md 3.8). `hero_retrained`: "Retrained at m:ss". |
+| Rule | A hover or focus anywhere on the APM plot or the lanes draws one vertical rule from the APM plot top to the last lane, at the APM minute or the mark's time. Over empty lane space it shows `m:ss` on the bottom axis. |
+| Width | At least 760 px. Below that the APM chart and the lanes scroll together in one `overflow-x: auto` box. |
 
 List (the table view):
 
-- md and up: one list on one time axis. Player 1 left, player 2 right, time in a centre gutter. Events at the same `time_ms` share a row. Column heads are the two `PlayerName`s with keys.
-- Below md: two `v-tabs`, one per player (`PlayerName` in each tab). Each tab: time, 24 px icon, name. A hero row carries its skill trail.
+- First the APM table (12.4), then "Build Orders".
+- md and up: one list per player, side by side, each under a sticky head with the key and `PlayerName`. Below md: two tabs, one per player.
+- A row: time, 24 px icon, name with "×N"; a merged row lists every time under it; a hero row carries its skill trail; the tier-up row carries a "T2" or "T3" chip.
 
 ### 12.4 APM chart
 
 | Item | Spec |
 |---|---|
 | Form | Line chart, two series: change over time for two players |
-| Axes | x: game minute, `scaleLinear([0, n - 1])`, `ticks(max(2, round(width / 90)))`. Left edge at the timeline's `gutter`. y: `scaleLinear([0, max]).nice()`, 4 ticks, hairline grid. |
+| Axes | x: the timeline's scale (12.3); minute k's point sits at the middle of its span. y: `scaleLinear([0, max]).nice()`, 4 ticks, hairline grid, labelled "APM" in the gutter. |
 | Marks | `d3-shape` `line()`, 2 px, round join and cap. 8 px end dot with a 2 px surface ring. |
 | Identity | Legend above the plot, in the card body (the title bar holds only the title and the view toggle): 2 px line key and `PlayerName`. Direct labels at the line ends; they drop when the end values sit within 16 px. |
 | Palette | `series-1` for the lower `player_id`, `series-2` for the other |
 | Tooltip | A vertical crosshair snaps to the nearest minute. One tooltip lists both APMs, value first. The plot is focusable; Left and Right move the crosshair. |
-| Size | 200 px plot plus a 28 px x-axis band. Width from `useWidth`. |
-| Table view | Minute rows with both APM values |
+| Size | 160 px plot plus a 28 px x-axis band. Width from a `ResizeObserver`, at least 760 px. |
+| Table view | In the list view: a column per minute, a row per player, the player heads sticky at the left; it scrolls in its own box |
 
 ### 12.5 States
 
@@ -792,8 +799,7 @@ List (the table view):
 ### 12.6 390 px
 
 - Player cards stack. Skill trails wrap.
-- The timeline opens on the list, in two tabs. The chart stays one toggle away, in its scroll box.
-- The APM chart keeps full width. Direct labels drop; the legend stays.
+- The timeline opens on the list: the APM table, then the build lists in two tabs. The chart stays one toggle away; the APM chart and the lanes scroll together in their box, and the legend stays above it.
 
 ## 13. Chart and format rules that apply everywhere
 

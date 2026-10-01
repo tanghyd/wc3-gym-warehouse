@@ -3,8 +3,7 @@ import { notFound } from "next/navigation";
 import { Fragment } from "react";
 import { getObjects, getReplay } from "@/lib/api";
 import { mss, ObjIcon, PlayerName, Result, SeriesKey, SkillTrail, Timer } from "@/lib/ui";
-import { ApmChart } from "./ApmChart";
-import { BuildOrders } from "./BuildOrders";
+import { GameTimeline } from "./GameTimeline";
 
 export async function generateMetadata({ params }: PageProps<"/replays/[id]">): Promise<Metadata> {
   const r = await getReplay((await params).id);
@@ -18,7 +17,6 @@ export default async function ReplayPage({ params, searchParams }: PageProps<"/r
   const players = [...r.players].sort((a, b) => a.player_id - b.player_id);
   const objects = await getObjects([...new Set([...r.events.map((e) => e.code), ...players.flatMap((p) => p.heroes.map((h) => h.code))])]);
   const who = new Map(players.map((p) => [p.player_id, p]));
-  const lineup = players.map(({ player_id, name, race }) => ({ player_id, name, race }));
 
   return (
     <>
@@ -104,9 +102,13 @@ export default async function ReplayPage({ params, searchParams }: PageProps<"/r
           ))}
         </div>
 
-        <ApmChart players={players.map(({ player_id, name, race, apm_per_minute }) => ({ player_id, name, race, apm_per_minute }))} durationMs={r.duration_ms} />
-
-        <BuildOrders players={lineup} events={r.events} objects={objects} kinds={typeof kinds === "string" ? kinds : undefined} />
+        <GameTimeline
+          players={players.map(({ player_id, name, race, apm_per_minute }) => ({ player_id, name, race, apm_per_minute }))}
+          events={r.events}
+          objects={objects}
+          durationMs={r.duration_ms}
+          kinds={typeof kinds === "string" ? kinds : undefined}
+        />
 
         {r.chat.length > 0 && (
           <section className="card">

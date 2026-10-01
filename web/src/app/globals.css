@@ -66,9 +66,9 @@
   /* A player name reads in Cardo 700, in its own case. */
   .font-name { font-family: var(--font-heading); font-weight: 700; text-transform: none; }
 
-  /* A near-square panel with a hairline edge. */
+  /* A near-square panel with a hairline edge; clip, not hidden, so a sticky head inside still sticks. */
   .card {
-    min-width: 0; overflow: hidden; border-radius: 0.35rem;
+    min-width: 0; overflow: clip; border-radius: 0.35rem;
     background: rgb(var(--v-theme-surface)); border: 1px solid var(--color-border);
   }
 
