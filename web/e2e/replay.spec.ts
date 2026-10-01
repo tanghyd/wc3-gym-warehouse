@@ -177,26 +177,11 @@ test.describe("replay detail at 390 px", () => {
 
 for (const id of ["nope", "a".repeat(64)]) {
   test(`unknown id ${id.slice(0, 8)} shows No game with this id`, async ({ page }) => {
-    // loading.tsx streams first with a 200, so Next marks the not-found page noindex instead of a 404
-    await page.goto(`/replays/${id}`);
-    await expect(page.locator('meta[name="robots"][content="noindex"]').first()).toBeAttached();
+    const res = await page.goto(`/replays/${id}`);
+    expect(res?.status()).toBe(404);
     await expect(page.getByRole("heading", { name: "No game with this id" })).toBeVisible();
     await expect(page).toHaveTitle(/No game with this id/);
     await expect(page.getByRole("link", { name: "Search replays" })).toHaveAttribute("href", "/");
     await expect(page.getByText("APM per minute")).toHaveCount(0);
   });
 }
-
-test("loading: a header band of the page's height and a progress bar stream first", async ({ browser, baseURL }) => {
-  const band = async (javaScriptEnabled: boolean) => {
-    const context = await browser.newContext({ baseURL, javaScriptEnabled });
-    const page = await context.newPage();
-    await page.goto(`/replays/${ID}`);
-    // without JS the streamed fallback is never swapped out
-    if (!javaScriptEnabled) await expect(page.getByRole("progressbar", { name: "Loading replay" })).toBeVisible();
-    const box = await page.locator("section.bg-band:visible").boundingBox();
-    await context.close();
-    return box!.height;
-  };
-  expect(Math.abs((await band(false)) - (await band(true)))).toBeLessThanOrEqual(4);
-});

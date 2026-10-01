@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 
 const ID = "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8";
-const UI = process.env.UI_URL ?? "http://ui";
 
 test.describe("replay list", () => {
   test.beforeEach(async ({ page }) => {
@@ -53,14 +52,4 @@ test.describe("replay list", () => {
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe("rgb(25, 26, 22)");
   });
-});
-
-test("the old page links a replay row to the inspector on :3000", async ({ page }) => {
-  await page.goto(UI);
-  const run = page.getByRole("button", { name: "Run search" });
-  await expect(run).toBeEnabled({ timeout: 30_000 });
-  await run.click();
-  const links = page.locator('a[href*=":3000/replays/"]');
-  await expect(links).toHaveCount(3);
-  await expect(links.filter({ hasText: "Concealed Hill" })).toHaveAttribute("href", new RegExp(`^http://ui:3000/replays/${ID}$`));
 });

@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// The e2e compose service runs this on the compose network: the inspector at web:3000, the old page at ui.
+// The e2e compose service runs this on the compose network, against the inspector at web:3000.
 export default defineConfig({
   testDir: ".",
   outputDir: "test-results",

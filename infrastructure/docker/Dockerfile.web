@@ -19,10 +19,7 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
 WORKDIR /web
 COPY --from=build /web/.next/standalone ./
 COPY --from=build /web/.next/static ./.next/static
-# The object and race icons come from frontend/, so git holds them once.
-COPY frontend/icons.json ./public/icons.json
-COPY frontend/icons ./public/icons
-COPY frontend/race-icons ./public/race-icons
+COPY --from=build /web/public ./public
 USER node
 EXPOSE 3000
 CMD ["node", "server.js"]

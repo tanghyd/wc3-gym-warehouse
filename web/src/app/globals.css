@@ -86,16 +86,4 @@
     height: 40px; padding: 0 8px; border: 1px solid var(--color-border); border-radius: 0.25rem;
     background: rgb(var(--v-theme-surface)); color: inherit;
   }
-
-  /* An indeterminate progress bar: a bronze segment runs along a surface-light track. */
-  .progress { height: 4px; overflow: hidden; background: rgb(var(--v-theme-surface-light)); }
-  .progress::before {
-    content: ""; display: block; width: 40%; height: 100%;
-    background: rgb(var(--v-theme-primary)); animation: progress-run 1.4s ease-in-out infinite;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .progress::before { width: 100%; animation: progress-fade 2s ease-in-out infinite; }
-  }
-  @keyframes progress-run { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
-  @keyframes progress-fade { 50% { opacity: 0.4; } }
 }

@@ -18,7 +18,7 @@ just dbt build   # seed the mappings, load the parsed docs, build and test every
 just ch          # a clickhouse-client shell
 ```
 
-The search page is at http://localhost:8080, the API at http://localhost:8080/api/docs and the replay inspector at http://localhost:3000.
+The replay inspector is at http://localhost:3000 and the API at http://localhost:8000 (docs at http://localhost:8000/docs).
 
 | Recipe | Does |
 |---|---|
@@ -32,7 +32,7 @@ The search page is at http://localhost:8080, the API at http://localhost:8080/ap
 
 ```
 R2 or MinIO                        ClickHouse (dbt builds w3g.*)                  API            page
-replays/<series>/game<n>.w3g ─drain─▶ parsed/v2/dt=<date>/<id>.json ─dbt─▶ raw_replays ─▶ marts ─▶ /query  ─▶ :8080
+replays/<series>/game<n>.w3g ─drain─▶ parsed/v2/dt=<date>/<id>.json ─dbt─▶ raw_replays ─▶ marts ─▶ /query  ─▶ web :3000
                                                                                               /search
 ```
 
@@ -81,13 +81,12 @@ A filter is a list of values or a `{gte, lte}` range. A step names an event type
 
 ## The replay inspector (`web/`)
 
-A Next.js app in the wc3-gym-frontend look, light and dark, at http://localhost:3000. `/` lists the replays under race, opponent race, map and player filters (`POST /search`). `/replays/<id>` shows one game: the players, their heroes and skills, APM per minute, both build orders and the chat (`GET /replays/{id}`, plus one `POST /query` on `mappings` for the names). Server components read the API at `API_URL` (`http://api:8000` in compose), so the browser never calls it. The image copies the icons from `frontend/` at build time.
+A Next.js app in the wc3-gym-frontend look, light and dark, at http://localhost:3000. `/` lists the replays under race, opponent race, map and player filters (`POST /search`). `/replays/<id>` shows one game: the players, their heroes and skills, APM per minute, both build orders and the chat (`GET /replays/{id}`, plus one `POST /query` on `mappings` for the names). Server components read the API at `API_URL` (`http://api:8000` in compose), so the browser never calls it. The object and race icons live in `web/public/`.
 
 | Recipe | Does |
 |---|---|
 | `just local::web-lock` | rewrites `web/pnpm-lock.yaml` after a `web/package.json` change, in a node container |
 | `just local::web-lint` | eslint, in the lint stage of the web image |
-| `just local::web-shot <path> <file> [width] [theme]` | a full-page screenshot of one page, light or dark, from Playwright on the compose network |
 
 ## Not here yet
 

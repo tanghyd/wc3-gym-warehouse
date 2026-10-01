@@ -1,11 +1,10 @@
-# The local compose project: ClickHouse on 127.0.0.1:8123, MinIO with the goldens,
-# the drain, the API, the page on http://localhost:8080 and the replay inspector
-# on http://localhost:3000.
+# The local compose project: ClickHouse on 127.0.0.1:8123, MinIO with the goldens, the drain,
+# the API on http://localhost:8000 and the replay inspector on http://localhost:3000.
 set working-directory := '..'
 
 # build and start every long-running service
 up:
-    docker compose up -d --build
+    docker compose up -d --build --remove-orphans
 
 # stop the project; its volumes and the data they hold stay
 down:
@@ -77,11 +76,3 @@ web-lint:
 [positional-arguments]
 e2e *args:
     docker compose run --rm --user "$(id -u):$(id -g)" e2e "$@"
-
-# a full-page screenshot of an inspector page, such as `just local::web-shot /replays/<id> "$PWD/shot.png" 390 dark`
-[positional-arguments]
-web-shot path out width='1280' theme='light':
-    docker run --rm --network wc3-gym-warehouse_default --user "$(id -u):$(id -g)" -e HOME=/tmp \
-      -v "$(dirname "$2"):/out" mcr.microsoft.com/playwright:v1.55.0-noble \
-      npx -y playwright@1.55.0 screenshot --browser chromium --full-page --color-scheme "$4" \
-      --viewport-size "$3,900" --wait-for-timeout 2000 "http://web:3000$1" "/out/$(basename "$2")"

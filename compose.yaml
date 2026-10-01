@@ -87,23 +87,15 @@ services:
       CLICKHOUSE_URL: http://clickhouse:8123
       CLICKHOUSE_API_PASSWORD: "${CLICKHOUSE_API_PASSWORD:-}"
       DBT_MANIFEST: /target/manifest.json
+    # Loopback only; the docs are at /docs.
+    ports:
+      - "127.0.0.1:8000:8000"
     volumes:
       - dbt_target:/target:ro
     restart: unless-stopped
     depends_on:
       clickhouse:
         condition: service_healthy
-
-  # The search page, with /api/ proxied to the API. Loopback only.
-  ui:
-    image: nginx:alpine
-    ports:
-      - "127.0.0.1:8080:80"
-    volumes:
-      - ./frontend:/usr/share/nginx/html:ro
-      - ./infrastructure/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    restart: unless-stopped
-    depends_on: [api]
 
   # The replay inspector (web/). It reads the API over the compose network. Loopback only.
   web:
@@ -117,7 +109,7 @@ services:
     restart: unless-stopped
     depends_on: [api]
 
-  # One-shot: `just local::e2e`. Playwright tests of web/ and the page, run as you because it
+  # One-shot: `just local::e2e`. Playwright tests of web/, run as you because it
   # writes web/e2e/node_modules and web/e2e/shots/. The tag matches web/e2e/package.json.
   e2e:
     image: mcr.microsoft.com/playwright:v1.55.0-noble
@@ -128,12 +120,11 @@ services:
     environment:
       HOME: /tmp
       WEB_URL: http://web:3000
-      UI_URL: http://ui
       API_URL: http://api:8000
     entrypoint: ["sh", "-c", "npm install --no-audit --no-fund --loglevel=error && exec node_modules/.bin/playwright test \"$$@\"", "e2e"]
     volumes:
       - ./web/e2e:/e2e
-    depends_on: [web, ui]
+    depends_on: [web]
 
   # A local stand-in for the R2 bucket.
   minio:
