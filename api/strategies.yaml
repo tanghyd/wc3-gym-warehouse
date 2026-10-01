@@ -11,7 +11,7 @@
 #               8:00 Undead, late to 15:00 (Orc 18:00). gym-replays: added here.
 #               wc3-gnl-website: the website's build orders (scripts/builds/*.mjs), the steps
 #               a player who follows the guide always does ("core"), measured in
-#               scratch/warehouse-redesign/website-builds/measure.md
+#               threads/warehouse-dbt-prototype/redesign/website-builds/measure.md
 #   vs_races    the opponent races a website guide is written for ([] for any)
 #   full, proposed_core
 #               notes, not read: a guide's orders in sequence up to tier 2, and a looser core
@@ -80,7 +80,7 @@
 - {id: ne-expand, name: Expanding Night Elf, race: NE, source: w3warehouse, steps: [{kind: building, codes: [etol], to_s: 540}]}
 - {id: ne-tavern, name: Tavern hero first, race: NE, source: gym-replays, steps: [{kind: hero, codes: [Nalc, Nbrn, Nbst, Nfir, Nngs, Npbm, Nplh, Ntin], nth: 1}]}
 
-# The wc3-gnl-website build orders, from scratch/warehouse-redesign/website-builds/presets.yaml
+# The wc3-gnl-website build orders, from threads/warehouse-dbt-prototype/redesign/website-builds/presets.yaml
 # (2026-10-02): its core is the steps.
 - id: beginner-rifle-caster
   name: Beginner Rifle Caster
