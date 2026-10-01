@@ -11,9 +11,9 @@ models:
     config:
       meta:
         semantic:
-          dimensions: [replay_id, player_id, player, race, opponent, opponent_race, matchup, map,
-                       duration_ms, minutes, result, apm, first_hero, opener_1, opener_2, opener_3,
-                       opener_4, opener_5, opener_6, gnl_series_id, gnl_game_no]
+          dimensions: [replay_id, player_id, player, race, opponent, opponent_race, computer_game,
+                       matchup, map, duration_ms, minutes, result, apm, first_hero, opener_1,
+                       opener_2, opener_3, opener_4, opener_5, opener_6, gnl_series_id, gnl_game_no]
           measures:
             games: count()
             wins: countIf(result = 'win')
@@ -65,6 +65,16 @@ models:
               description: Opponent race is a GNL race id.
               arguments:
                 values: [HU, OC, NE, UD, RANDOM]
+      - name: computer_game
+        description: >-
+          1 when the player or the opponent is the WC3 AI, else 0. The AI is named Computer,
+          with no #tag, so no battle tag matches it, and a replay holds none of its orders.
+        data_tests:
+          - accepted_values:
+              description: computer_game is 0 or 1.
+              arguments:
+                values: [0, 1]
+                quote: false
       - name: matchup
         description: "{{ doc('matchup') }}"
       - name: map

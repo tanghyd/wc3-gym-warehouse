@@ -10,6 +10,8 @@ const PAGES = [
   ["openers", "/openers?race=NE&open=eate&open=eate.eaom&open=eate.eaom.eden&open=eate.eaom.eden.etoa&open=eate.eaom.eden.etoa.edob"],
   // the Undead tree by best win rate, open down to a Slaughterhouse sixth
   ["openers-undead", "/openers?race=UD&sort=winrate&open=usep&open=usep.uaod&open=usep.uaod.ugrv&open=usep.uaod.ugrv.utom&open=usep.uaod.ugrv.utom.unp1"],
+  // the Orc tree with games vs Computer in: the checkbox checked
+  ["openers-computer", "/openers?race=OC&computer=1"],
   // Concealed Hill, 15:37, NE v OC: the story 4 golden
   ["replay", "/replays/dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8"],
   // Shallow Grave, 31 minutes, NE v OC: the longest human game

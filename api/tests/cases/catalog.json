@@ -26,6 +26,7 @@
           "race": "LowCardinality(String)",
           "opponent": "String",
           "opponent_race": "LowCardinality(String)",
+          "computer_game": "UInt8",
           "matchup": "LowCardinality(String)",
           "map": "LowCardinality(String)",
           "duration_ms": "UInt32",

@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { type Filters, pickerValues, searchReplays, stepObjects } from "@/lib/api";
+import { type Filters, noComputer, pickerValues, searchReplays, stepObjects } from "@/lib/api";
 import { decodeSteps, KINDS } from "@/lib/steps";
-import { Field, matchup, mss, ObjIcon, PlayerName, record, Result } from "@/lib/ui";
+import { Check, Field, matchup, mss, ObjIcon, PlayerName, record, Result } from "@/lib/ui";
 import { PlayerSlot } from "./PlayerSlot";
 
 const OPENERS = ["opener_1", "opener_2", "opener_3", "opener_4", "opener_5", "opener_6"];
@@ -27,8 +27,10 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const prefix = OPENERS.map(value);
   prefix.splice(prefix.indexOf("") < 0 ? 6 : prefix.indexOf(""));
 
-  // Player 1 is the focus: the row whose result the table reports. Map, length and opener ride on him.
-  const filters: Filters = {};
+  // Player 1 is the focus: the row whose result the table reports. Map, length and opener ride on him,
+  // and so does computer_game, which marks both players of a game vs the AI.
+  const computer = value("computer") === "1";
+  const filters: Filters = noComputer(computer);
   for (const k of ["race", "opponent_race", "map", "player"]) if (value(k)) filters[k] = [value(k)];
   prefix.forEach((c, i) => (filters[OPENERS[i]] = [c]));
   if (value("opp_player")) filters.opponent = [value("opp_player")];
@@ -52,7 +54,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const past = more ? answer.replays.map((r) => r.replay_id).sort().at(-1) : undefined;
   const replays = answer.replays.filter((r) => r.replay_id !== past);
   // with no condition on a player there is no focus, and players stay in slot order
-  const focused = Object.keys(filters).some((k) => k !== "map" && k !== "duration_ms") || p1Steps.length > 0 || others.length > 0;
+  const focused = Object.keys(filters).some((k) => !["map", "duration_ms", "computer_game"].includes(k)) || p1Steps.length > 0 || others.length > 0;
   const won = replays.map((r) => r.players.find((p) => p.player_id === r.focus_player_id)?.won);
   const set = Object.values(sp).some((v) => v);
   const withoutOpener = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" && v && !OPENERS.includes(k) ? [[k, v]] : [])));
@@ -84,6 +86,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
               <input name="max" type="number" min={0} step="any" inputMode="decimal" placeholder="to" aria-label="Minutes to" defaultValue={value("max")} className="field w-full" />
             </div>
           </div>
+          <Check name="computer" value="1" defaultChecked={computer} label="Include games vs Computer" />
           {prefix.length > 0 && (
             <div role="group" aria-labelledby="opener" className="flex flex-col gap-1 text-sm">
               <span id="opener" className="text-muted">
@@ -169,11 +172,26 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                       </td>
                       <td className="hidden sm:table-cell">{matchup(players)}</td>
                       <td>
-                        <ul className="flex flex-col gap-1">
+                        <ul className="flex flex-col gap-2">
                           {players.map((p) => (
-                            <li key={p.player_id} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                              <PlayerName name={p.name} race={p.race} className="max-w-48 sm:max-w-none" />
-                              {p.won && <Result won />}
+                            <li key={p.player_id} className="flex min-w-0 flex-col gap-1">
+                              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                <PlayerName name={p.name} race={p.race} className="max-w-48 sm:max-w-none" />
+                                {p.won && <Result won />}
+                              </div>
+                              {/* his heroes in pick order, a quiet second line */}
+                              {p.heroes.length > 0 && (
+                                <ul aria-label="Heroes" className="flex flex-wrap gap-1">
+                                  {p.heroes.map((h, i) => {
+                                    const label = `${byCode[h.code]?.name ?? "Unknown hero"}, level ${h.final_level}`;
+                                    return (
+                                      <li key={i}>
+                                        <ObjIcon code={h.code} objects={byCode} size={20} alt={label} title={label} />
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              )}
                             </li>
                           ))}
                         </ul>

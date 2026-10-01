@@ -85,19 +85,30 @@ export function SeriesKey({ i }: { i: number }) {
 }
 
 /** An object's command-card icon, or a "?" tile when it has none; alt="" where its name stands beside it. */
-export function ObjIcon({ code, objects, size, alt }: { code: string; objects: Objects; size: number; alt: string }) {
+export function ObjIcon({ code, objects, size, alt, title }: { code: string; objects: Objects; size: number; alt: string; title?: string }) {
   const icon = objects[code]?.icon;
   if (!icon)
     return (
       <span
         role={alt ? "img" : undefined}
         aria-label={alt || undefined}
+        title={title}
         // the "?" is CSS content, so it stays out of the row's text
         className="grid shrink-0 place-items-center rounded-sm border bg-surface-light leading-none font-bold text-muted before:content-['?']"
         style={{ width: size, height: size, fontSize: Math.round(size * 0.6) }}
       />
     );
-  return <img src={icon} width={size} height={size} alt={alt} className="block shrink-0 rounded-sm" />;
+  return <img src={icon} width={size} height={size} alt={alt} title={title} className="block shrink-0 rounded-sm" />;
+}
+
+/** A checkbox in a filter row: its label beside it, as tall as a field. */
+export function Check({ label, ...props }: Omit<ComponentProps<"input">, "type"> & { label: string }) {
+  return (
+    <label className="flex h-[38px] cursor-pointer items-center gap-2 text-sm whitespace-nowrap">
+      <input type="checkbox" className="size-4 shrink-0 cursor-pointer accent-primary-text" {...props} />
+      {label}
+    </label>
+  );
 }
 
 const nameOf = (objects: Objects, code: string) => objects[code]?.name ?? "Unknown skill";

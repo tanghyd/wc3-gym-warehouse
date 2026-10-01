@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { type Filters, getObjects, pickerValues, query } from "@/lib/api";
-import { Field, mss, ObjIcon, RaceIcon, RACES, RaceSelect, record } from "@/lib/ui";
+import { type Filters, getObjects, noComputer, pickerValues, query } from "@/lib/api";
+import { Check, Field, mss, ObjIcon, RaceIcon, RACES, RaceSelect, record } from "@/lib/ui";
 
 export const metadata: Metadata = { title: "Openers" };
 
@@ -56,9 +56,12 @@ export default async function OpenersPage({ searchParams }: PageProps<"/openers"
   const value = (k: string) => (typeof sp[k] === "string" ? sp[k] : "");
   const race = RACES[value("race")] ? value("race") : "NE";
   const sort = value("sort") === "winrate" ? "winrate" : "popular";
-  const pairs: [string, string][] = [["race", race], ...["opponent_race", "map", "player"].filter(value).map((k): [string, string] => [k, value(k)])];
-  // only games with a known winner, so games equal wins plus losses
-  const base: Filters = { ...Object.fromEntries(pairs.map(([k, v]) => [k, [v]])), result: ["win", "loss"] };
+  const computer = value("computer") === "1";
+  const fields: [string, string][] = [["race", race], ...["opponent_race", "map", "player"].filter(value).map((k): [string, string] => [k, value(k)])];
+  // only games with a known winner, so games equal wins plus losses; games vs Computer only with ?computer=1
+  const base: Filters = { ...Object.fromEntries(fields.map(([k, v]) => [k, [v]])), result: ["win", "loss"], ...noComputer(computer) };
+  // what every link keeps
+  const pairs: [string, string][] = computer ? [...fields, ["computer", "1"]] : fields;
 
   // ?open= once per expanded row, its path of codes joined with "."; a path loads when every row above it is open
   const key = (p: string[]) => p.join(".");
@@ -131,6 +134,7 @@ export default async function OpenersPage({ searchParams }: PageProps<"/openers"
             ))}
           </select>
         </Field>
+        <Check name="computer" value="1" defaultChecked={computer} label="Include games vs Computer" />
         {shown.map((o) => (
           <input key={o} type="hidden" name="open" value={o} />
         ))}

@@ -217,9 +217,16 @@ def compile_search(req: SearchRequest, model: Model) -> tuple[str, dict[str, str
 ROWS_SQL = """SELECT
     r.replay_id AS replay_id, r.map AS map, r.matchup AS matchup, r.duration_ms AS duration_ms,
     r.winning_team_id AS winning_team_id, r.gnl_series_id AS gnl_series_id, r.gnl_game_no AS gnl_game_no,
-    arraySort(groupArray((rp.player_id, rp.name, rp.race, rp.team_id))) AS players
+    arraySort(groupArray((rp.player_id, rp.name, rp.race, rp.team_id, h.heroes))) AS players
 FROM w3g.replays AS r
 INNER JOIN w3g.replay_players AS rp ON rp.replay_id = r.replay_id
+-- each player's heroes in pick order, [] for a player with none
+LEFT JOIN (
+    SELECT replay_id, player_id, arraySort(groupArray((hero_slot, hero_id, final_level))) AS heroes
+    FROM w3g.player_heroes
+    WHERE has({ids:Array(String)}, replay_id) AND hero_id != ''
+    GROUP BY replay_id, player_id
+) AS h ON h.replay_id = rp.replay_id AND h.player_id = rp.player_id
 WHERE has({ids:Array(String)}, r.replay_id)
 GROUP BY replay_id, map, matchup, duration_ms, winning_team_id, gnl_series_id, gnl_game_no
 ORDER BY gnl_series_id, gnl_game_no, replay_id"""

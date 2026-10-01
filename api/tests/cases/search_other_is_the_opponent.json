@@ -40,14 +40,34 @@
               "name": "FoCuS#31324",
               "race": "OC",
               "team_id": 0,
-              "won": false
+              "won": false,
+              "heroes": [
+                {
+                  "code": "Obla",
+                  "final_level": 2
+                },
+                {
+                  "code": "Oshd",
+                  "final_level": 1
+                }
+              ]
             },
             {
               "player_id": 2,
               "name": "Medusa#31315",
               "race": "NE",
               "team_id": 1,
-              "won": true
+              "won": true,
+              "heroes": [
+                {
+                  "code": "Edem",
+                  "final_level": 2
+                },
+                {
+                  "code": "Ekee",
+                  "final_level": 1
+                }
+              ]
             }
           ]
         },
@@ -69,14 +89,38 @@
               "name": "thanks#11187",
               "race": "NE",
               "team_id": 0,
-              "won": true
+              "won": true,
+              "heroes": [
+                {
+                  "code": "Edem",
+                  "final_level": 4
+                },
+                {
+                  "code": "Ekee",
+                  "final_level": 4
+                }
+              ]
             },
             {
               "player_id": 2,
               "name": "Okeanos#22605",
               "race": "OC",
               "team_id": 1,
-              "won": false
+              "won": false,
+              "heroes": [
+                {
+                  "code": "Ofar",
+                  "final_level": 3
+                },
+                {
+                  "code": "Oshd",
+                  "final_level": 2
+                },
+                {
+                  "code": "Otch",
+                  "final_level": 1
+                }
+              ]
             }
           ]
         }

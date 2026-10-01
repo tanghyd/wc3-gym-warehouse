@@ -134,8 +134,11 @@ def search(req: SearchRequest) -> dict[str, Any]:
                 "gnl": _gnl(r), "download_url": None,  # no source_key yet (design S3)
                 "focus_player_id": focus[r["replay_id"]],
                 "players": [
-                    {"player_id": pid, "name": name, "race": race, "team_id": team, "won": _won(team, r["winning_team_id"])}
-                    for pid, name, race, team in r["players"]
+                    {
+                        "player_id": pid, "name": name, "race": race, "team_id": team, "won": _won(team, r["winning_team_id"]),
+                        "heroes": [{"code": code, "final_level": level} for _slot, code, level in heroes],
+                    }
+                    for pid, name, race, team, heroes in r["players"]
                 ],
             })
     return {"replays": rows, "sql": sql, "params": params}

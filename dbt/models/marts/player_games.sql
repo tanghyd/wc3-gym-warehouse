@@ -33,6 +33,8 @@ SELECT
     rp.race                                           AS race,
     opp.name                                          AS opponent,
     opp.race                                          AS opponent_race,
+    -- the WC3 AI is named Computer, a name with no #tag that no human can carry
+    toUInt8(rp.name = 'Computer' OR opp.name = 'Computer') AS computer_game,
     r.matchup                                         AS matchup,
     r.map                                             AS map,
     r.duration_ms                                     AS duration_ms,

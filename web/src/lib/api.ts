@@ -10,11 +10,13 @@ export type Gnl = { series_id: number; game_no: number } | null;
 export type Player = { player_id: number; name: string; race: string; team_id: number; won: boolean | null };
 export type Hero = { slot: number; code: string; final_level: number };
 export type ReplayPlayer = Player & { apm: number; apm_per_minute: number[]; heroes: Hero[] };
+/** A player of a search row: his heroes in pick order. */
+export type RowPlayer = Player & { heroes: Omit<Hero, "slot">[] };
 export type GameEvent = { player_id: number; time_ms: number; event_type: string; code: string; hero_code: string | null };
 export type Chat = { time_ms: number; player_id: number; mode: string; message: string };
 type Header = { replay_id: string; map: string; matchup: string; duration_ms: number; winning_team_id: number; gnl: Gnl; download_url: string | null };
 export type Replay = Header & { version: string; players: ReplayPlayer[]; events: GameEvent[]; chat: Chat[] };
-export type ReplayRow = Header & { focus_player_id: number; players: Player[] };
+export type ReplayRow = Header & { focus_player_id: number; players: RowPlayer[] };
 /** Name and icon path per object code; a code in no mappings row has no name. */
 export type Objects = Record<string, { name?: string; icon: string | null }>;
 
@@ -41,7 +43,10 @@ async function api<T>(path: string, body?: object): Promise<T | null> {
 export const getReplay = cache((id: string) => api<Replay>(`/replays/${encodeURIComponent(id)}`));
 
 /** A dimension's allowed values, or a numeric range. */
-export type Filters = Record<string, string[] | { gte?: number; lte?: number }>;
+export type Filters = Record<string, (string | number)[] | { gte?: number; lte?: number }>;
+
+/** The filter that leaves out games against the WC3 AI; ?computer=1 drops it. */
+export const noComputer = (computer: boolean): Filters => (computer ? {} : { computer_game: [0] });
 export type ApiStep = { type: string; code: string; within_prev_s: number | null; from_min: number | null; to_min: number | null };
 
 type Search = { replays: ReplayRow[]; sql: string; params: Record<string, string>; refused?: string };
