@@ -5,7 +5,7 @@ The replay's id: a hex SHA-256 the parser computes from the game's random seed, 
 {% enddocs %}
 
 {% docs player_id %}
-The player's slot id in the replay (1-24), unique within a replay.
+The player's id in the replay, unique within a replay: 1 and up for a human player, 0 for a computer player.
 {% enddocs %}
 
 {% docs race %}
