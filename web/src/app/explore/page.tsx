@@ -37,7 +37,7 @@ export default async function ExplorePage({ searchParams }: PageProps<"/explore"
   const labels = await valueLabels(Object.fromEntries(Object.entries(seen).map(([d, s]) => [d, [...s]])));
   const chart = chartOf(view, cat);
   const head = cat.labels[chart.measure ?? view.show[0]];
-  const title = dims.length ? `${head} by ${andList(dims.map((d) => titleCase(cat.labels[d])))}` : andList(view.show.map((m) => titleCase(cat.labels[m])));
+  const title = dims.length ? `${titleCase(head)} by ${andList(dims.map((d) => titleCase(cat.labels[d])))}` : andList(view.show.map((m) => titleCase(cat.labels[m])));
 
   return (
     <main className="wrap flex flex-col gap-4 py-6">

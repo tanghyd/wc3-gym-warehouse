@@ -158,5 +158,9 @@ test.describe("explore", () => {
     await page.goto("/explore?rows=first_hero&cols=opponent_race&race=NE");
     await expect(page.getByRole("grid").getByRole("columnheader")).toHaveCount(6);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    // the table fits its card: Avg length, the third measure, is hidden, so no figure is cut at the edge
+    const table = page.locator("table.x-table");
+    await expect(table.getByRole("columnheader", { name: "Avg length" })).toBeHidden();
+    expect(await table.evaluate((t) => t.scrollWidth <= t.parentElement!.clientWidth)).toBeTruthy();
   });
 });

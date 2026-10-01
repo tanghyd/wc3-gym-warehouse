@@ -263,6 +263,8 @@ export function Result(props: { view: View; cat: Catalog; rows: Row[]; labels: L
   const by = view.show.find((m) => cat.types[m] === "count") ?? view.show[0];
   const sorted = [...rows].sort((a, b) => measureValue(cat, by, b) - measureValue(cat, by, a));
   const shown = all ? sorted : sorted.slice(0, 10);
+  // a phone shows four columns: the dimensions, then the measures in order, at least one; the CSV keeps all
+  const phoneHides = (i: number) => i > 0 && dims.length + i >= 4;
 
   const copy = async () => {
     await navigator.clipboard.writeText(location.href);
@@ -337,8 +339,8 @@ export function Result(props: { view: View; cat: Catalog; rows: Row[]; labels: L
                         {cat.labels[d]}
                       </th>
                     ))}
-                    {view.show.map((m) => (
-                      <th key={m} scope="col" className="text-right" title={cat.notes[m]}>
+                    {view.show.map((m, i) => (
+                      <th key={m} scope="col" className={`text-right ${phoneHides(i) ? "max-sm:hidden" : ""}`}>
                         {cat.labels[m]}
                       </th>
                     ))}
@@ -352,8 +354,8 @@ export function Result(props: { view: View; cat: Catalog; rows: Row[]; labels: L
                           <Value d={d} v={String(r[d])} labels={labels} iconOnly={narrow && d in RACE_DIMS} />
                         </td>
                       ))}
-                      {view.show.map((m) => (
-                        <td key={m} className="text-right">
+                      {view.show.map((m, i) => (
+                        <td key={m} className={`text-right ${phoneHides(i) ? "max-sm:hidden" : ""}`}>
                           {/* a record breaks only before its percent */}
                           {measureText(cat, m, r)
                             .split(/ (?=\()/)
@@ -370,6 +372,11 @@ export function Result(props: { view: View; cat: Catalog; rows: Row[]; labels: L
                 </tbody>
               </table>
             </div>
+            {view.show.some((m) => cat.notes[m]) && (
+              <p className="border-t px-4 py-2.5 text-sm text-muted">
+                {view.show.filter((m) => cat.notes[m]).map((m) => `${cat.labels[m]}: ${cat.notes[m][0].toLowerCase()}${cat.notes[m].slice(1)}.`).join(" ")}
+              </p>
+            )}
             {rows.length > 10 && (
               <div className="pager">
                 <span>

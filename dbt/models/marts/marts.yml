@@ -46,7 +46,7 @@ models:
               sql: count()
               label: Games
               type: count
-              note: "One per player: a mirror game can count twice"
+              note: "One per player, so a mirror game can count twice"
             wins: countIf(result = 'win')
             losses: countIf(result = 'loss')
             record: {label: Record, type: record, parts: [wins, losses]}
