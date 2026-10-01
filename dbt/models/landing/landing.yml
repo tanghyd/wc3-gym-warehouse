@@ -19,7 +19,7 @@ sources:
             warn_after: {count: 7, period: day}
         columns:
           - name: doc
-            description: One parsed replay document as JSON text, as w3grs wrote it plus the drain's gnl object.
+            description: One parsed replay document as JSON text, as w3grs wrote it plus the drain's source_key (the raw object key) and, for a GNL replay, its gnl object.
 
 models:
   - name: raw_replays

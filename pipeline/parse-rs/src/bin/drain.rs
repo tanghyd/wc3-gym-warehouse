@@ -10,11 +10,12 @@
 //!
 //! A raw object is never moved or deleted: the site's download URLs point at it.
 //! Work already done is recorded by a breadcrumb at
-//! `status/<series id>/game<n>.json` holding the raw object's ETag, so a pass
-//! processes a key only when it has no breadcrumb or the ETag has changed.
+//! `status/<series id>/game<n>.json` holding the raw object's ETag and the
+//! PARSE_VERSION that wrote it, so a pass processes a key only when it has no
+//! breadcrumb, the ETag has changed or the breadcrumb has another version.
 //!
-//! The object key carries the GNL series and game number, and the drain writes
-//! them into the parsed document as a `gnl` object.
+//! The drain writes the raw object key into the parsed document as `source_key`.
+//! A GNL key also carries the series and game number, written as a `gnl` object.
 //!
 //! Two run modes: default loops every WORKER_POLL_MS as a SINGLE instance (two
 //! instances race on the same keys); `--once` drains the bucket once and exits.
@@ -28,6 +29,7 @@ use aws_sdk_s3::config::{BehaviorVersion, Credentials, Region};
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::Client;
 use futures::stream::{self, StreamExt};
+use w3warehouse_parse::PARSE_VERSION;
 
 const RAW: &str = "replays/";
 const STATUS: &str = "status/";
@@ -132,6 +134,19 @@ fn status_key(cfg: &Cfg, raw_key: &str) -> String {
     format!("{}{}.json", cfg.status(), rest.strip_suffix(".w3g").unwrap_or(rest))
 }
 
+/// A breadcrumb body: what happened to a raw key, at which ETag and parser version.
+fn breadcrumb(state: &str, raw_key: &str, etag: &str) -> serde_json::Value {
+    serde_json::json!({
+        "state": state, "key": raw_key, "etag": etag, "parse_version": PARSE_VERSION,
+    })
+}
+
+/// True when a breadcrumb covers this ETag under this parser version.
+fn up_to_date(crumb: &serde_json::Value, etag: &str) -> bool {
+    crumb["etag"].as_str() == Some(etag)
+        && crumb["parse_version"].as_u64() == Some(PARSE_VERSION.into())
+}
+
 /// Process every new or changed `replays/` object once, concurrently. Returns
 /// how many were handled; transient S3 errors leave the key to retry next pass.
 async fn drain_once(client: &Client, cfg: &Cfg) -> usize {
@@ -157,7 +172,7 @@ async fn drain_once(client: &Client, cfg: &Cfg) -> usize {
                 log(&format!("skipping {key}: not a .w3g under {raw_prefix}"));
                 return false;
             }
-            done.get(key) != Some(etag)
+            !done.get(key).is_some_and(|crumb| up_to_date(crumb, etag))
         })
         .collect();
 
@@ -178,6 +193,25 @@ async fn drain_once(client: &Client, cfg: &Cfg) -> usize {
     outcomes.into_iter().filter(|ok| *ok).count()
 }
 
+/// The doc the drain writes: w3grs's JSON plus `source_key`, and `gnl` for a GNL
+/// key, so ClickHouse reads them out of the same s3() load as every other field.
+fn landed_doc(
+    json: &str,
+    raw_key: &str,
+    gnl: Option<(u32, u8)>,
+) -> Result<serde_json::Value, String> {
+    let mut doc: serde_json::Value = serde_json::from_str(json).map_err(|e| e.to_string())?;
+    let fields = doc.as_object_mut().ok_or("parsed doc is not a JSON object")?;
+    fields.insert("source_key".to_string(), raw_key.into());
+    if let Some((series_id, game_no)) = gnl {
+        fields.insert(
+            "gnl".to_string(),
+            serde_json::json!({"series_id": series_id, "game_no": game_no}),
+        );
+    }
+    Ok(doc)
+}
+
 async fn process_one(client: &Client, cfg: &Cfg, raw_key: &str, etag: &str) -> Result<(), String> {
     let bucket = &cfg.bucket;
     let gnl = parse_key(&cfg.raw(), raw_key);
@@ -187,9 +221,9 @@ async fn process_one(client: &Client, cfg: &Cfg, raw_key: &str, etag: &str) -> R
     let parsed = match w3warehouse_parse::parse_replay(&bytes) {
         Ok(p) => p,
         Err(error) => {
-            // Won't ever parse — record it so the next pass skips the key.
-            let status =
-                serde_json::json!({"state":"failed","key":raw_key,"etag":etag,"error":error});
+            // Won't parse with this parser: skip the key until its ETag or PARSE_VERSION changes.
+            let mut status = breadcrumb("failed", raw_key, etag);
+            status["error"] = error.as_str().into();
             put_json(client, bucket, &status_key, &status).await?;
             log(&format!("parse FAILED {raw_key}: {error}"));
             return Ok(());
@@ -199,17 +233,7 @@ async fn process_one(client: &Client, cfg: &Cfg, raw_key: &str, etag: &str) -> R
         return Err("parsed doc has no id".to_string());
     }
 
-    // The GNL series and game number ride in the document so ClickHouse reads
-    // them out of the same s3() load as every other field.
-    let mut doc: serde_json::Value =
-        serde_json::from_str(&parsed.json).map_err(|e| e.to_string())?;
-    let fields = doc.as_object_mut().ok_or("parsed doc is not a JSON object")?;
-    if let Some((series_id, game_no)) = gnl {
-        fields.insert(
-            "gnl".to_string(),
-            serde_json::json!({"series_id": series_id, "game_no": game_no}),
-        );
-    }
+    let doc = landed_doc(&parsed.json, raw_key, gnl)?;
 
     // Land the parsed doc content-addressed by replay id under the parser-version
     // prefix (PARSE_VERSION in lib.rs) so a parser change re-derives incrementally.
@@ -220,17 +244,16 @@ async fn process_one(client: &Client, cfg: &Cfg, raw_key: &str, etag: &str) -> R
         &format!(
             "{}parsed/v{}/dt={date}/{}.json",
             cfg.prefix,
-            w3warehouse_parse::PARSE_VERSION,
+            PARSE_VERSION,
             parsed.replay_id
         ),
         serde_json::to_vec(&doc).map_err(|e| e.to_string())?,
     )
     .await?;
 
-    let status = serde_json::json!({
-        "state":"parsed","key":raw_key,"etag":etag,
-        "replay_id":parsed.replay_id,"type":parsed.replay_type,
-    });
+    let mut status = breadcrumb("parsed", raw_key, etag);
+    status["replay_id"] = parsed.replay_id.as_str().into();
+    status["type"] = parsed.replay_type.as_str().into();
     put_json(client, bucket, &status_key, &status).await?;
     log(&format!(
         "parsed {raw_key} → {} ({} type={})",
@@ -241,10 +264,13 @@ async fn process_one(client: &Client, cfg: &Cfg, raw_key: &str, etag: &str) -> R
     Ok(())
 }
 
-/// Raw key → the ETag recorded for it, read from every `status/` breadcrumb.
-/// A listing carries the breadcrumb's own ETag, not the replay's, so each body
-/// is fetched; the fetches run at the pass concurrency.
-async fn read_breadcrumbs(client: &Client, cfg: &Cfg) -> Result<HashMap<String, String>, String> {
+/// Raw key → its breadcrumb, read from every `status/` object. A listing carries
+/// the breadcrumb's own ETag, not the replay's, so each body is fetched; the
+/// fetches run at the pass concurrency.
+async fn read_breadcrumbs(
+    client: &Client,
+    cfg: &Cfg,
+) -> Result<HashMap<String, serde_json::Value>, String> {
     let keys = list_prefix(client, &cfg.bucket, &cfg.status()).await?;
     let bodies = stream::iter(keys)
         .map(|(key, _)| async move { get_object(client, &cfg.bucket, &key).await })
@@ -254,8 +280,8 @@ async fn read_breadcrumbs(client: &Client, cfg: &Cfg) -> Result<HashMap<String, 
     let mut map = HashMap::new();
     for body in bodies {
         let doc: serde_json::Value = serde_json::from_slice(&body?).map_err(|e| e.to_string())?;
-        if let (Some(k), Some(e)) = (doc["key"].as_str(), doc["etag"].as_str()) {
-            map.insert(k.to_string(), e.to_string());
+        if let Some(k) = doc["key"].as_str().map(str::to_string) {
+            map.insert(k, doc);
         }
     }
     Ok(map)
@@ -375,6 +401,33 @@ mod tests {
             status_key(&c, "preview/replays/435/game1.w3g"),
             "preview/status/435/game1.json"
         );
+    }
+
+    #[test]
+    fn a_key_is_done_only_at_the_same_etag_and_parser_version() {
+        let key = "preview/replays/435/game1.w3g";
+        assert!(up_to_date(&breadcrumb("parsed", key, "e1"), "e1"));
+        assert!(up_to_date(&breadcrumb("failed", key, "e1"), "e1"));
+        assert!(!up_to_date(&breadcrumb("parsed", key, "e1"), "e2"));
+        // A breadcrumb from before parse_version, or from another version, re-parses.
+        let old = serde_json::json!({"state": "parsed", "key": key, "etag": "e1"});
+        assert!(!up_to_date(&old, "e1"));
+        let mut other = breadcrumb("parsed", key, "e1");
+        other["parse_version"] = (PARSE_VERSION - 1).into();
+        assert!(!up_to_date(&other, "e1"));
+    }
+
+    #[test]
+    fn the_landed_doc_carries_the_raw_key_and_gnl_only_for_a_gnl_key() {
+        let key = "preview/replays/435/game1.w3g";
+        let gnl = landed_doc(r#"{"id":"r1"}"#, key, Some((435, 1))).unwrap();
+        assert_eq!(gnl["id"], "r1");
+        assert_eq!(gnl["source_key"], key);
+        assert_eq!(gnl["gnl"], serde_json::json!({"series_id": 435, "game_no": 1}));
+        let local = landed_doc(r#"{"id":"r2"}"#, "preview/replays/local/w3c-1.w3g", None).unwrap();
+        assert_eq!(local["source_key"], "preview/replays/local/w3c-1.w3g");
+        assert!(local.get("gnl").is_none());
+        assert!(landed_doc("[]", "k", None).is_err());
     }
 
     #[test]

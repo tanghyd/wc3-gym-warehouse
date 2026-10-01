@@ -9,11 +9,9 @@
 //! Volatile-field policy (stated once, here): `parseTime` — wall-clock parse
 //! duration, the only non-content field — is stripped from both sides.
 //!
-//! Blessing a deliberate parser change = regenerate the goldens:
-//!   pipeline/parse-rs/target/release/parse /tmp/g pipeline/parse-rs/fixtures/*.w3g
-//!   then rewrite tests/goldens/*.json as sorted-key JSON (json.dump
-//!   sort_keys=True, indent=1) and review the git diff — that diff IS the
-//!   parser-change review.
+//! Blessing a deliberate parser change = regenerate the goldens with
+//! `just local::goldens` (the drain image's `parse`, written as sorted-key JSON
+//! with indent 1) and review the git diff — that diff IS the parser-change review.
 
 use serde_json::Value;
 use std::collections::BTreeSet;

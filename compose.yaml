@@ -42,7 +42,7 @@ services:
       retries: 30
       start_period: 5s
 
-  # Lists replays/, parses each new or changed .w3g, writes parsed/v2/…json.
+  # Lists replays/, parses each new or changed .w3g, writes parsed/v3/…json.
   drain:
     build:
       context: .

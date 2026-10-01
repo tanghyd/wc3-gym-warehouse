@@ -6,14 +6,12 @@
 //! naming and storage differ.
 use w3grs::{ParserOutput, W3GReplay};
 
-/// Parser output version. `drain` writes parsed docs under `parsed/v<N>/…` so a
-/// parser schema/extraction change gets a fresh prefix — re-derivation is then
-/// incremental (re-drain raw-archive/ under the new prefix) instead of stale
-/// v<N-1> JSON silently serving. Bump on ANY change to what parse_replay emits,
-/// together with the v<N> hand-copies in compose.yaml (STREAM_URL), the justfile
-/// `reparse` recipe, and scripts/test_stream.sh —
-/// services/api/tests/test_landing_predicates.py pins all of them to this const.
-pub const PARSE_VERSION: u32 = 2;
+/// Parser output version. Bump it on any change to what the drain writes. `drain`
+/// writes parsed docs under `parsed/v<N>/…` and stamps N on each status breadcrumb,
+/// so after a bump the next pass re-parses every raw replay into the new prefix.
+/// The one hand copy is W3WAREHOUSE_PARSED_URL in .env and .env.example, the
+/// prefix ClickHouse loads; change it with the bump.
+pub const PARSE_VERSION: u32 = 3;
 
 /// A parsed replay: the canonical JSON doc the ClickHouse loader consumes, plus
 /// the `id` / `type` lifted from the typed output so callers don't re-extract

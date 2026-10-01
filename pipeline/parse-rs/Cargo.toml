@@ -22,8 +22,8 @@ name = "drain"
 path = "src/bin/drain.rs"
 
 [dependencies]
-# Upstream w3grs plus one patch that keeps unknown object codes; see the fork's README.
-w3grs = { git = "https://github.com/tanghyd/w3grs", rev = "a93fe880deea6d303552fe77822db384cab352ba" }
+# Upstream w3grs plus two patches: unknown object codes and players[].lastActionMs; see the fork's README.
+w3grs = { git = "https://github.com/tanghyd/w3grs", rev = "cb4b5625f9ed1737a9ec074257d1b7a066f8f33b" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # drain (S3 object-store worker) only:

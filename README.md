@@ -24,7 +24,7 @@ The replay inspector is at http://localhost:3000, the API at http://localhost:80
 |---|---|
 | `just dbt <args>` | any dbt command in the dbt container, such as `build`, `test` or `docs generate` |
 | `just local::docs` | writes dbt's docs site (models, columns, tests, lineage) into the target volume that http://localhost:8080 serves |
-| `just local::upload-replays <folder> <date>` | copies every `.w3g` under a folder changed since a date into the bucket's `replays/local/`; then `just drain-once` and `just dbt build` |
+| `just local::upload-replays <folder> <date>` | copies every `.w3g` under a folder changed since a date into the bucket's `replays/local/`, except `LastReplay.w3g` (a copy of the latest game); then `just drain-once` and `just dbt build` |
 | `just local::drain-test` | the drain's unit tests and parser goldens, in its image |
 | `just local::mappings` | rewrites `dbt/seeds/mappings_melee.csv` from the parser's tables, after a w3grs bump |
 | `just local::api-test` | the API tests in its container: compiler goldens, then the live cases |
@@ -35,12 +35,12 @@ The replay inspector is at http://localhost:3000, the API at http://localhost:80
 
 ```
 R2 or MinIO                        ClickHouse (dbt builds w3g.*)                  API            page
-replays/<series>/game<n>.w3g ─drain─▶ parsed/v2/dt=<date>/<id>.json ─dbt─▶ raw_replays ─▶ marts ─▶ /query  ─▶ web :3000
+replays/<series>/game<n>.w3g ─drain─▶ parsed/v3/dt=<date>/<id>.json ─dbt─▶ raw_replays ─▶ marts ─▶ /query  ─▶ web :3000
                                                                                               /search
 ```
 
 1. The GNL backend writes a reported replay to `<env>/replays/<series id>/game<n>.w3g`; `<env>` is the Vercel environment (`app/services/r2.py`), set as `W3WAREHOUSE_S3_PREFIX`. Locally, `minio-setup` puts the 3 goldens there as series 9001-9003. Any other `.w3g` under `replays/` (such as `replays/local/`, which `just local::upload-replays` fills) is drained too, with no `gnl` field.
-2. The drain (`pipeline/parse-rs`, w3grs) parses each new or changed file and writes the parsed document under `parsed/v2/`. It never moves or deletes a raw file.
+2. The drain (`pipeline/parse-rs`, w3grs) parses each new or changed file and writes the parsed document under `parsed/v3/`, with the raw object key as `source_key`. It never moves or deletes a raw file.
 3. `just dbt build`:
    - `raw_replays` is an incremental model. It reads the dbt source `bucket.parsed_docs`, an S3 table over the `parsed_docs` named collection (`infrastructure/docker/clickhouse/named-collections.xml`) that dbt's `on-run-start` hook creates, and appends the documents it does not have yet. It skips a loaded document by its file name (`<replay_id>.json`) before ClickHouse fetches it. The URL and the keys come from the server's environment, so no secret lands in SQL.
    - The staging views flatten orders and hero skills.
@@ -67,7 +67,7 @@ The opener tree is a `GROUP BY` over `player_games.opener_N`, so the refreshable
 - The source `bucket.parsed_docs` has freshness on the S3 `_time` virtual column: `just dbt source freshness`.
 - Exposures in `dbt/models/exposures.yml` name the three readers: the replay inspector, the query API and Grafana.
 - dbt's docs site has no column-level lineage: dbt v2 builds it from static analysis, which is off for ClickHouse. It also lists the dbt and ClickHouse adapter macros, which dbt 2.0.6 cannot hide.
-- A parser change bumps `PARSE_VERSION` in `pipeline/parse-rs/src/lib.rs`, so the drain writes a new `parsed/v<N>/` prefix. `raw_replays` keeps one document per replay, so an incremental run skips the re-parsed ones: set `W3WAREHOUSE_PARSED_URL` to the new prefix, `just up` (ClickHouse reads it at start), then `just dbt build --full-refresh`.
+- A parser change bumps `PARSE_VERSION` in `pipeline/parse-rs/src/lib.rs`. The drain stamps the version on each `status/` breadcrumb, so its next pass re-parses every raw replay into the new `parsed/v<N>/` prefix; no breadcrumb needs clearing. `raw_replays` keeps one document per replay, so an incremental run skips the re-parsed ones: set `W3WAREHOUSE_PARSED_URL` in `.env` to the new prefix, `just up` (ClickHouse reads it at start), `just drain-once`, then `just dbt build --full-refresh`.
 
 ## The query API (`api/`)
 

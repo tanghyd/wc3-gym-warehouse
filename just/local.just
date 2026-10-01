@@ -54,14 +54,31 @@ export-mappings:
 drain-test:
     docker build --target test --progress plain -f infrastructure/docker/Dockerfile.drain .
 
+# rewrite pipeline/parse-rs/tests/goldens from the fixtures with the drain image's parse, as
+# sorted-key JSON; the git diff is the parser-change review
+goldens:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    out=$(mktemp -d); trap 'rm -rf "$out"' EXIT
+    docker compose run --rm --no-deps --build --user "$(id -u):$(id -g)" --entrypoint sh \
+      -v "$PWD/pipeline/parse-rs/fixtures:/in:ro" -v "$out:/out" drain -c 'parse /out /in/*.w3g'
+    docker run --rm --user "$(id -u):$(id -g)" -v "$out:/out:ro" -v "$PWD/pipeline/parse-rs/tests/goldens:/goldens" \
+      node:22-slim node -e '
+        const fs = require("fs");
+        const sort = (v) => Array.isArray(v) ? v.map(sort) : v && typeof v === "object"
+          ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sort(v[k])])) : v;
+        for (const f of fs.readdirSync("/out").filter((f) => f.endsWith(".json")))
+          fs.writeFileSync("/goldens/" + f, JSON.stringify(sort(JSON.parse(fs.readFileSync("/out/" + f, "utf8"))), null, 1));'
+
 # copy every .w3g under a folder changed since a date into the bucket's replays/local/, keeping
-# subfolders, such as `just local::upload-replays "/mnt/c/Users/Daniel/Documents/Warcraft III/BattleNet/51230813/Replays" 2026-09-01`
+# subfolders and skipping LastReplay.w3g (the client rewrites it after each game), such as
+# `just local::upload-replays "/mnt/c/Users/Daniel/Documents/Warcraft III/BattleNet/51230813/Replays" 2026-09-01`
 [positional-arguments]
 upload-replays dir since:
     #!/usr/bin/env bash
     set -euo pipefail
     stage=$(mktemp -d); trap 'rm -rf "$stage"' EXIT
-    (cd "$1" && find . -type f -name '*.w3g' -newermt "$2" -exec cp --parents -p {} "$stage/" \;)
+    (cd "$1" && find . -type f -name '*.w3g' ! -name 'LastReplay.w3g' -newermt "$2" -exec cp --parents -p {} "$stage/" \;)
     echo "uploading $(find "$stage" -type f | wc -l) replays"
     docker compose run --rm --no-deps -v "$stage:/upload:ro" -e KEY="$W3WAREHOUSE_S3_ACCESS_KEY" \
       -e SECRET="$W3WAREHOUSE_S3_SECRET_KEY" --entrypoint sh minio-setup -c \
@@ -96,6 +113,13 @@ web-lock:
 [positional-arguments]
 node dir *args:
     d="$1"; shift; docker run --rm --user "$(id -u):$(id -g)" -v "$d:/work:ro" -w /work node:22-slim node "$@"
+
+# cargo on a crate from an absolute folder, mounted read-only, in a rust container as you,
+# such as the w3grs fork's tests `just local::cargo /home/daniel/warcraft/w3grs test --all-features`
+[positional-arguments]
+cargo dir *args:
+    d="$1"; shift; docker run --rm --user "$(id -u):$(id -g)" -e CARGO_HOME=/tmp/cargo -e CARGO_TARGET_DIR=/tmp/target \
+      -v "$d:/work:ro" -w /work rust:1-slim-bookworm cargo "$@"
 
 # eslint over web/, in the lint stage of the web image
 web-lint:
