@@ -2200,7 +2200,7 @@ checksum = "5c3082ca00d5a5ef149bb8b555a72ae84c9c59f7250f013ac822ac2e49b19c64"
 [[package]]
 name = "w3grs"
 version = "0.2.3"
-source = "git+https://github.com/tanghyd/w3grs?rev=d93ade9bff9bf867928ce70a8d957efb0634ea05#d93ade9bff9bf867928ce70a8d957efb0634ea05"
+source = "git+https://github.com/tanghyd/w3grs?rev=476fd35d30af72c91464eb0ee6862af1a1a58fe6#476fd35d30af72c91464eb0ee6862af1a1a58fe6"
 dependencies = [
  "flate2",
  "prost",
