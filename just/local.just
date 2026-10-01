@@ -34,11 +34,13 @@ sql *args:
 # dbt in its container, such as `just dbt build` or `just dbt test`
 [positional-arguments]
 dbt *args:
-    docker compose run --rm --build dbt "$@"
+    # --no-deps: never start or recreate clickhouse; `just up` runs it
+    docker compose run --rm --no-deps --build dbt "$@"
 
 # write dbt's docs site (models, columns, tests, lineage) for http://127.0.0.1:8080
 docs:
-    docker compose run --rm --build dbt docs generate
+    # --no-deps: never start or recreate clickhouse; `just up` runs it
+    docker compose run --rm --no-deps --build dbt docs generate
 
 # parse every new or changed replay in the bucket once, with the drain image
 drain-once:
