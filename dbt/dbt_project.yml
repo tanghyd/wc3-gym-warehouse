@@ -5,14 +5,29 @@ version: "1.0"
 profile: w3g
 require-dbt-version: ">=2.0.0,<3.0.0"
 
+# The bucket.parsed_docs source (models/landing/landing.yml): an S3 table over the
+# parsed_docs named collection, so the bucket reads like any other table. Its own
+# database keeps it away from the api and grafana users, which read w3g only.
+on-run-start:
+  - CREATE DATABASE IF NOT EXISTS bucket
+  - >-
+    CREATE OR REPLACE TABLE bucket.parsed_docs
+    (doc String COMMENT 'One parsed replay document, as JSON text.')
+    ENGINE = S3(parsed_docs, format = 'JSONAsString')
+    COMMENT 'The parsed replay documents the drain writes under parsed/ in the bucket, one file per replay.'
+
 models:
   w3g:
     # ponytail: marts rebuild in full every run (an atomic swap, readers never see
     # half a table). Switch a mart to incremental on replay_id when a build takes minutes.
     +materialized: table
+    # The YAML descriptions become table and column comments in ClickHouse. No
+    # semicolons in a description: dbt 2.0.6 splits the comment DDL on them.
+    +persist_docs: {relation: true, columns: true}
 
 seeds:
   w3g:
+    +persist_docs: {relation: true, columns: true}
     mappings_melee:
       +column_types: {code: String, name: String, kind: String, race: String, hero: String, is_supply_building: UInt8}
     mappings_custom:

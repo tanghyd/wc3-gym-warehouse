@@ -1,0 +1,9 @@
+data_tests:
+  - name: one_v_one_replays_have_two_player_games
+    description: Every 1on1 replay has exactly two player_games rows, one per player.
+  - name: no_event_after_game_end
+    description: >-
+      No order or hero skill lies more than 5 s after the replay header's duration.
+      Severity warn so a failure does not stop player_games from building.
+  - name: openers_have_no_gaps
+    description: opener_N is empty whenever opener_N-1 is, so the opener tree never skips a level.

@@ -5,7 +5,7 @@ SELECT
     r.replay_id                                  AS replay_id,
     toUInt8(JSONExtractUInt(c, 'playerId'))      AS player_id,
     JSONExtractString(c, 'playerName')           AS player_name,
-    JSONExtractString(c, 'mode')                 AS mode,
+    toLowCardinality(JSONExtractString(c, 'mode')) AS mode,
     JSONExtractString(c, 'message')              AS message,
     toUInt32(JSONExtractUInt(c, 'timeMS'))       AS time_ms,
     toUInt32(c_idx)                              AS seq

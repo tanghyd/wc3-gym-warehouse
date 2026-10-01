@@ -2,9 +2,12 @@
 # target/manifest.json): `dimensions` are the columns a caller may group or filter
 # on, `measures` are named aggregate expressions. A model whose dimensions include
 # replay_id and player_id also takes a build-order `steps` filter.
+# Shared column descriptions are doc blocks in models/docs.md.
 models:
   - name: player_games
-    description: One row per player per 1v1 replay.
+    description: >-
+      One row per player per 1v1 replay (type 1on1): who played whom, on which map, the
+      result, the first hero and the first six buildings. The query API's main semantic model.
     config:
       meta:
         semantic:
@@ -22,66 +25,485 @@ models:
             avg_apm: round(avg(apm))
             replays: uniqExact(replay_id)
             players: uniqExact(player)
+    data_tests:
+      - unique:
+          name: player_games_one_row_per_player
+          description: A player appears once per replay.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id)"
     columns:
       - name: replay_id
-        data_tests: [not_null]
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every row names its replay.
+          - relationships:
+              description: Every row belongs to a replay in replays.
+              arguments:
+                to: ref('replays')
+                field: replay_id
       - name: player_id
+        description: "{{ doc('player_id') }}"
+        data_tests:
+          - not_null:
+              description: Every row names its player.
       - name: player
-        description: The player's battle tag as the replay wrote it.
+        description: "{{ doc('player_name') }}"
       - name: race
-        description: GNL race id (HU, OC, NE, UD, RANDOM).
-      - name: opponent
-      - name: opponent_race
-      - name: matchup
-        description: Both races, sorted, joined by v (HvN).
-      - name: map
-        description: Readable map name.
-      - name: minutes
-        description: Game length, one decimal.
-      - name: result
-        description: win, loss, or unknown when the parser could not tell.
+        description: "{{ doc('race') }}"
         data_tests:
           - accepted_values:
+              description: Race is a GNL race id.
+              arguments:
+                values: [HU, OC, NE, UD, RANDOM]
+      - name: opponent
+        description: The opponent's battle tag, the player on the other team.
+      - name: opponent_race
+        description: The opponent's GNL race id (HU, OC, NE, UD, RANDOM).
+        data_tests:
+          - accepted_values:
+              description: Opponent race is a GNL race id.
+              arguments:
+                values: [HU, OC, NE, UD, RANDOM]
+      - name: matchup
+        description: "{{ doc('matchup') }}"
+      - name: map
+        description: "{{ doc('map') }}"
+      - name: duration_ms
+        description: "{{ doc('duration_ms') }}"
+      - name: minutes
+        description: Game length in minutes, rounded to one decimal.
+      - name: result
+        description: win or loss for this player, or unknown when the parser could not tell who won.
+        data_tests:
+          - accepted_values:
+              description: Result is win, loss or unknown.
               arguments:
                 values: [win, loss, unknown]
+      - name: apm
+        description: The player's actions per minute over the time they were in the game, from the parser.
       - name: first_hero
-        description: Hero code of the first hero to spend a skill point; '' for none.
+        description: Object code of the player's first hero, the first to get a skill point, or '' when the player spent none.
+      - name: opener
+        description: >-
+          The first six non-supply buildings the player ordered, by time then seq, with
+          back-to-back repeats of one building dropped. {{ doc('order_is_a_command') }}
       - name: opener_1
-        description: First non-supply building ordered; opener_2..opener_6 follow.
+        description: The first building in opener, or '' when the player ordered no non-supply building.
+      - name: opener_2
+        description: The second building in opener, or '' past its end.
+      - name: opener_3
+        description: The third building in opener, or '' past its end.
+      - name: opener_4
+        description: The fourth building in opener, or '' past its end.
+      - name: opener_5
+        description: The fifth building in opener, or '' past its end.
+      - name: opener_6
+        description: The sixth building in opener, or '' past its end.
       - name: gnl_series_id
-        description: GNL series the replay was reported on; 0 outside GNL.
+        description: "{{ doc('gnl_series_id') }}"
+      - name: gnl_game_no
+        description: "{{ doc('gnl_game_no') }}"
 
   - name: mappings
-    description: WC3 object codes and their display names.
+    description: >-
+      WC3 object codes and their names: the parser's melee tables (seed mappings_melee)
+      plus the hand-kept custom-map codes (seed mappings_custom). A code can appear
+      under more than one kind, so join on code and kind.
     config:
       meta:
         semantic:
           dimensions: [code, name, kind, race, hero, category, is_supply_building]
           measures:
             objects: count()
+    data_tests:
+      - unique:
+          name: mappings_one_row_per_code_and_kind
+          description: A code has one name per kind.
+          arguments:
+            column_name: "code || ':' || kind"
     columns:
       - name: code
-        data_tests: [not_null]
+        description: "{{ doc('object_code') }}"
+        data_tests:
+          - not_null:
+              description: Every row has a code.
+      - name: name
+        description: The object's display name, such as Barracks.
       - name: kind
-        description: building, unit, item, upgrade, hero, hero_skill, or unknown (custom map).
+        description: building, unit, item, upgrade, hero, hero_skill, or unknown for a custom-map code.
+        data_tests:
+          - accepted_values:
+              description: Kind is one of the parser's object kinds.
+              arguments:
+                values: [building, unit, item, upgrade, hero, hero_skill, unknown]
+      - name: race
+        description: The object's race in the parser's tables (human, orc, night_elf, undead, neutral), or '' when it has none or the code is custom.
+      - name: hero
+        description: For a hero_skill, the name of the hero that learns it, or '' otherwise.
+      - name: is_supply_building
+        description: 1 for a building the parser flags as supply (Farm, Moon Well and Ziggurat, not Orc Burrow), else 0. player_games' openers skip these.
+      - name: category
+        description: For a custom-map code, its group (ui-menu, builder, tower, upgrade, item, other), or '' for a melee code.
 
   - name: replays
-    description: One row per replay, the header and settings.
+    description: One row per replay, the header and the lobby settings, with a readable map name.
     columns:
       - name: replay_id
-        data_tests: [unique, not_null]
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - unique:
+              description: One row per replay.
+          - not_null:
+              description: Every replay has an id.
+      - name: gnl_series_id
+        description: "{{ doc('gnl_series_id') }}"
+      - name: gnl_game_no
+        description: "{{ doc('gnl_game_no') }}"
+      - name: map
+        description: "{{ doc('map') }}"
+      - name: map_json
+        description: The parser's map object as JSON text, with the map's file, path, checksum and checksumSha1.
+      - name: gamename
+        description: The lobby's game name, such as w3c-20-6ClLsLbjhr.
+      - name: creator
+        description: The host that created the game, such as a battle tag or FLO.
+      - name: type
+        description: The team sizes, sorted and joined by on, such as 1on1 or 4on4. A game with one team gives a single number.
+      - name: matchup
+        description: "{{ doc('matchup') }}"
+      - name: duration_ms
+        description: "{{ doc('duration_ms') }}"
+      - name: build_number
+        description: The game's build number from the replay header, such as 6117.
+      - name: version
+        description: The game version from the replay header, such as 2.00.
+      - name: expansion
+        description: True when the replay is a The Frozen Throne game.
+      - name: parse_time_ms
+        description: How long the parser took on this replay, in milliseconds.
+      - name: winning_team_id
+        description: The winning team's id, which the parser sets for 1on1 games only. -1 when it could not tell or the game is not 1on1.
+      - name: random_seed
+        description: The game's random seed from the replay header.
+      - name: start_spots
+        description: The number of start spots in the lobby.
+      - name: observers
+        description: Battle tags of the observers and referees, who are not players.
+      - name: speed
+        description: The lobby's game speed, 0 slow, 1 normal, 2 fast.
+      - name: fixed_teams
+        description: Lobby setting, teams are locked.
+      - name: teams_together
+        description: Lobby setting, allies start next to each other.
+      - name: full_shared_unit_control
+        description: Lobby setting, allies share full control of their units.
+      - name: always_visible
+        description: Lobby setting, the whole map is always visible.
+      - name: map_explored
+        description: Lobby setting, the map starts explored.
+      - name: referees
+        description: Lobby setting, referees are allowed.
+      - name: observer_mode
+        description: Lobby observer setting, NONE, ON_DEFEAT, FULL or REFEREES.
+      - name: random_hero
+        description: Lobby setting, each player gets a random hero.
+      - name: random_races
+        description: Lobby setting, each player gets a random race.
+      - name: hide_terrain
+        description: Lobby setting, terrain is hidden.
 
   - name: replay_events
-    description: Every order and hero skill per player in time order; build-order steps match here.
-  - name: replay_players
-  - name: player_order_events
-    description: Every order per player, keyed by replay; the replay page reads it.
+    description: >-
+      Every order and hero skill per player as one time-ordered stream, the table
+      build-order steps match against. It unions player_order_events,
+      hero_ability_events and one hero_trained row per hero. {{ doc('order_is_a_command') }}
+    data_tests:
+      - unique:
+          name: replay_events_one_row_per_event
+          description: An event is one row, keyed by replay, player, type, hero, object and seq.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id) || ':' || event_type || ':' || detail || ':' || subject_code || ':' || toString(seq)"
     columns:
+      - name: race
+        description: "{{ doc('race') }}"
+        data_tests:
+          - accepted_values:
+              description: Race is a GNL race id.
+              arguments:
+                values: [HU, OC, NE, UD, RANDOM]
+      - name: matchup
+        description: "{{ doc('matchup') }}"
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every event names its replay.
+          - relationships:
+              description: Every event belongs to a replay in replays.
+              arguments:
+                to: ref('replays')
+                field: replay_id
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+      - name: time_ms
+        description: "{{ doc('time_ms') }}"
+      - name: event_type
+        description: "{{ doc('event_type') }}"
+        data_tests:
+          - accepted_values:
+              description: Event type is an order kind, hero_skill or hero_trained.
+              arguments:
+                values: [building, unit, item, upgrade, unknown, hero_skill, hero_trained]
+      - name: subject_code
+        description: The object code of the order, the ability for hero_skill, or the hero for hero_trained.
+      - name: subject_name
+        description: The display name of subject_code from mappings, or the code itself when mappings has no name for it.
+      - name: detail
+        description: For hero_skill, the name of the hero that learned the skill, or '' otherwise.
+      - name: seq
+        description: >-
+          {{ doc('seq') }} For an order, its position within the player's list of that
+          kind. For hero_skill, within the hero's skill list. 0 for hero_trained.
+
+  - name: replay_players
+    description: One row per player per replay, with the player's slot, team, race, APM and action counts. Observers are not players and never appear.
+    data_tests:
+      - unique:
+          name: replay_players_one_row_per_player
+          description: A player appears once per replay.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every player row names its replay.
+          - relationships:
+              description: Every player row belongs to a replay in replays.
+              arguments:
+                to: ref('replays')
+                field: replay_id
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+        data_tests:
+          - not_null:
+              description: Every player row has a slot id.
+      - name: name
+        description: "{{ doc('player_name') }}"
+      - name: color
+        description: "The player's color as a hex code, such as #ff0303 for red."
+      - name: team_id
+        description: The player's team id from the lobby, from 0. -1 when the parser gave none.
+      - name: race
+        description: "{{ doc('race') }}"
+        data_tests:
+          - accepted_values:
+              description: Race is a GNL race id.
+              arguments:
+                values: [HU, OC, NE, UD, RANDOM]
+      - name: race_detected
+        description: The race letter (H, O, N, U) the parser read from the player's first race-specific order, or '' when none was seen. Shows a random player's actual race.
+      - name: apm
+        description: Actions per minute over the time the player was in the game, from the parser.
+      - name: actions_rightclick
+        description: Count of right-click actions (move, attack, smart orders).
+      - name: actions_basic
+        description: Count of basic commands such as stop, hold position and attack-move.
+      - name: actions_buildtrain
+        description: Count of build and train orders.
+      - name: actions_ability
+        description: Count of ability uses.
+      - name: actions_item
+        description: Count of item actions (use, drop, give).
+      - name: actions_select
+        description: Count of selection changes by clicking or dragging.
+      - name: actions_removeunit
+        description: Count of units removed from the selection.
+      - name: actions_subgroup
+        description: Count of subgroup changes (tab through a selection).
+      - name: actions_selecthotkey
+        description: Count of control group recalls.
+      - name: actions_assigngroup
+        description: Count of control group assignments.
+      - name: actions_esc
+        description: Count of Escape key presses.
+      - name: apm_timed
+        description: Actions per game minute, one element per minute. The last, partial minute is scaled to a full minute, or dropped when under 30 s.
+
+  - name: player_order_events
+    description: >-
+      Every order a player gave, one row each: buildings, units, items, upgrades, and
+      the parser's unknown bucket. {{ doc('order_is_a_command') }} The replay page reads it.
+    data_tests:
+      - unique:
+          name: player_order_events_one_row_per_order
+          description: An order is one row, keyed by replay, player, kind and seq.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id) || ':' || kind || ':' || toString(seq)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every order names its replay.
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+      - name: kind
+        description: "{{ doc('order_kind') }}"
+        data_tests:
+          - accepted_values:
+              description: Kind is one of the parser's order lists.
+              arguments:
+                values: [building, unit, item, upgrade, unknown]
+      - name: object_code
+        description: "{{ doc('object_code') }}"
+      - name: time_ms
+        description: "{{ doc('time_ms') }}"
+      - name: seq
+        description: "{{ doc('seq') }} Numbered within one (replay, player, kind)."
+      - name: race
+        description: "{{ doc('race') }}"
+      - name: matchup
+        description: "{{ doc('matchup') }}"
       - name: is_repeat
-        description: 1 on a tier hall, research or hero order under 1000 ms after the same player's previous order of that code. The replay page leaves these out.
+        description: 1 on a tier hall, research or hero order under 1000 ms after the same player's previous order of that code, else 0. The replay page leaves these out.
+
   - name: hero_ability_events
-    description: Every hero skill point and retrain, keyed by replay.
+    description: Every hero skill point spent and every retraining, one row each, keyed by replay, player and hero.
+    data_tests:
+      - unique:
+          name: hero_ability_events_one_row_per_event
+          description: A skill event is one row, keyed by replay, player, hero slot and seq.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id) || ':' || toString(hero_slot) || ':' || toString(seq)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every skill event names its replay.
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+      - name: hero_slot
+        description: "{{ doc('hero_slot') }}"
+      - name: hero_id
+        description: "{{ doc('hero_id') }}"
+      - name: event_type
+        description: ability for a skill point spent, retraining for a Tome of Retraining use.
+        data_tests:
+          - accepted_values:
+              description: A skill event is ability or retraining.
+              arguments:
+                values: [ability, retraining]
+      - name: ability_id
+        description: The object code of the skill learned, or '' for retraining.
+      - name: time_ms
+        description: "{{ doc('time_ms') }}"
+      - name: seq
+        description: "{{ doc('seq') }} Numbered within the hero's skill list."
+      - name: race
+        description: "{{ doc('race') }}"
+      - name: matchup
+        description: "{{ doc('matchup') }}"
+
   - name: player_heroes
+    description: One row per hero a player spent a skill point on, with its level at the end of the game.
+    data_tests:
+      - unique:
+          name: player_heroes_one_row_per_hero
+          description: A hero slot is one row per player and replay.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id) || ':' || toString(hero_slot)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every hero row names its replay.
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+      - name: hero_slot
+        description: "{{ doc('hero_slot') }}"
+      - name: hero_id
+        description: "{{ doc('hero_id') }}"
+      - name: final_level
+        description: The hero's level at the end of the game, the sum of its skill levels after any retraining.
+
   - name: player_group_hotkeys
+    description: One row per control group (0-9) a player touched, with how often it was assigned and recalled.
+    data_tests:
+      - unique:
+          name: player_group_hotkeys_one_row_per_group
+          description: A control group is one row per player and replay.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id) || ':' || toString(group_key)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every row names its replay.
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+      - name: group_key
+        description: The control group's number key, 0-9.
+      - name: assigned
+        description: How many times the player assigned units to the group.
+      - name: used
+        description: How many times the player recalled the group.
+
   - name: chat
+    description: In-game chat, one row per message. Two players can talk on the same millisecond, so seq keeps the order.
+    data_tests:
+      - unique:
+          name: chat_one_row_per_message
+          description: A message is one row per replay and seq.
+          arguments:
+            column_name: "replay_id || ':' || toString(seq)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every message names its replay.
+      - name: player_id
+        description: The sender's slot id. An observer can send chat, so it need not be in replay_players.
+      - name: player_name
+        description: The sender's battle tag.
+      - name: mode
+        description: Who the message went to, All, Team, Obervers (the parser's spelling) or Private.
+      - name: message
+        description: The message text.
+      - name: time_ms
+        description: "{{ doc('time_ms') }}"
+      - name: seq
+        description: "{{ doc('seq') }} Numbered within the replay's chat."
+
   - name: resource_transfers
+    description: Gold and lumber sent between allies, one row per transfer.
+    data_tests:
+      - unique:
+          name: resource_transfers_one_row_per_transfer
+          description: A transfer is one row, keyed by replay, sender and seq.
+          arguments:
+            column_name: "replay_id || ':' || toString(from_player_id) || ':' || toString(seq)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every transfer names its replay.
+      - name: from_player_id
+        description: The sender's slot id.
+      - name: to_player_id
+        description: The receiver's slot id.
+      - name: gold
+        description: Gold sent.
+      - name: lumber
+        description: Lumber sent.
+      - name: time_ms
+        description: "{{ doc('time_ms') }}"
+      - name: seq
+        description: "{{ doc('seq') }} Numbered within the sender's transfers."

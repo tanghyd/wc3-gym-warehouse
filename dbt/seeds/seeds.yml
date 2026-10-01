@@ -1,5 +1,47 @@
 seeds:
   - name: mappings_melee
     description: The parser's melee object tables, written by `just mappings` (export-mappings in the drain image). Never edit by hand.
+    data_tests:
+      - unique:
+          name: mappings_melee_one_row_per_code_and_kind
+          description: A melee code has one name per kind.
+          arguments:
+            column_name: "code || ':' || kind"
+    columns:
+      - name: code
+        description: "{{ doc('object_code') }}"
+        data_tests:
+          - not_null:
+              description: Every row has a code.
+      - name: name
+        description: The object's display name, such as Barracks.
+      - name: kind
+        description: building, unit, item, upgrade, hero or hero_skill.
+        data_tests:
+          - accepted_values:
+              description: Kind is one of the parser's melee table kinds.
+              arguments:
+                values: [building, unit, item, upgrade, hero, hero_skill]
+      - name: race
+        description: The object's race (human, orc, night_elf, undead, neutral), or '' when the parser's table gives none.
+      - name: hero
+        description: For a hero_skill, the name of the hero that learns it, or '' otherwise.
+      - name: is_supply_building
+        description: 1 for a building the parser flags as supply (Farm, Moon Well and Ziggurat, not Orc Burrow), else 0.
+
   - name: mappings_custom
     description: Custom-map rawcodes with a display name and a category (ui-menu, builder, tower, upgrade, item, other) from the map's own object data. Kept by hand.
+    columns:
+      - name: code
+        description: "{{ doc('object_code') }}"
+        data_tests:
+          - unique:
+              description: A custom code is listed once.
+          - not_null:
+              description: Every row has a code.
+      - name: name
+        description: The object's display name in the custom map.
+      - name: kind
+        description: Always unknown, the kind the parser gives a code in no melee table.
+      - name: category
+        description: The object's group in the custom map, ui-menu, builder, tower, upgrade, item or other.
