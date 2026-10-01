@@ -729,7 +729,7 @@ One `GET /replays/{id}` (api.md 3.8, A9).
 |---|---|
 | Title | `map`, "Unknown map" when `""` |
 | Players line | two `PlayerName` (`{name} {race}`), "v" between, `mdi-trophy` after the winner |
-| Meta line | `duration_ms` as `m:ss`, `matchup`, `version`, `gnl` as text "GNL S{series_id} G{game_no}" |
+| Meta line | `duration_ms` as `m:ss`, the matchup in the players line's order (one race letter per player, "OvN"; the API's `matchup` is in letter order), `version`, `gnl` as text "GNL S{series_id} G{game_no}" |
 | Download | `download_url`; "No file" when null |
 | Player card | 2 px key in `series-1` or `series-2`, `PlayerName`, "Won" with `mdi-trophy` or "Lost", in ink. `apm` as the card figure. `heroes[]` in `slot` order: 40 px icon, name, "Level {final_level}". Under each hero its skill trail: the `hero_skill` events with that `hero_code`, 24 px icons in time order, `m:ss` under each. |
 | APM chart | `players[].apm_per_minute` (12.4) |
@@ -739,7 +739,7 @@ One `GET /replays/{id}` (api.md 3.8, A9).
 
 - Decided: the GNL series shows as text, no link. Why: the gnl route `/match/:id` is member-only and needs a match id the warehouse does not have. A link waits for the dims loader.
 - Decided: hide private chat. Why: the route is public and cached for 1 hour. The API sends only `mode = 'All'` lines (api.md 3.8), so there is no "Private" chip.
-- Names come from `/mappings` through `objects.js`. A code with no name shows the code.
+- Names come from the mappings model through `getObjects` (`web/src/lib/api.ts`). A code with no mappings row reads "Unknown skill", "Unknown hero" and so on by kind, on a "?" tile. Parser follow-up: map AHpa, AHcr, ANcp and AUa2 (seen in the patch 3.0 replays) and the hero the parser leaves with an empty code.
 - Skills sit in two places on purpose: the card answers "which skills, in what order"; the Heroes lane answers "when, against the build".
 
 ### 12.3 Build timeline
@@ -750,7 +750,7 @@ Merging: orders of one object by one player up to 60 s after the first of them b
 
 Tier-ups: the first order of Keep/Castle (`hkee`/`hcas`), Stronghold/Fortress (`ostr`/`ofrt`), Tree of Ages/Eternity (`etoa`/`etoe`) or Halls of the Dead/Black Citadel (`unp1`/`unp2`). All eight are `building` rows in the mappings model and in the orders of 6 to 37 games.
 
-Flagged repeats: the API leaves out rows with `is_repeat = 1` (same code, same player, under 1000 ms after the previous same-code order, for tier halls, research and hero training; PR 2; api.md 3.8). `events[]` has no flag field, so neither view filters. The kept row carries the first order time.
+Flagged repeats: dbt flags `is_repeat` on `player_order_events` (same code, same player, under 1000 ms after the previous same-code order, for tier halls, research and hero training; api.md "Repeat flag"), and the API's events read leaves out `is_repeat = 1` (`REPLAY_SQL` in `api/compile.py`). `events[]` has no flag field, so neither view filters. The kept row carries the first order time.
 
 Chart (`TimelineChart.tsx`), a swimlane under the APM chart:
 
@@ -771,8 +771,8 @@ Chart (`TimelineChart.tsx`), a swimlane under the APM chart:
 List (the table view):
 
 - First the APM table (12.4), then "Build Orders".
-- md and up: one list per player, side by side, each under a sticky head with the key and `PlayerName`. Below md: two tabs, one per player.
-- A row: time, 24 px icon, name with "×N"; a merged row lists every time under it; a hero row carries its skill trail; the tier-up row carries a "T2" or "T3" chip.
+- md and up: one list per player, side by side, each under a sticky head with the key, `PlayerName` and the "Ordered" column head over the times. Below md: two tabs, one per player, the "Ordered" head above the list.
+- A row: time, 24 px icon, name with "×N"; a merged row lists every time under it; a hero row carries its skill trail and a "Trained by" chip (its time is the first skill point); a retrain carries a "Retrained" chip; the tier-up row carries a "T2" or "T3" chip.
 
 ### 12.4 APM chart
 

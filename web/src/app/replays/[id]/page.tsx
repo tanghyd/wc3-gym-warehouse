@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Fragment } from "react";
 import { getObjects, getReplay } from "@/lib/api";
-import { mss, ObjIcon, PlayerName, Result, SeriesKey, SkillTrail, Timer } from "@/lib/ui";
+import { matchup, mss, ObjIcon, PlayerName, Result, SeriesKey, SkillTrail, Timer } from "@/lib/ui";
 import { GameTimeline } from "./GameTimeline";
 
 export async function generateMetadata({ params }: PageProps<"/replays/[id]">): Promise<Metadata> {
@@ -48,7 +48,7 @@ export default async function ReplayPage({ params, searchParams }: PageProps<"/r
               <Timer label="Length" />
               {mss(r.duration_ms)}
             </span>
-            <span>{r.matchup}</span>
+            <span>{matchup(players)}</span>
             <span>Patch {r.version}</span>
             {r.gnl && (
               <span>
@@ -85,7 +85,7 @@ export default async function ReplayPage({ params, searchParams }: PageProps<"/r
                         <ObjIcon code={h.code} objects={objects} size={40} alt="" />
                         <div>
                           <p>
-                            <span className="font-bold">{objects[h.code]?.name ?? h.code}</span>
+                            <span className="font-bold">{objects[h.code]?.name ?? "Unknown hero"}</span>
                             <span className="ml-2 text-muted">Level {h.final_level}</span>
                           </p>
                           <SkillTrail

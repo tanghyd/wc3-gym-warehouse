@@ -49,15 +49,24 @@ export function tiers(events: GameEvent[]): Tier[] {
   return out.sort((a, b) => a.tier - b.tier);
 }
 
-// A code with no name shows the code; the parser leaves some heroes' code empty.
-const nameOf = (objects: Objects, code: string | null) => objects[code ?? ""]?.name || code || "Unknown hero";
+// What a code in no mappings row is called; the parser leaves some heroes' code empty.
+const UNKNOWN: Record<string, string> = {
+  building: "Unknown building",
+  unit: "Unknown unit",
+  upgrade: "Unknown upgrade",
+  item: "Unknown item",
+  hero_trained: "Unknown hero",
+  hero_retrained: "Unknown hero",
+  hero_skill: "Unknown skill",
+};
+const nameOf = (objects: Objects, code: string | null, type: string) => objects[code ?? ""]?.name ?? UNKNOWN[type];
 
 /** A mark's name with its count, and what its times mean. */
 export function describe(m: Mark, objects: Objects): [string, string] {
-  const name = nameOf(objects, m.code) + (m.times.length > 1 ? ` ×${m.times.length}` : "");
+  const name = nameOf(objects, m.code, m.event_type) + (m.times.length > 1 ? ` ×${m.times.length}` : "");
   const at = m.times.map(mss).join(", ");
   if (m.event_type === "hero_trained") return [name, `Trained by ${at}`];
   if (m.event_type === "hero_retrained") return [name, `Retrained at ${at}`];
-  if (m.event_type === "hero_skill") return [name, `${nameOf(objects, m.hero_code)} skill at ${at}`];
+  if (m.event_type === "hero_skill") return [name, `${nameOf(objects, m.hero_code, "hero_trained")} skill at ${at}`];
   return [name, `Ordered at ${at}`];
 }

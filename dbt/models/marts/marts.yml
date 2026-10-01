@@ -9,8 +9,8 @@ models:
       meta:
         semantic:
           dimensions: [replay_id, player_id, player, race, opponent, opponent_race, matchup, map,
-                       minutes, result, apm, first_hero, opener_1, opener_2, opener_3, opener_4,
-                       opener_5, opener_6, gnl_series_id, gnl_game_no]
+                       duration_ms, minutes, result, apm, first_hero, opener_1, opener_2, opener_3,
+                       opener_4, opener_5, opener_6, gnl_series_id, gnl_game_no]
           measures:
             games: count()
             wins: countIf(result = 'win')
@@ -76,6 +76,9 @@ models:
   - name: replay_players
   - name: player_order_events
     description: Every order per player, keyed by replay; the replay page reads it.
+    columns:
+      - name: is_repeat
+        description: 1 on a tier hall, research or hero order under 1000 ms after the same player's previous order of that code. The replay page leaves these out.
   - name: hero_ability_events
     description: Every hero skill point and retrain, keyed by replay.
   - name: player_heroes

@@ -228,16 +228,16 @@ FROM w3g.replays WHERE replay_id = {id:String}""",
 FROM (SELECT * FROM w3g.replay_players WHERE replay_id = {id:String}) AS p
 LEFT JOIN (
     SELECT player_id, arraySort(groupArray((hero_slot, hero_id, final_level))) AS heroes
-    FROM w3g.player_heroes WHERE replay_id = {id:String} AND hero_id != ''
+    FROM w3g.player_heroes WHERE replay_id = {id:String}
     GROUP BY player_id
 ) AS h ON h.player_id = p.player_id
 ORDER BY p.player_id""",
-    # The timeline: orders (custom-map `unknown` codes left out), skill points under
-    # their hero, retrains, and each hero's first skill point as its arrival.
+    # The timeline: orders (custom-map `unknown` codes and repeat clicks left out), skill
+    # points under their hero, retrains, and each hero's first skill point as its arrival.
     # seq 0 sorts hero_trained before the first skill at the same ms.
     "events": """SELECT player_id, time_ms, event_type, code, hero_code FROM (
     SELECT player_id, time_ms, kind AS event_type, object_code AS code, CAST(NULL, 'Nullable(String)') AS hero_code, seq
-    FROM w3g.player_order_events WHERE replay_id = {id:String} AND kind != 'unknown'
+    FROM w3g.player_order_events WHERE replay_id = {id:String} AND kind != 'unknown' AND is_repeat = 0
     UNION ALL
     SELECT player_id, time_ms, if(event_type = 'retraining', 'hero_retrained', 'hero_skill'),
            if(event_type = 'retraining', hero_id, ability_id), hero_id, seq

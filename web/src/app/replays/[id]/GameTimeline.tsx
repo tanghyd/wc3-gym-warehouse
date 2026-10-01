@@ -29,6 +29,14 @@ function rowsFor(b: Block, events: GameEvent[]): Row[] {
     .sort((x, y) => x.times[0] - y.times[0]);
 }
 
+// Rows whose time is not an order: a hero's first skill point, a retrain
+const CHIPS: Record<string, string> = { hero_trained: "Trained by", hero_retrained: "Retrained" };
+
+/** The column head over a list's times. */
+function OrdersHead() {
+  return <p className="pb-1.5 text-xs text-muted">Ordered</p>;
+}
+
 function Orders({ rows, objects, label }: { rows: Row[]; objects: Objects; label: string }) {
   return (
     <ol aria-label={label} className="py-1 text-sm">
@@ -39,6 +47,7 @@ function Orders({ rows, objects, label }: { rows: Row[]; objects: Objects; label
             <ObjIcon code={r.code} objects={objects} size={24} alt="" />
             <span className="min-w-0">{describe(r, objects)[0]}</span>
             {r.tier && <span className="chip border">T{r.tier}</span>}
+            {CHIPS[r.event_type] && <span className="chip border">{CHIPS[r.event_type]}</span>}
           </div>
           {r.times.length > 1 && <p className="pl-[92px] text-xs text-muted">{r.times.map(mss).join(", ")}</p>}
           <SkillTrail skills={r.skills} objects={objects} className="pt-1 pl-[92px]" />
@@ -149,9 +158,12 @@ export function GameTimeline({ players, events, objects, durationMs, kinds }: { 
                 <div className="hidden gap-x-8 px-4 pb-3 md:grid md:grid-cols-2">
                   {blocks.map((b, i) => (
                     <div key={b.player_id} className="min-w-0">
-                      <div className="sticky top-0 z-10 flex h-12 items-center gap-2 border-b bg-surface">
-                        <SeriesKey i={i} />
-                        <PlayerName name={b.name} race={b.race} />
+                      <div className="sticky top-0 z-10 border-b bg-surface">
+                        <div className="flex h-12 items-center gap-2">
+                          <SeriesKey i={i} />
+                          <PlayerName name={b.name} race={b.race} />
+                        </div>
+                        <OrdersHead />
                       </div>
                       <Orders rows={lists[i]} objects={objects} label={`Orders of ${b.name}`} />
                     </div>
@@ -174,7 +186,8 @@ export function GameTimeline({ players, events, objects, durationMs, kinds }: { 
                       </button>
                     ))}
                   </div>
-                  <div role="tabpanel" className="px-4 py-1">
+                  <div role="tabpanel" className="px-4 pt-3 pb-1">
+                    <OrdersHead />
                     {blocks[tab] && <Orders rows={lists[tab]} objects={objects} label={`Orders of ${blocks[tab].name}`} />}
                   </div>
                 </div>

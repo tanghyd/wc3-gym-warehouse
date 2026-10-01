@@ -4,6 +4,9 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 const ID = "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8";
 // Shallow Grave, 31 minutes, NE v OC: the longest human game
 const LONG = "a9872674567c6389f3d912b5f053f7e2af4a87de3378d5229a90f091bd219d88";
+// Fading Autumn, UD v NE: thanks's third hero and its skills AHpa and AHcr are in no mappings row
+const FADING = "be7b97ee9668d1f441fa2973387ea4e02fa5a02d2adababec6cb3e7647871c32";
+const LETTER: Record<string, string> = { Human: "H", Orc: "O", "Night Elf": "N", Undead: "U", Random: "R" };
 const API = process.env.API_URL ?? "http://api:8000";
 const NE = "thanks#11187";
 const OC = "Okeanos#22605";
@@ -124,7 +127,8 @@ test.describe("replay detail", () => {
     const wisps = lanes(page, NE).getByRole("img", { name: "Wisp ×5. Ordered at 0:02, 0:08, 0:16, 0:35, 0:51" });
     await expect(wisps).toContainText("×5");
     await expect(lanes(page, OC).getByRole("img", { name: "Peon ×4. Ordered at 0:02, 0:19, 0:34, 0:58" })).toContainText("×4");
-    await expect(lanes(page, NE).getByRole("img", { name: "Tree of Ages ×2. Ordered at 2:44, 2:44" })).toBeVisible();
+    // the second Tree of Ages order came 155 ms after the first: a repeat click, left out
+    await expect(lanes(page, NE).getByRole("img", { name: "Tree of Ages. Ordered at 2:44" })).toBeVisible();
     await expect(lanes(page, NE).getByRole("img", { name: "Demon Hunter. Trained by 2:22" })).toBeVisible();
     await expect(lanes(page, NE).getByRole("img", { name: "Immolation. Demon Hunter skill at 2:22" })).toBeVisible();
   });
@@ -212,8 +216,10 @@ test.describe("replay detail", () => {
     await expect(units).toHaveAttribute("aria-pressed", "false");
     await check();
     await t.getByRole("button", { name: "List" }).click();
-    await expect(list(page, NE).locator(":scope > li")).toHaveCount(listRows(groups(replay, NE, kinds)));
-    await expect(list(page, NE).getByText(/^Wisp/)).toHaveCount(0);
+    for (const [name, worker] of [[NE, "Wisp"], [OC, "Peon"]]) {
+      await expect(list(page, name).locator(":scope > li")).toHaveCount(listRows(groups(replay, name, kinds)));
+      await expect(list(page, name).getByText(new RegExp(`^${worker}\\b`))).toHaveCount(0);
+    }
   });
 
   test("APM: two lines with end labels, a keyboard tooltip and a table view", async ({ page }) => {
@@ -252,8 +258,15 @@ test.describe("replay detail", () => {
     const [a, b] = [list(page, NE), list(page, OC)];
     for (const [l, name] of [[a, NE], [b, OC]] as const) {
       await expect(l.locator(":scope > li")).toHaveCount(listRows(groups(replay, name)));
-      const times = (await l.locator(":scope > li > div > span:first-child").allInnerTexts()).map((s) => Number(s.split(":")[0]) * 60 + Number(s.split(":")[1]));
+      const cells = l.locator(":scope > li > div > span:first-child");
+      const raw = await cells.allInnerTexts();
+      expect(raw.filter((t) => !/^\d+:\d\d$/.test(t)), "times not m:ss").toEqual([]);
+      const times = raw.map((s) => Number(s.split(":")[0]) * 60 + Number(s.split(":")[1]));
       expect(times).toEqual([...times].sort((x, y) => x - y));
+      // the time column's head says the times are orders, and sits over that column
+      const ordered = l.locator("xpath=preceding-sibling::div[1]").getByText("Ordered", { exact: true });
+      await expect(ordered).toBeVisible();
+      expect(Math.abs((await ordered.boundingBox())!.x - (await cells.first().boundingBox())!.x)).toBeLessThan(1);
     }
     const ba = (await a.boundingBox())!;
     const bb = (await b.boundingBox())!;
@@ -262,7 +275,7 @@ test.describe("replay detail", () => {
     await expect(a.locator(":scope > li").first()).toHaveText("0:02Wisp ×50:02, 0:08, 0:16, 0:35, 0:51");
     await expect(b.locator(":scope > li").first()).toHaveText("0:02Peon ×40:02, 0:19, 0:34, 0:58");
     const toa = a.locator(":scope > li").filter({ hasText: "Tree of Ages" });
-    await expect(toa.locator(".chip")).toHaveText("T2");
+    await expect(toa).toHaveText("2:44Tree of AgesT2");
     await expect(b.locator(":scope > li").filter({ hasText: "Fortress" }).locator(".chip")).toHaveText("T3");
     const dh = a.locator(":scope > li").filter({ hasText: "Demon Hunter" });
     await expect(dh.locator("ol > li")).toHaveText(["2:22", "4:06", "6:40", "11:54"]);
@@ -306,15 +319,48 @@ test("a 31-minute game keeps the Units lane a few rows high", async ({ page, req
 });
 
 // Shallow Grave, Tidehunters and Fading Autumn; the last has a hero the parser left with no code
-for (const id of [LONG, "025d14359f58eac19f263f0dce880bc13bf9cf8d087158202addeb93474ac8c2", "be7b97ee9668d1f441fa2973387ea4e02fa5a02d2adababec6cb3e7647871c32"]) {
-  test(`every mark of ${id.slice(0, 8)} has a name`, async ({ page }) => {
+for (const id of [LONG, "025d14359f58eac19f263f0dce880bc13bf9cf8d087158202addeb93474ac8c2", FADING]) {
+  test(`every mark of ${id.slice(0, 8)} has a name, never a raw code`, async ({ page, request }) => {
+    const r: Replay = await (await request.get(`${API}/replays/${id}`)).json();
     await page.goto(`/replays/${id}`);
     const marks = timeline(page).locator("[data-mark]");
     await expect(marks.first()).toBeVisible();
     const labels = await marks.evaluateAll((els) => els.map((e) => e.getAttribute("aria-label") ?? ""));
     expect(labels.filter((l) => !/^\S/.test(l) || l.startsWith(".")), "marks with no name").toEqual([]);
+    const names = labels.map((l) => l.split(/ ×|\. /)[0]);
+    expect([...new Set(r.events.map((e) => e.code))].filter((c) => names.includes(c)), "codes shown with no name").toEqual([]);
+  });
+
+  // the API's matchup is in letter order; the page's follows the players line
+  test(`the matchup of ${id.slice(0, 8)} reads in the players' order`, async ({ page }) => {
+    await page.goto(`/replays/${id}`);
+    const header = page.locator("section").filter({ has: page.getByRole("heading", { level: 1 }) });
+    const races = await header.locator("p").first().locator("img").evaluateAll((imgs) => imgs.map((i) => (i as HTMLImageElement).alt));
+    expect(races).toHaveLength(2);
+    const meta = page.locator("p").filter({ has: page.getByRole("img", { name: "Length" }) });
+    await expect(meta.getByText(races.map((r) => LETTER[r]).join("v"), { exact: true })).toBeVisible();
   });
 }
+
+test("the list marks a retrain and a hero's arrival", async ({ page }) => {
+  await page.goto(`/replays/${LONG}`);
+  await timeline(page).getByRole("button", { name: "List" }).click();
+  const rows = list(page, NE).locator(":scope > li > div");
+  await expect(rows.filter({ hasText: /^22:03Demon Hunter/ })).toHaveText("22:03Demon HunterRetrained");
+  await expect(rows.filter({ hasText: /^\d+:\d\dDemon Hunter/ }).first()).toHaveText(/^\d+:\d\dDemon HunterTrained by$/);
+});
+
+test("a hero and skills in no mappings row read Unknown, on a ? tile", async ({ page }) => {
+  await page.goto(`/replays/${FADING}`);
+  const h = hero(card(page, NE), "Unknown hero");
+  await expect(h).toContainText("Level 2");
+  await expect(h.locator("ol > li")).toHaveText(["15:31", "18:04"]);
+  await expect(h.locator("ol > li").first()).toHaveAttribute("title", "Unknown skill at 15:31");
+  const mark = lanes(page, NE).getByRole("img", { name: "Unknown skill. Unknown hero skill at 15:31" });
+  await expect(mark).toBeVisible();
+  await expect(lanes(page, NE).getByRole("img", { name: "Unknown hero. Trained by 15:31" })).toBeVisible();
+  expect(await mark.locator("span").first().evaluate((e) => getComputedStyle(e, "::before").content)).toBe('"?"');
+});
 
 test.describe("replay detail at 390 px", () => {
   test.use({ viewport: { width: 390, height: 844 } });
@@ -335,6 +381,9 @@ test.describe("replay detail at 390 px", () => {
     await expect(tabs.first()).toHaveAttribute("aria-selected", "true");
     await expect(tabs.first()).toContainText(NE);
     await expect(t.getByRole("tabpanel").getByRole("list", { name: `Orders of ${NE}` })).toBeVisible();
+    await expect(t.getByRole("tabpanel").getByText("Ordered", { exact: true })).toBeVisible();
+    const raw = await list(page, NE).locator(":scope > li > div > span:first-child").allInnerTexts();
+    expect(raw.filter((s) => !/^\d+:\d\d$/.test(s)), "times not m:ss").toEqual([]);
     await expect(list(page, NE).locator(":scope > li")).toHaveCount(listRows(groups(replay, NE)));
     const first = list(page, NE).locator(":scope > li").first();
     await expect(first).toHaveText(/^0:02Wisp ×5/);

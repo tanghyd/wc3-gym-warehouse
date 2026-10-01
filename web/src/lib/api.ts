@@ -14,8 +14,8 @@ export type Chat = { time_ms: number; player_id: number; mode: string; message: 
 type Header = { replay_id: string; map: string; matchup: string; duration_ms: number; winning_team_id: number; gnl: Gnl; download_url: string | null };
 export type Replay = Header & { version: string; players: ReplayPlayer[]; events: GameEvent[]; chat: Chat[] };
 export type ReplayRow = Header & { focus_player_id: number; players: Player[] };
-/** Name and icon path per object code. */
-export type Objects = Record<string, { name: string; icon: string | null }>;
+/** Name and icon path per object code; a code in no mappings row has no name. */
+export type Objects = Record<string, { name?: string; icon: string | null }>;
 
 /** One API call; null on 404. */
 async function api<T>(path: string, body?: object): Promise<T | null> {
@@ -48,7 +48,7 @@ export async function pickerValues(dimension: "map" | "player") {
 
 let iconFiles: Record<string, string> | undefined;
 
-/** Names from the mappings model in one read, icons from public/icons.json; a code with no name shows the code. */
+/** Names from the mappings model in one read, icons from public/icons.json. */
 export async function getObjects(codes: string[]): Promise<Objects> {
   if (!codes.length) return {};
   const res = await api<{ rows: { code: string; name: string; kind: string }[] }>("/query", {
@@ -65,6 +65,6 @@ export async function getObjects(codes: string[]): Promise<Objects> {
   iconFiles ??= JSON.parse(readFileSync(join(process.cwd(), "public/icons.json"), "utf8")) as Record<string, string>;
   const icons = iconFiles;
   return Object.fromEntries(
-    codes.map((c) => [c, { name: names.get(c) || c, icon: icons[c] ? `/icons/${icons[c]}` : null }]),
+    codes.map((c) => [c, { name: names.get(c) || undefined, icon: icons[c] ? `/icons/${icons[c]}` : null }]),
   );
 }

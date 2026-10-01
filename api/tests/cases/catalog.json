@@ -28,6 +28,7 @@
           "opponent_race": "String",
           "matchup": "String",
           "map": "String",
+          "duration_ms": "UInt32",
           "minutes": "Float64",
           "result": "String",
           "apm": "UInt32",

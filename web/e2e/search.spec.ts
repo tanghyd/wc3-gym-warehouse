@@ -52,7 +52,7 @@ test.describe("replay list", () => {
     await expect(goldens(page)).toHaveCount(3);
   });
 
-  test("minutes from and to keep games of that length, ends included", async ({ page }) => {
+  test("minutes from and to keep games of that length, ends included", async ({ page, request }) => {
     await page.getByRole("spinbutton", { name: "Minutes from" }).fill("15");
     await page.getByRole("spinbutton", { name: "Minutes to" }).fill("16");
     await page.getByRole("button", { name: "Search" }).click();
@@ -62,11 +62,25 @@ test.describe("replay list", () => {
     const lengths = (await rows(page).locator("td:last-child").allInnerTexts()).map(secs);
     expect(lengths.length).toBeGreaterThan(0);
     expect(lengths.filter((s) => s < 15 * 60 || s > 16 * 60)).toEqual([]);
+    // exactly the games from 15:00.000 to 16:00.000, so a 16:02 game never rounds in
+    const all: { duration_ms: number }[] = (await (await request.post(`${API}/search`, { data: { filters: {} } })).json()).replays;
+    await expect(rows(page)).toHaveCount(all.filter((r) => r.duration_ms >= 900_000 && r.duration_ms <= 960_000).length);
 
     await page.getByRole("spinbutton", { name: "Minutes from" }).fill("999");
     await page.getByRole("spinbutton", { name: "Minutes to" }).fill("");
     await page.getByRole("button", { name: "Search" }).click();
     await expect(page.getByText("No replay matches")).toBeVisible();
+  });
+
+  // the API's matchup is in letter order; a row's follows its players, top first
+  test("each row's matchup reads in its players' order", async ({ page }) => {
+    const LETTER: Record<string, string> = { Human: "H", Orc: "O", "Night Elf": "N", Undead: "U", Random: "R" };
+    const got = await rows(page).evaluateAll((trs) =>
+      trs.map((tr) => [(tr as HTMLTableRowElement).cells[2].textContent, [...(tr as HTMLTableRowElement).cells[3].querySelectorAll("img")].map((i) => i.alt)] as const),
+    );
+    expect(got.length).toBeGreaterThan(0);
+    expect(got.filter(([m, races]) => m !== races.map((r) => LETTER[r]).join("v"))).toEqual([]);
+    await expect(goldens(page).filter({ hasText: "S9001" }).locator("td").nth(2)).toHaveText("OvN");
   });
 
   test("a row links to its replay page", async ({ page }) => {

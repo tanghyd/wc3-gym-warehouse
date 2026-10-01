@@ -66,9 +66,7 @@ export function TimelineChart({ blocks, durationMs, objects }: { blocks: Block[]
   const maxMin = Math.max(durationMs, 1000) / 60000;
   const x = scaleLinear([0, maxMin], [ML, W - MR]);
   // whole-minute ticks, about one per 90 px
-  const count = Math.max(2, Math.round((W - ML - MR) / 90));
-  const step = [1, 2, 5, 10, 15, 20, 30].find((s) => maxMin / s <= count) ?? 60;
-  const ticks = Array.from({ length: Math.floor(maxMin / step) + 1 }, (_, j) => j * step);
+  const ticks = x.ticks(Math.max(2, Math.round((W - ML - MR) / 90))).filter(Number.isInteger);
 
   const apmH = APM_T + APM_H + AXIS;
   const laid = blocks.map((b) => place(b.lanes, x));

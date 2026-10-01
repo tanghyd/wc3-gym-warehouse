@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { pickerValues, searchReplays } from "@/lib/api";
-import { mss, PlayerName, RACES, Result } from "@/lib/ui";
+import { matchup, mss, PlayerName, RACES, Result } from "@/lib/ui";
 
 const FIELDS = ["race", "opponent_race", "map", "player"] as const;
 
@@ -33,9 +33,9 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const filters: Record<string, string[] | { gte?: number; lte?: number }> = Object.fromEntries(
     FIELDS.filter((k) => value(k)).map((k) => [k, [value(k)]]),
   );
-  // ?min= and ?max= are the game length in minutes, both ends included
-  const [min, max] = [value("min"), value("max")].map((v) => (v && Number.isFinite(Number(v)) ? Number(v) : undefined));
-  if (min !== undefined || max !== undefined) filters.minutes = { gte: min, lte: max };
+  // ?min= and ?max= are the game length in minutes, both ends included; the filter is on exact ms
+  const [min, max] = [value("min"), value("max")].map((v) => (v && Number.isFinite(Number(v)) ? Number(v) * 60000 : undefined));
+  if (min !== undefined || max !== undefined) filters.duration_ms = { gte: min, lte: max };
   const [replays, maps, players] = await Promise.all([searchReplays(filters), pickerValues("map"), pickerValues("player")]);
 
   return (
@@ -105,33 +105,34 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                 </tr>
               </thead>
               <tbody>
-                {replays.map((r) => (
-                  <tr key={r.replay_id} className="align-top">
-                    <td className="hidden whitespace-nowrap sm:table-cell">{r.gnl ? `S${r.gnl.series_id} G${r.gnl.game_no}` : ""}</td>
-                    <td>
-                      {/* no prefetch: it runs generateMetadata, a full replay read per row */}
-                      <Link href={`/replays/${r.replay_id}`} prefetch={false} className="block max-w-28 font-bold break-words sm:max-w-none">
-                        {r.map || "Unknown map"}
-                      </Link>
-                      {/* a phone has no room for the Length column, so the length sits under the map */}
-                      <span className="mt-0.5 block text-sm text-muted sm:hidden">{mss(r.duration_ms)}</span>
-                    </td>
-                    <td className="hidden sm:table-cell">{r.matchup}</td>
-                    <td>
-                      <ul className="flex flex-col gap-1">
-                        {[...r.players]
-                          .sort((a, b) => a.player_id - b.player_id)
-                          .map((p) => (
+                {replays.map((r) => {
+                  const players = [...r.players].sort((a, b) => a.player_id - b.player_id);
+                  return (
+                    <tr key={r.replay_id} className="align-top">
+                      <td className="hidden whitespace-nowrap sm:table-cell">{r.gnl ? `S${r.gnl.series_id} G${r.gnl.game_no}` : ""}</td>
+                      <td>
+                        {/* no prefetch: it runs generateMetadata, a full replay read per row */}
+                        <Link href={`/replays/${r.replay_id}`} prefetch={false} className="block max-w-28 font-bold break-words sm:max-w-none">
+                          {r.map || "Unknown map"}
+                        </Link>
+                        {/* a phone has no room for the Length column, so the length sits under the map */}
+                        <span className="mt-0.5 block text-sm text-muted sm:hidden">{mss(r.duration_ms)}</span>
+                      </td>
+                      <td className="hidden sm:table-cell">{matchup(players)}</td>
+                      <td>
+                        <ul className="flex flex-col gap-1">
+                          {players.map((p) => (
                             <li key={p.player_id} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                               <PlayerName name={p.name} race={p.race} className="max-w-48 sm:max-w-none" />
                               {p.won && <Result won />}
                             </li>
                           ))}
-                      </ul>
-                    </td>
-                    <td className="hidden text-right sm:table-cell">{mss(r.duration_ms)}</td>
-                  </tr>
-                ))}
+                        </ul>
+                      </td>
+                      <td className="hidden text-right sm:table-cell">{mss(r.duration_ms)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

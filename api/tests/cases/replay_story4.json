@@ -372,13 +372,6 @@
           "hero_code": null
         },
         {
-          "player_id": 1,
-          "time_ms": 164642,
-          "event_type": "building",
-          "code": "etoa",
-          "hero_code": null
-        },
-        {
           "player_id": 2,
           "time_ms": 179442,
           "event_type": "unit",
@@ -1109,13 +1102,6 @@
         {
           "player_id": 1,
           "time_ms": 833596,
-          "event_type": "upgrade",
-          "code": "Resw",
-          "hero_code": null
-        },
-        {
-          "player_id": 1,
-          "time_ms": 833754,
           "event_type": "upgrade",
           "code": "Resw",
           "hero_code": null
