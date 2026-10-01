@@ -14,8 +14,20 @@ export type ReplayPlayer = Player & { apm: number; apm_per_minute: number[]; her
 export type RowPlayer = Player & { heroes: Omit<Hero, "slot">[] };
 export type GameEvent = { player_id: number; time_ms: number; event_type: string; code: string; hero_code: string | null };
 export type Chat = { time_ms: number; player_id: number; mode: string; message: string };
-type Header = { replay_id: string; map: string; matchup: string; duration_ms: number; winning_team_id: number; gnl: Gnl; download_url: string | null };
-export type Replay = Header & { version: string; players: ReplayPlayer[]; events: GameEvent[]; chat: Chat[] };
+/** Where a result comes from: the file's leave records, the later last command (inferred), or nothing. */
+export type ResultSource = "replay" | "last_actor" | "unknown";
+type Header = {
+  replay_id: string;
+  map: string;
+  matchup: string;
+  duration_ms: number;
+  winning_team_id: number;
+  result_source: ResultSource;
+  gnl: Gnl;
+  download_url: string | null;
+};
+/** patch: the game patch from the build number, such as "3.0"; "" for a build with no patch row. */
+export type Replay = Header & { patch: string; players: ReplayPlayer[]; events: GameEvent[]; chat: Chat[] };
 export type ReplayRow = Header & { focus_player_id: number; players: RowPlayer[] };
 /** Name and icon path per object code; a code in no mappings row has no name. */
 export type Objects = Record<string, { name?: string; icon: string | null }>;
@@ -66,10 +78,10 @@ export async function query<T>(body: { model?: string; dimensions?: string[]; me
   return (await api<{ rows: T[] }>("/query", body))!.rows;
 }
 
-/** Every value of one player_games dimension, for a picker. */
-export async function pickerValues(dimension: "map" | "player") {
+/** Every value of one player_games dimension, for a picker; "" is the picker's Any, so it drops out. */
+export async function pickerValues(dimension: "map" | "patch" | "player") {
   const rows = await query<Record<string, string>>({ dimensions: [dimension], measures: ["games"], order_by: [dimension], limit: 10000 });
-  return rows.map((r) => r[dimension]);
+  return rows.map((r) => r[dimension]).filter(Boolean);
 }
 
 let iconFiles: Record<string, string> | undefined;

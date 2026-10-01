@@ -3,13 +3,18 @@ import { expect, test, type APIRequestContext, type Locator, type Page } from "@
 // The build-order search on /: each list equals POST /search's answer to the same request.
 const API = process.env.API_URL ?? "http://api:8000";
 
-type Row = { replay_id: string; gnl: unknown; focus_player_id: number; players: { player_id: number; name: string; won: boolean | null }[] };
+type Row = { replay_id: string; gnl: unknown; result_source: string; focus_player_id: number; players: { player_id: number; name: string; won: boolean | null }[] };
 const rows = (page: Page) => page.locator("tbody tr");
 const goldens = (page: Page) => rows(page).filter({ hasText: /\bS900[123] G\d/ });
 const slot = (page: Page, n: number) => page.getByRole("region", { name: `Player ${n}` });
 const steps = (card: Locator) => card.locator("ol > li");
 /** The replay ids the list shows, in order. */
 const shown = (page: Page) => rows(page).locator('a[href^="/replays/"]').evaluateAll((as) => as.map((a) => a.getAttribute("href")!.split("/").pop()));
+/** Per Player 1 cell: its result chip ("" with none) and whether it is marked inferred. */
+const player1 = (page: Page) =>
+  rows(page)
+    .locator("td:nth-child(5)")
+    .evaluateAll((tds) => tds.map((td) => [td.querySelector(".chip")?.textContent ?? "", !!td.querySelector('[title^="Inferred:"]')]));
 const record = (w: number, l: number) => (w + l ? `${w} – ${l}` + (w + l >= 10 ? ` (${Math.round((100 * w) / (w + l))}%)` : "") : "—");
 
 async function search(request: APIRequestContext, body: object): Promise<Row[]> {
@@ -74,7 +79,8 @@ test.describe("build-order search", () => {
 
     // the Player 1 column reports the focus player, who is listed first
     const focus = want.map((r) => r.players.find((p) => p.player_id === r.focus_player_id)!);
-    expect(await rows(page).locator("td:nth-child(5)").allInnerTexts()).toEqual(focus.map((p) => (p.won === null ? "" : p.won ? "Won" : "Lost")));
+    // a result from the last actor keeps its chip and adds the inferred mark
+    expect(await player1(page)).toEqual(want.map((r, i) => [focus[i].won === null ? "" : focus[i].won ? "Won" : "Lost", r.result_source === "last_actor"]));
     expect(await rows(page).locator("td:nth-child(4) li:first-child .font-name").allInnerTexts()).toEqual(focus.map((p) => p.name));
     // and his record over the list sits beside the count
     const [w, l] = [focus.filter((p) => p.won === true).length, focus.filter((p) => p.won === false).length];
@@ -212,7 +218,10 @@ test.describe("build-order search", () => {
     const decided: number = (await res.json()).rows[0].replays;
     expect(decided).toBeGreaterThan(0);
     await expect(rows(page)).toHaveCount(decided);
-    expect(new Set(await rows(page).locator("td:nth-child(5)").allInnerTexts())).toEqual(new Set(["Lost"]));
+    expect(new Set((await player1(page)).map(([chip]) => chip))).toEqual(new Set(["Lost"]));
+    // the losses the last actor names are marked inferred, as many as the API counts
+    const inferred = await request.post(`${API}/query`, { data: { measures: ["replays"], filters: { result: ["win"], result_source: ["last_actor"], ...HUMAN } } });
+    await expect(rows(page).locator('td:nth-child(5) [title^="Inferred:"]')).toHaveCount((await inferred.json()).rows[0].replays);
     // two winners in one game: none
     await page.goto("/?result=won&opp_result=won");
     await expect(page.getByText("No replay matches. Widen the filters.")).toBeVisible();

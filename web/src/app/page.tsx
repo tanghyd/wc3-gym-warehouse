@@ -11,7 +11,7 @@ const LIMIT = 100; // games a search lists
 export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
   const value = (k: string) => (typeof sp[k] === "string" ? sp[k] : "");
-  const [objects, maps, players] = await Promise.all([stepObjects(), pickerValues("map"), pickerValues("player")]);
+  const [objects, maps, patches, players] = await Promise.all([stepObjects(), pickerValues("map"), pickerValues("patch"), pickerValues("player")]);
   const byCode = Object.fromEntries(objects.map((o) => [o.code, o]));
   // A step's code gives its kind; a code that is no step object drops out.
   const steps = (k: string) => decodeSteps(value(k)).filter((s) => byCode[s.code]);
@@ -27,11 +27,11 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const prefix = OPENERS.map(value);
   prefix.splice(prefix.indexOf("") < 0 ? 6 : prefix.indexOf(""));
 
-  // Player 1 is the focus: the row whose result the table reports. Map, length and opener ride on him,
-  // and so does computer_game, which marks both players of a game vs the AI.
+  // Player 1 is the focus: the row whose result the table reports. Map, patch, length and opener ride
+  // on him, and so does computer_game, which marks both players of a game vs the AI.
   const computer = value("computer") === "1";
   const filters: Filters = noComputer(computer);
-  for (const k of ["race", "opponent_race", "map", "player"]) if (value(k)) filters[k] = [value(k)];
+  for (const k of ["race", "opponent_race", "map", "patch", "player"]) if (value(k)) filters[k] = [value(k)];
   prefix.forEach((c, i) => (filters[OPENERS[i]] = [c]));
   if (value("opp_player")) filters.opponent = [value("opp_player")];
   if (RESULTS[value("result")]) filters.result = [RESULTS[value("result")]];
@@ -54,7 +54,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const past = more ? answer.replays.map((r) => r.replay_id).sort().at(-1) : undefined;
   const replays = answer.replays.filter((r) => r.replay_id !== past);
   // with no condition on a player there is no focus, and players stay in slot order
-  const focused = Object.keys(filters).some((k) => !["map", "duration_ms", "computer_game"].includes(k)) || p1Steps.length > 0 || others.length > 0;
+  const focused = Object.keys(filters).some((k) => !["map", "patch", "duration_ms", "computer_game"].includes(k)) || p1Steps.length > 0 || others.length > 0;
   const won = replays.map((r) => r.players.find((p) => p.player_id === r.focus_player_id)?.won);
   const set = Object.values(sp).some((v) => v);
   const withoutOpener = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" && v && !OPENERS.includes(k) ? [[k, v]] : [])));
@@ -71,6 +71,14 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
               <option value="">Any</option>
               {maps.map((m) => (
                 <option key={m}>{m}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Patch">
+            <select name="patch" defaultValue={value("patch")} className="field">
+              <option value="">Any</option>
+              {patches.map((p) => (
+                <option key={p}>{p}</option>
               ))}
             </select>
           </Field>
@@ -159,6 +167,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                   const rank = (p: { player_id: number }) => (focused && p.player_id === r.focus_player_id ? -1 : p.player_id);
                   const players = [...r.players].sort((a, b) => rank(a) - rank(b));
                   const focus = r.players.find((p) => p.player_id === r.focus_player_id);
+                  const inferred = r.result_source === "last_actor";
                   return (
                     <tr key={r.replay_id} className="align-top">
                       <td className="hidden whitespace-nowrap sm:table-cell">{r.gnl ? `S${r.gnl.series_id} G${r.gnl.game_no}` : ""}</td>
@@ -177,7 +186,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                             <li key={p.player_id} className="flex min-w-0 flex-col gap-1">
                               <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                                 <PlayerName name={p.name} race={p.race} className="max-w-48 sm:max-w-none" />
-                                {p.won && <Result won />}
+                                {p.won && <Result won inferred={inferred} />}
                               </div>
                               {/* his heroes in pick order, a quiet second line */}
                               {p.heroes.length > 0 && (
@@ -196,7 +205,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                           ))}
                         </ul>
                       </td>
-                      {focused && <td className="hidden sm:table-cell">{focus && focus.won !== null && <Result won={focus.won} />}</td>}
+                      {focused && <td className="hidden sm:table-cell">{focus && focus.won !== null && <Result won={focus.won} inferred={inferred} />}</td>}
                       <td className="hidden text-right sm:table-cell">{mss(r.duration_ms)}</td>
                     </tr>
                   );

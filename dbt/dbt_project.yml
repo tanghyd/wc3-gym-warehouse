@@ -32,3 +32,5 @@ seeds:
       +column_types: {code: String, name: String, kind: String, race: String, hero: String, is_supply_building: UInt8}
     mappings_custom:
       +column_types: {code: String, name: String, kind: String, category: String}
+    patches:
+      +column_types: {build_number: UInt32, patch: String, description: String}

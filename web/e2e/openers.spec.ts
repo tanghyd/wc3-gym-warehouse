@@ -116,6 +116,29 @@ test.describe("openers tree", () => {
     expect(await page.locator("tbody .font-name").allInnerTexts()).toContain("Computer");
   });
 
+  test("the patch filter narrows every figure, and a games link keeps it", async ({ page, request }) => {
+    const filters = { race: ["NE"], patch: ["3.0"] };
+    const root = await level(request, filters, []);
+    expect(root.length).toBeGreaterThan(0);
+    const name = await names(request, root.map((r) => r.code));
+    await page.goto("/openers");
+    const patch = page.getByRole("combobox", { name: "Patch" });
+    await expect(patch).toHaveValue("");
+    await patch.selectOption("3.0");
+    await page.getByRole("button", { name: "Show openers" }).click();
+    await expect(page).toHaveURL(/[?&]patch=3\.0(&|$)/);
+    expect(await cells(page)).toEqual(expected(root, name));
+    const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { ...filters, ...DECIDED, ...HUMAN } } })).json()).rows[0].games;
+    await expect(page.locator(".bar .chip")).toHaveText(`${total} games won or lost`);
+
+    // the first row's games open on the replay list with the patch still set
+    await rows(page).first().getByRole("link", { name: `List the games of ${name[root[0].code]}` }).click();
+    await expect(page).toHaveURL(/^[^?]*\/\?.*patch=3\.0/);
+    await expect(page.getByRole("combobox", { name: "Patch" })).toHaveValue("3.0");
+    const res = await request.post(`${API}/search`, { data: { filters: { ...filters, ...HUMAN, opener_1: [root[0].code] } } });
+    await expect(page.locator("tbody tr")).toHaveCount((await res.json()).replays.length);
+  });
+
   test("best win rate puts rows from 10 games up first and keeps the sort while a row opens", async ({ page, request }) => {
     const root = await level(request, { race: ["NE"] }, [], "winrate");
     expect(root.some((r) => r.games < 10)).toBeTruthy();

@@ -57,7 +57,7 @@ export default async function OpenersPage({ searchParams }: PageProps<"/openers"
   const race = RACES[value("race")] ? value("race") : "NE";
   const sort = value("sort") === "winrate" ? "winrate" : "popular";
   const computer = value("computer") === "1";
-  const fields: [string, string][] = [["race", race], ...["opponent_race", "map", "player"].filter(value).map((k): [string, string] => [k, value(k)])];
+  const fields: [string, string][] = [["race", race], ...["opponent_race", "map", "patch", "player"].filter(value).map((k): [string, string] => [k, value(k)])];
   // only games with a known winner, so games equal wins plus losses; games vs Computer only with ?computer=1
   const base: Filters = { ...Object.fromEntries(fields.map(([k, v]) => [k, [v]])), result: ["win", "loss"], ...noComputer(computer) };
   // what every link keeps
@@ -69,9 +69,10 @@ export default async function OpenersPage({ searchParams }: PageProps<"/openers"
   const openKeys = new Set(open.map(key));
   const paths = [[], ...open.filter((p) => p.slice(0, -1).every((_, i) => openKeys.has(key(p.slice(0, i + 1)))))];
   const unique = [...new Map(paths.map((p) => [key(p), p])).values()];
-  const [[{ games: total }], maps, players] = await Promise.all([
+  const [[{ games: total }], maps, patches, players] = await Promise.all([
     query<{ games: number }>({ measures: ["games"], filters: base }),
     pickerValues("map"),
+    pickerValues("patch"),
     pickerValues("player"),
   ]);
   const levels = await Promise.all(unique.map((p) => level(base, p, sort)));
@@ -114,6 +115,14 @@ export default async function OpenersPage({ searchParams }: PageProps<"/openers"
             <option value="">Any</option>
             {maps.map((m) => (
               <option key={m}>{m}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Patch">
+          <select name="patch" defaultValue={value("patch")} className="field">
+            <option value="">Any</option>
+            {patches.map((p) => (
+              <option key={p}>{p}</option>
             ))}
           </select>
         </Field>

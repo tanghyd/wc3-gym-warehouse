@@ -45,3 +45,21 @@ seeds:
         description: Always unknown, the kind the parser gives a code in no melee table.
       - name: category
         description: The object's group in the custom map, ui-menu, builder, tower, upgrade, item or other.
+
+  - name: patches
+    description: The game patch each replay build number belongs to. Kept by hand, one row per build seen. A build with no row gives patch '' and the builds_have_a_patch test warns.
+    columns:
+      - name: build_number
+        description: The build number from the replay header, such as 7000.
+        data_tests:
+          - unique:
+              description: A build belongs to one patch.
+          - not_null:
+              description: Every row has a build number.
+      - name: patch
+        description: The patch name shown to people, such as 3.0.
+        data_tests:
+          - not_null:
+              description: Every build names its patch.
+      - name: description
+        description: What the patch is, in a few words.

@@ -5,6 +5,8 @@ import { expect, test } from "@playwright/test";
 const PAGES = [
   ["search", "/"],
   // a Night Elf build against an Orc one: timing on two steps, a hero, an outcome
+  // thanks#11187 as player 1: inferred results in the Player 1 column
+  ["search-player", "/?player=thanks%2311187"],
   ["search-build", `/?race=NE&result=won&steps=${encodeURIComponent("eate@-120,eaom~20,Edem")}&opponent_race=OC&opp_steps=ofor`],
   // the Night Elf tree, open down to the sixth building
   ["openers", "/openers?race=NE&open=eate&open=eate.eaom&open=eate.eaom.eden&open=eate.eaom.eden.etoa&open=eate.eaom.eden.etoa.edob"],
@@ -20,6 +22,8 @@ const PAGES = [
   ["replay-tidehunters", "/replays/025d14359f58eac19f263f0dce880bc13bf9cf8d087158202addeb93474ac8c2"],
   // Fading Autumn, 20 minutes, NE v UD
   ["replay-autumn", "/replays/be7b97ee9668d1f441fa2973387ea4e02fa5a02d2adababec6cb3e7647871c32"],
+  // Northern Isles, 2 minutes, NE v OC: a result from the last actor, marked inferred
+  ["replay-inferred", "/replays/f33bf0f15df541045edb030615f9129f28cecf911a7a376865b10f00dd7a049b"],
   ["missing", "/replays/nope"],
 ] as const;
 // The `background` token, light and dark.

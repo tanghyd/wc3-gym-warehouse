@@ -6,6 +6,8 @@ const ID = "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8";
 const LONG = "a9872674567c6389f3d912b5f053f7e2af4a87de3378d5229a90f091bd219d88";
 // Fading Autumn, UD v NE: thanks's third hero and its skills AHpa and AHcr are in no mappings row
 const FADING = "be7b97ee9668d1f441fa2973387ea4e02fa5a02d2adababec6cb3e7647871c32";
+// Northern Isles, NE v OC: the file has no leave record; BIGmoon stopped first, so thanks won by last command
+const INFERRED = "f33bf0f15df541045edb030615f9129f28cecf911a7a376865b10f00dd7a049b";
 const LETTER: Record<string, string> = { Human: "H", Orc: "O", "Night Elf": "N", Undead: "U", Random: "R" };
 const API = process.env.API_URL ?? "http://api:8000";
 const NE = "thanks#11187";
@@ -69,7 +71,9 @@ test.describe("replay detail", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Concealed Hill");
     await expect(page).toHaveTitle(/^Concealed Hill/);
     const meta = page.locator("p").filter({ has: page.getByRole("img", { name: "Length" }) });
-    for (const text of ["15:37", "NvO", "Patch 2.00", "GNL S9003 G1"]) await expect(meta).toContainText(text);
+    // the game patch from the build number, never the file format version 2.00
+    for (const text of ["15:37", "NvO", "Patch 2.0", "GNL S9003 G1"]) await expect(meta).toContainText(text);
+    await expect(meta).not.toContainText("2.00");
     await expect(page.getByText("No file", { exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Download replay" })).toHaveCount(0);
   });
@@ -80,6 +84,8 @@ test.describe("replay detail", () => {
     await expect(line.locator(`span:text-is("${NE}") + img`)).toHaveAttribute("alt", "Night Elf");
     await expect(line.locator(`span:text-is("${OC}") + img`)).toHaveAttribute("alt", "Orc");
     await expect(line.getByText("Won", { exact: true })).toHaveCount(1);
+    // the file names the winner, so nothing reads as inferred
+    await expect(page.getByText("inferred", { exact: true })).toHaveCount(0);
   });
 
   test("player cards: result, APM, heroes and the skill trail", async ({ page }) => {
@@ -298,6 +304,29 @@ test.describe("replay detail", () => {
     await expect(chat.locator("li").first()).toContainText("glhf");
     await expect(page.getByText("Private")).toHaveCount(0);
   });
+});
+
+test("a result from the last actor reads as inferred in the players line and on both cards", async ({ page, request }) => {
+  type Header = { result_source: string; patch: string; players: { name: string; won: boolean | null }[] };
+  const r: Header = await (await request.get(`${API}/replays/${INFERRED}`)).json();
+  expect(r.result_source).toBe("last_actor");
+  const winner = r.players.find((p) => p.won === true)!;
+  const loser = r.players.find((p) => p.won === false)!;
+  await page.goto(`/replays/${INFERRED}`);
+  const header = page.locator("section").filter({ has: page.getByRole("heading", { level: 1 }) });
+  const marks = header.locator('span[title^="Inferred:"]');
+  await expect(marks).toHaveCount(1);
+  await expect(marks).toHaveText("Won inferred");
+  await expect(marks).toHaveAttribute("title", "Inferred: the other player stopped first; the file has no leave record");
+  await expect(header.locator("p").filter({ hasText: loser.name })).toHaveText(new RegExp(`${winner.name}\\s*Won\\s*inferred\\s*v\\s*${loser.name}`), { useInnerText: true });
+  await expect(header.locator("p").filter({ has: page.getByRole("img", { name: "Length" }) })).toContainText(`Patch ${r.patch}`);
+
+  const won = card(page, winner.name).locator('span[title^="Inferred:"]');
+  await expect(won.locator(".chip")).toHaveText("Won");
+  await expect(won.getByText("inferred", { exact: true })).toBeVisible();
+  const lost = card(page, loser.name).locator('span[title^="Inferred:"]');
+  await expect(lost.locator(".chip")).toHaveText("Lost");
+  await expect(lost).toHaveAttribute("title", "Inferred: this player stopped first; the file has no leave record");
 });
 
 test("a 31-minute game keeps the Units lane a few rows high", async ({ page, request }) => {

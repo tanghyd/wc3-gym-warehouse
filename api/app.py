@@ -131,7 +131,8 @@ def search(req: SearchRequest) -> dict[str, Any]:
             rows.append({
                 "replay_id": r["replay_id"], "map": r["map"], "matchup": r["matchup"],
                 "duration_ms": r["duration_ms"], "winning_team_id": r["winning_team_id"],
-                "gnl": _gnl(r), "download_url": None,  # no source_key yet (design S3)
+                "result_source": r["result_source"], "gnl": _gnl(r),
+                "download_url": None,  # no public file host for source_key yet
                 "focus_player_id": focus[r["replay_id"]],
                 "players": [
                     {
@@ -164,7 +165,8 @@ def replay(replay_id: str) -> dict[str, Any]:
     ]
     return {
         "replay_id": h["replay_id"], "map": h["map"], "matchup": h["matchup"], "duration_ms": h["duration_ms"],
-        "winning_team_id": h["winning_team_id"], "version": h["version"], "gnl": _gnl(h), "download_url": None,
+        "winning_team_id": h["winning_team_id"], "result_source": h["result_source"], "version": h["version"],
+        "patch": h["patch"], "gnl": _gnl(h), "download_url": None,
         "players": players,
         "events": run(REPLAY_SQL["events"], p),
         "chat": run(REPLAY_SQL["chat"], p),

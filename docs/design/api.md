@@ -57,13 +57,14 @@ Why (F): tier and research repeat almost only under 1 s (Stronghold 1,052 of 1,0
 | `opponent_race` | GNL id | `HU OC NE UD RANDOM` | Race of the other player |
 | `player` | string | 1-64 chars | Focus player name. Exact, case-insensitive (`lowerUTF8()` on both sides, queries.md §1). |
 | `map` | string | 1-64 chars | Exact map name, as `GET /filters` lists it |
+| `patch` | string | a `patches` seed value | Game patch, such as `3.0` (`player_games.patch`, from the `patches` seed by build number) |
 | `min_minutes` | integer | 0-180 | `duration_ms >= min_minutes * 60000` |
 | `max_minutes` | integer | 0-180, not below `min_minutes` | `duration_ms <= max_minutes * 60000` |
 
 - No defaults. Bounds as w3warehouse: models.py:209-221, 290-300.
 - A game passes when it has players P and Q on different teams. P matches `race` and `player`. Q matches `opponent_race`.
 - P is the opener's owner on `/openers` (views.sql:52, index.html:887). On `/stats`, P and Q only select the cohort.
-- Every route adds `replays.type = '1on1'` (index.html:750, views.sql:80).
+- Every route adds `replays.type = '1on1'` (index.html:750, views.sql:80) and counts a game once: it reads `player_games`, which leaves out a second file of the same game (`replays.duplicate_of`, 2.5).
 - Decided: `RANDOM` is a fifth race, so `race=OC` skips a Random who rolled Orc. Why: the rolled race is out of scope (`race_detected` has it for 964 of 1,004 Random players (F), queries.md §4.1 rule 4).
 - No season or team filter until the dims loader (after the four pages).
 
@@ -76,7 +77,7 @@ The search body has no top-level `race`, `opponent_race` or `player`; each slot 
 | `race` | `groups[0].race` |
 | `opponent_race` | `groups[1].race` |
 | `player` | `groups[0].player` |
-| `map`, `min_minutes`, `max_minutes` | same top-level name |
+| `map`, `patch`, `min_minutes`, `max_minutes` | same top-level name |
 
 ### 2.4 Paging and order
 
@@ -103,13 +104,15 @@ The search body has no top-level `race`, `opponent_race` or `player`; each slot 
 | `map` | string | `""` when the file name gives none |
 | `matchup` | string | e.g. `"NvO"` |
 | `duration_ms` | integer | Game length |
-| `winning_team_id` | integer | `-1` when unknown (views.sql:108) |
+| `winning_team_id` | integer | The final winner, `replays.winning_team_id`: the file's recorded winner, else for a 1on1 the team of the player whose last command came later. `-1` when unknown |
+| `result_source` | enum | `replay` (the file's leave records name the winner), `last_actor` (inferred: the other player stopped first and the file has no leave record) or `unknown`. The UI marks a `last_actor` result as inferred |
 | `gnl` | object or null | `{"series_id": int, "game_no": int}`. Null when `gnl_series_id = 0` (tables.sql:33-36). The UI shows it as text. |
 | `download_url` | string or null | `DOWNLOAD_BASE_URL` + `replays.source_key` when both are non-empty, else null. The UI then shows "No file". |
 | `focus_player_id` | integer or null | The player the result column reports. `/search`: the player `groups[0]` bound to; null with no groups; the lower `player_id` when both fit. `/openers/replays`: the opener's owner (3.6). |
 | `players` | array | Sorted by `player_id`. Item: `player_id` int, `name` string, `race` GNL id, `team_id` int, `won` bool or null (null when `winning_team_id < 0`), `heroes` array of `{"code": string, "final_level": int}` in pick order (`player_heroes.hero_slot`, rows with `hero_id = ''` left out), `[]` when the player spent no skill point. |
 
 - Row key: `(replay_id, focus_player_id)`. On `/openers/replays` a mirror game can appear twice (3.6).
+- One game, one row: `/search` reads `player_games`, which leaves out a replay whose `replays.duplicate_of` is set (a second file of the same game, such as the client's Autosaved copy of a w3c- file). `/replays/{id}` still answers any replay.
 - `source_key` (queries.md §5 S3, PR 3): the drain writes the raw R2 object key into each doc; `replays.source_key String DEFAULT ''` stores it. PR 3 re-stages the staging bucket (drain re-run, breadcrumbs cleared). Rows not loaded by the drain (fixtures, dev load) keep `''`.
 - Names carry no flag and no MMR until the dims loader lands.
 
@@ -365,13 +368,13 @@ Cache-Control: no-store
 [
   {"replay_id": "0ddbb4abacfb6b62d88223ac6bb3902edc0bdc3a2eac55e29ffe367405cffa60",
    "map": "Springtime 1.3", "matchup": "NvO", "duration_ms": 403900, "winning_team_id": 1,
-   "gnl": null, "download_url": null, "focus_player_id": 2,
+   "result_source": "replay", "gnl": null, "download_url": null, "focus_player_id": 2,
    "players": [
      {"player_id": 1, "name": "FoCuS#31324", "race": "OC", "team_id": 0, "won": false},
      {"player_id": 2, "name": "Medusa#31315", "race": "NE", "team_id": 1, "won": true}]},
   {"replay_id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
    "map": "Concealed Hill", "matchup": "NvO", "duration_ms": 937219, "winning_team_id": 0,
-   "gnl": null, "download_url": null, "focus_player_id": 1,
+   "result_source": "replay", "gnl": null, "download_url": null, "focus_player_id": 1,
    "players": [
      {"player_id": 1, "name": "thanks#11187", "race": "NE", "team_id": 0, "won": true},
      {"player_id": 2, "name": "Okeanos#22605", "race": "OC", "team_id": 1, "won": false}]}
@@ -496,7 +499,7 @@ X-Total-Count: 1
 ```json
 [{"replay_id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
   "map": "Concealed Hill", "matchup": "NvO", "duration_ms": 937219, "winning_team_id": 0,
-  "gnl": null, "download_url": null, "focus_player_id": 1,
+  "result_source": "replay", "gnl": null, "download_url": null, "focus_player_id": 1,
   "players": [
     {"player_id": 1, "name": "thanks#11187", "race": "NE", "team_id": 0, "won": true},
     {"player_id": 2, "name": "Okeanos#22605", "race": "OC", "team_id": 1, "won": false}]}]
@@ -565,7 +568,9 @@ Hero rows come from `player_heroes`. APM rows come from `replay_players.apm`: 89
 | Field | Type | Meaning |
 |---|---|---|
 | `replay_id`, `map`, `matchup`, `duration_ms`, `winning_team_id`, `gnl`, `download_url` | | As in 2.5 |
-| `version` | string | `replays.version` |
+| `result_source` | enum | As in 2.5 |
+| `version` | string | `replays.version`, the replay file format version such as `"2.00"`, not the game patch |
+| `patch` | string | `replays.patch`, the game patch from the `patches` seed by build number, such as `"3.0"`. `""` for a build the seed has no row for. The replay header shows it |
 | `players[]` | array | Sorted by `player_id`. `player_id`, `name`, `race`, `team_id`, `won` as in 2.5. |
 | `players[].apm` | integer | Whole-game APM |
 | `players[].apm_per_minute` | array of int | `replay_players.apm_timed`, one value per game minute (inferred (X): 7 values for 6.7 min, 16 for 15.6 min). The last, partial minute is scaled to a full minute, or dropped when it is under 30 s |
@@ -591,7 +596,7 @@ GET /replays/dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8
 {
   "replay_id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
   "map": "Concealed Hill", "matchup": "NvO", "duration_ms": 937219, "winning_team_id": 0,
-  "version": "2.00", "gnl": null, "download_url": null,
+  "result_source": "replay", "version": "2.00", "patch": "2.0", "gnl": null, "download_url": null,
   "players": [
     {"player_id": 1, "name": "thanks#11187", "race": "NE", "team_id": 0, "won": true, "apm": 140,
      "apm_per_minute": [110, 96, 162, 130, 149],

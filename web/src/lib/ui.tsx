@@ -73,10 +73,20 @@ export function PlayerName({ name, race, className = "" }: { name: string; race:
   );
 }
 
-/** A result as a word on its win, loss or draw fill. */
-export function Result({ won }: { won: boolean | null }) {
+/**
+ * A result as a word on its win, loss or draw fill. An inferred one (result_source last_actor) adds the
+ * word "inferred" in the ink around it, so it reads on a table and on a banner alike.
+ */
+export function Result({ won, inferred = false }: { won: boolean | null; inferred?: boolean }) {
   const [label, tone] = won === null ? ["No result", "bg-draw text-on-draw"] : won ? ["Won", "bg-win text-on-win"] : ["Lost", "bg-loss text-on-loss"];
-  return <span className={`chip ${tone}`}>{label}</span>;
+  const chip = <span className={`chip ${tone}`}>{label}</span>;
+  if (!inferred || won === null) return chip;
+  const who = won ? "the other player" : "this player";
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap" title={`Inferred: ${who} stopped first; the file has no leave record`}>
+      {chip} <span className="text-sm italic">inferred</span>
+    </span>
+  );
 }
 
 /** The 2 px line key of a player's series. */

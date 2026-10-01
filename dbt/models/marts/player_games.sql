@@ -1,5 +1,5 @@
--- One row per player per 1v1 replay: who, against whom, where, the result, and
--- what they opened with. The query API's main semantic model (see the YAML).
+-- One row per player per 1v1 game: who, against whom, where, the result, and what
+-- they opened with. The query API's main semantic model (see the YAML).
 --
 -- opener_1..opener_6 are the first six non-supply buildings in order, back-to-back
 -- repeats dropped, '' past the end, so the opener tree is a GROUP BY over them.
@@ -37,10 +37,12 @@ SELECT
     toUInt8(rp.name = 'Computer' OR opp.name = 'Computer') AS computer_game,
     r.matchup                                         AS matchup,
     r.map                                             AS map,
+    r.patch                                           AS patch,
     r.duration_ms                                     AS duration_ms,
     round(r.duration_ms / 60000, 1)                   AS minutes,
     toLowCardinality(multiIf(r.winning_team_id < 0, 'unknown',
             r.winning_team_id = rp.team_id, 'win', 'loss')) AS result,
+    r.result_source                                   AS result_source,
     rp.apm                                            AS apm,
     toLowCardinality(fh.first_hero)                   AS first_hero,
     o.opener                                          AS opener,
@@ -56,4 +58,5 @@ INNER JOIN {{ ref('replay_players') }} AS opp
     ON opp.replay_id = rp.replay_id AND opp.team_id != rp.team_id
 LEFT JOIN openers AS o ON o.replay_id = rp.replay_id AND o.player_id = rp.player_id
 LEFT JOIN first_heroes AS fh ON fh.replay_id = rp.replay_id AND fh.player_id = rp.player_id
-WHERE r.type = '1on1'
+-- A game that arrived as two files counts once, through the copy replays picks.
+WHERE r.type = '1on1' AND r.duplicate_of = ''
