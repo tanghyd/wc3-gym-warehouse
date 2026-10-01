@@ -7,13 +7,13 @@ SELECT
     r.replay_id                                       AS replay_id,
     toUInt8(JSONExtractUInt(p, 'id'))                 AS player_id,
     toUInt8(h_idx - 1)                                AS hero_slot,
-    JSONExtractString(h, 'id')                        AS hero_id,
-    JSONExtractString(ev, 'type')                     AS event_type,
-    trim(BOTH '"' FROM JSONExtractRaw(ev, 'value'))   AS ability_id,
+    toLowCardinality(JSONExtractString(h, 'id'))      AS hero_id,
+    toLowCardinality(JSONExtractString(ev, 'type'))   AS event_type,
+    toLowCardinality(trim(BOTH '"' FROM JSONExtractRaw(ev, 'value'))) AS ability_id,
     toUInt32(JSONExtractUInt(ev, 'time'))             AS time_ms,
     toUInt32(ev_idx)                                  AS seq,
     {{ gnl_race("JSONExtractString(p, 'race')") }} AS race,
-    JSONExtractString(r.doc, 'matchup')               AS matchup
+    toLowCardinality(JSONExtractString(r.doc, 'matchup')) AS matchup
 FROM {{ ref('raw_replays') }} AS r
 ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p
 ARRAY JOIN

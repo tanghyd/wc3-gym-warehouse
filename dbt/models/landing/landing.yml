@@ -1,6 +1,40 @@
+sources:
+  - name: bucket
+    description: >-
+      The object store bucket (MinIO locally, Cloudflare R2 in production). ClickHouse
+      reads it through S3 tables in the bucket database, which the on-run-start hook in
+      dbt_project.yml creates over named collections that hold the URL and the keys.
+    schema: bucket
+    tables:
+      - name: parsed_docs
+        description: >-
+          The parsed replay documents the drain writes to
+          parsed/v<parser version>/dt=<date>/<replay_id>.json, one JSON document per
+          replay. An S3 table (format JSONAsString) over the parsed_docs named collection;
+          a read lists the prefix and fetches each matching file.
+        config:
+          loaded_at_field: _time
+          freshness:
+            warn_after: {count: 7, period: day}
+        columns:
+          - name: doc
+            description: One parsed replay document as JSON text, as w3grs wrote it plus the drain's gnl object.
+
 models:
   - name: raw_replays
-    description: The parsed replay documents as loaded from the bucket, one per replay.
+    description: >-
+      The parsed replay documents loaded from the bucket, one row per replay. Incremental:
+      a run appends only the documents whose file name and replay id are not loaded yet,
+      so a document that changes under the same id is not reloaded.
     columns:
       - name: replay_id
-        data_tests: [unique, not_null]
+        description: "{{ doc('replay_id') }} Read from the document's id field."
+        data_tests:
+          - unique:
+              description: A replay is loaded once.
+          - not_null:
+              description: Every loaded document has an id.
+      - name: doc
+        description: The whole parsed document as JSON text; every mart extracts its fields from here.
+      - name: ingested_at
+        description: When the run that loaded this document started (server time).

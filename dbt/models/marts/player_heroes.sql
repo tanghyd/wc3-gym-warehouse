@@ -5,7 +5,7 @@ SELECT
     r.replay_id                                AS replay_id,
     toUInt8(JSONExtractUInt(p, 'id'))          AS player_id,
     toUInt8(h_idx - 1)                         AS hero_slot,
-    JSONExtractString(h, 'id')                 AS hero_id,
+    toLowCardinality(JSONExtractString(h, 'id')) AS hero_id,
     toUInt8(JSONExtractUInt(h, 'level'))       AS final_level
 FROM {{ ref('raw_replays') }} AS r
 ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p

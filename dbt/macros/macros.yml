@@ -1,0 +1,10 @@
+macros:
+  - name: gnl_race
+    description: >-
+      Maps the parser's race letter to the GNL app's race id: H to HU, O to OC, N to NE,
+      U to UD, R to RANDOM. Any other value passes through unchanged, so the race
+      accepted_values tests catch it. Returns LowCardinality(String).
+    arguments:
+      - name: expr
+        type: string
+        description: A SQL expression that yields the parser's race letter, such as JSONExtractString(p, 'race').

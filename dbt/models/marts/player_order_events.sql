@@ -7,12 +7,12 @@
 SELECT
     r.replay_id                                   AS replay_id,
     toUInt8(JSONExtractUInt(p, 'id'))             AS player_id,
-    k.1                                           AS kind,
-    JSONExtractString(o, 'id')                    AS object_code,
+    toLowCardinality(k.1)                         AS kind,
+    toLowCardinality(JSONExtractString(o, 'id'))  AS object_code,
     toUInt32(JSONExtractUInt(o, 'ms'))            AS time_ms,
     toUInt32(o_idx)                               AS seq,
     {{ gnl_race("JSONExtractString(p, 'race')") }} AS race,
-    JSONExtractString(r.doc, 'matchup')           AS matchup
+    toLowCardinality(JSONExtractString(r.doc, 'matchup')) AS matchup
 FROM {{ ref('raw_replays') }} AS r
 ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p
 -- (kind, the player key that holds its orders)

@@ -1,0 +1,59 @@
+exposures:
+  - name: replay_inspector
+    label: Replay inspector
+    type: application
+    maturity: low
+    url: http://127.0.0.1:3000
+    description: >-
+      The Next.js page in web/. It lists replays and shows one replay's players, build
+      orders, hero skills, heroes and chat, and runs player_games queries, all through
+      the query API.
+    owner:
+      name: Daniel
+    depends_on:
+      - ref('replays')
+      - ref('replay_players')
+      - ref('player_games')
+      - ref('mappings')
+      - ref('player_order_events')
+      - ref('hero_ability_events')
+      - ref('player_heroes')
+      - ref('chat')
+
+  - name: query_api
+    label: Query API
+    type: application
+    maturity: low
+    url: http://127.0.0.1:8000/docs
+    description: >-
+      The FastAPI service in api/. /query and /catalog serve the semantic models in
+      marts.yml (player_games, mappings) with build-order steps matched on
+      replay_events; /search and the replay routes read the replay tables. It queries
+      as the read-only api user and reads column types from system.columns.
+    owner:
+      name: Daniel
+    depends_on:
+      - ref('player_games')
+      - ref('replay_events')
+      - ref('mappings')
+      - ref('replays')
+      - ref('replay_players')
+      - ref('player_order_events')
+      - ref('hero_ability_events')
+      - ref('player_heroes')
+      - ref('chat')
+
+  - name: grafana
+    label: Grafana
+    type: dashboard
+    maturity: low
+    url: http://127.0.0.1:3001
+    description: >-
+      Three provisioned dashboards (infrastructure/docker/grafana). Warehouse data
+      counts replays loaded over time from raw_replays; the rest read ClickHouse's
+      system tables (query_log, metric_log, asynchronous_metric_log, parts), which dbt
+      does not model. Reads as the read-only grafana user.
+    owner:
+      name: Daniel
+    depends_on:
+      - ref('raw_replays')

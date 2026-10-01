@@ -1,0 +1,70 @@
+unit_tests:
+  - name: player_games_openers
+    description: >-
+      player_games keeps the first six non-supply buildings by time then seq, drops a
+      back-to-back repeat (also one left adjacent once a supply building is removed),
+      ignores other order kinds, fills '' past the end, and takes the earliest
+      hero_trained as first_hero.
+    model: player_games
+    given:
+      - input: ref('replay_events')
+        rows:
+          - {replay_id: r1, player_id: 1, event_type: unit,         subject_code: hpea, time_ms: 500,  seq: 1}
+          - {replay_id: r1, player_id: 1, event_type: building,     subject_code: hhou, time_ms: 1000, seq: 1}
+          - {replay_id: r1, player_id: 1, event_type: building,     subject_code: halt, time_ms: 2000, seq: 2}
+          - {replay_id: r1, player_id: 1, event_type: hero_trained, subject_code: Hamg, time_ms: 2500, seq: 0}
+          - {replay_id: r1, player_id: 1, event_type: building,     subject_code: hbar, time_ms: 3000, seq: 3}
+          - {replay_id: r1, player_id: 1, event_type: building,     subject_code: hbar, time_ms: 3000, seq: 4}
+          - {replay_id: r1, player_id: 1, event_type: building,     subject_code: hhou, time_ms: 4000, seq: 5}
+          - {replay_id: r1, player_id: 1, event_type: building,     subject_code: hbar, time_ms: 5000, seq: 6}
+          - {replay_id: r1, player_id: 1, event_type: building,     subject_code: hlum, time_ms: 6000, seq: 7}
+          - {replay_id: r1, player_id: 1, event_type: building,     subject_code: hvlt, time_ms: 7000, seq: 9}
+          - {replay_id: r1, player_id: 1, event_type: building,     subject_code: htow, time_ms: 7000, seq: 8}
+          - {replay_id: r1, player_id: 1, event_type: building,     subject_code: hgra, time_ms: 8000, seq: 10}
+          - {replay_id: r1, player_id: 1, event_type: building,     subject_code: hars, time_ms: 9000, seq: 11}
+          - {replay_id: r1, player_id: 2, event_type: building,     subject_code: obar, time_ms: 1500, seq: 1}
+          - {replay_id: r1, player_id: 2, event_type: hero_trained, subject_code: Obla, time_ms: 3000, seq: 0}
+          - {replay_id: r1, player_id: 2, event_type: hero_trained, subject_code: Ofar, time_ms: 2000, seq: 0}
+      - input: ref('mappings')
+        rows:
+          - {code: hhou, kind: building, is_supply_building: 1}
+          - {code: halt, kind: building, is_supply_building: 0}
+          - {code: hbar, kind: building, is_supply_building: 0}
+          - {code: hlum, kind: building, is_supply_building: 0}
+          - {code: htow, kind: building, is_supply_building: 0}
+          - {code: hvlt, kind: building, is_supply_building: 0}
+          - {code: hgra, kind: building, is_supply_building: 0}
+          - {code: hars, kind: building, is_supply_building: 0}
+          - {code: obar, kind: building, is_supply_building: 0}
+      - input: ref('replay_players')
+        rows:
+          - {replay_id: r1, player_id: 1, name: Alice, race: HU, team_id: 0, apm: 100}
+          - {replay_id: r1, player_id: 2, name: Bob,   race: OC, team_id: 1, apm: 120}
+      - input: ref('replays')
+        rows:
+          - {replay_id: r1, type: 1on1, matchup: HvO, map: Echo Isles, duration_ms: 600000, winning_team_id: 0, gnl_series_id: 0, gnl_game_no: 0}
+    expect:
+      rows:
+        - {replay_id: r1, player_id: 1, player: Alice, opponent: Bob, result: win, first_hero: Hamg,
+           opener_1: halt, opener_2: hbar, opener_3: hlum, opener_4: htow, opener_5: hvlt, opener_6: hgra}
+        - {replay_id: r1, player_id: 2, player: Bob, opponent: Alice, result: loss, first_hero: Ofar,
+           opener_1: obar, opener_2: '', opener_3: '', opener_4: '', opener_5: '', opener_6: ''}
+
+  - name: gnl_race_maps_parser_letters
+    description: >-
+      The gnl_race macro, through replay_players, maps H O N U R to HU OC NE UD RANDOM
+      and passes any other letter through.
+    model: replay_players
+    given:
+      - input: ref('raw_replays')
+        rows:
+          - replay_id: r1
+            doc: '{"id":"r1","duration":120000,"players":[{"id":1,"race":"H"},{"id":2,"race":"O"},{"id":3,"race":"N"},{"id":4,"race":"U"},{"id":5,"race":"R"},{"id":6,"race":"X"}]}'
+    expect:
+      rows:
+        - {replay_id: r1, player_id: 1, race: HU}
+        - {replay_id: r1, player_id: 2, race: OC}
+        - {replay_id: r1, player_id: 3, race: NE}
+        - {replay_id: r1, player_id: 4, race: UD}
+        - {replay_id: r1, player_id: 5, race: RANDOM}
+        - {replay_id: r1, player_id: 6, race: X}

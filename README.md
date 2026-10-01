@@ -42,7 +42,7 @@ replays/<series>/game<n>.w3g ─drain─▶ parsed/v2/dt=<date>/<id>.json ─dbt
 1. The GNL backend writes a reported replay to `<env>/replays/<series id>/game<n>.w3g`; `<env>` is the Vercel environment (`app/services/r2.py`), set as `W3WAREHOUSE_S3_PREFIX`. Locally, `minio-setup` puts the 3 goldens there as series 9001-9003. Any other `.w3g` under `replays/` (such as `replays/local/`, which `just local::upload-replays` fills) is drained too, with no `gnl` field.
 2. The drain (`pipeline/parse-rs`, w3grs) parses each new or changed file and writes the parsed document under `parsed/v2/`. It never moves or deletes a raw file.
 3. `just dbt build`:
-   - `raw_replays` is an incremental model. It reads every parsed document through ClickHouse's `s3()` and appends the ones it does not have yet. The URL and the keys come from the `parsed_docs` named collection (`infrastructure/docker/clickhouse/named-collections.xml`), filled from the server's environment, so no secret lands in SQL.
+   - `raw_replays` is an incremental model. It reads the dbt source `bucket.parsed_docs`, an S3 table over the `parsed_docs` named collection (`infrastructure/docker/clickhouse/named-collections.xml`) that dbt's `on-run-start` hook creates, and appends the documents it does not have yet. It skips a loaded document by its file name (`<replay_id>.json`) before ClickHouse fetches it. The URL and the keys come from the server's environment, so no secret lands in SQL.
    - The staging views flatten orders and hero skills.
    - The marts are tables that rebuild with an atomic swap.
 4. The API reads the semantic catalog from dbt's `target/manifest.json` and queries ClickHouse as the read-only `api` user.
@@ -59,6 +59,14 @@ replays/<series>/game<n>.w3g ─drain─▶ parsed/v2/dt=<date>/<id>.json ─dbt
 | `player_heroes`, `player_group_hotkeys`, `chat`, `resource_transfers` | as named |
 
 The opener tree is a `GROUP BY` over `player_games.opener_N`, so the refreshable rollup and its 10-minute staleness are gone.
+
+### dbt docs and tests
+
+- Every model, seed and column has a description in YAML; shared terms (replay_id, race, matchup, order kinds) are doc blocks in `dbt/models/docs.md`. `+persist_docs` in `dbt_project.yml` writes them into ClickHouse as table and column comments, so `system.tables.comment` and `system.columns.comment` carry them.
+- Tests: `unique` and `not_null` on each table's key, with composite keys as an expression such as `replay_id || ':' || toString(player_id)`; `relationships` from `replay_players`, `player_games` and `replay_events` to `replays`; `accepted_values` on race, result, order kind and event type; singular tests in `dbt/tests/` (two `player_games` rows per 1v1, no event after the game's end, no gap in the openers); unit tests in `dbt/models/marts/unit_tests.yml` for the opener derivation and the `gnl_race` macro.
+- The source `bucket.parsed_docs` has freshness on the S3 `_time` virtual column: `just dbt source freshness`.
+- Exposures in `dbt/models/exposures.yml` name the three readers: the replay inspector, the query API and Grafana.
+- dbt's docs site has no column-level lineage: dbt v2 builds it from static analysis, which is off for ClickHouse.
 
 ## The query API (`api/`)
 

@@ -2,8 +2,22 @@
 -- by `just mappings`) plus the hand-kept custom-map names.
 {{ config(order_by='code') }}
 
-SELECT code, name, kind, race, hero, is_supply_building, '' AS category
+SELECT
+    code,
+    name,
+    toLowCardinality(kind)     AS kind,
+    toLowCardinality(race)     AS race,
+    toLowCardinality(hero)     AS hero,
+    is_supply_building,
+    toLowCardinality('')       AS category
 FROM {{ ref('mappings_melee') }}
 UNION ALL
-SELECT code, name, kind, '' AS race, '' AS hero, toUInt8(0) AS is_supply_building, category
+SELECT
+    code,
+    name,
+    toLowCardinality(kind)     AS kind,
+    toLowCardinality('')       AS race,
+    toLowCardinality('')       AS hero,
+    toUInt8(0)                 AS is_supply_building,
+    toLowCardinality(category) AS category
 FROM {{ ref('mappings_custom') }}

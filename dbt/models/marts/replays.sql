@@ -9,7 +9,7 @@ SELECT
     toUInt32(JSONExtractUInt(r.doc, 'gnl', 'series_id'))                 AS gnl_series_id,
     toUInt8(JSONExtractUInt(r.doc, 'gnl', 'game_no'))                    AS gnl_game_no,
     -- The map segment of a w3c filename, then "_v1.3" and camelCase into spaces.
-    replaceRegexpAll(
+    toLowCardinality(replaceRegexpAll(
         replaceRegexpAll(
             replaceRegexpOne(
                 multiIf(
@@ -20,15 +20,15 @@ SELECT
                     stem),
             '_v([0-9])', ' \\1'),
         '([a-z0-9])([A-Z])', '\\1 \\2'),
-    '_', ' ')                                                            AS map,
+    '_', ' '))                                                           AS map,
     JSONExtractString(r.doc, 'map')                                      AS map_json,
     JSONExtractString(r.doc, 'gamename')                                 AS gamename,
     JSONExtractString(r.doc, 'creator')                                  AS creator,
-    JSONExtractString(r.doc, 'type')                                     AS type,
-    JSONExtractString(r.doc, 'matchup')                                  AS matchup,
+    toLowCardinality(JSONExtractString(r.doc, 'type'))                   AS type,
+    toLowCardinality(JSONExtractString(r.doc, 'matchup'))                AS matchup,
     toUInt32(JSONExtractUInt(r.doc, 'duration'))                         AS duration_ms,
     toUInt32(JSONExtractUInt(r.doc, 'buildNumber'))                      AS build_number,
-    JSONExtractString(r.doc, 'version')                                  AS version,
+    toLowCardinality(JSONExtractString(r.doc, 'version'))                AS version,
     JSONExtractBool(r.doc, 'expansion')                                  AS expansion,
     toUInt32(JSONExtractUInt(r.doc, 'parseTime'))                        AS parse_time_ms,
     -- -1 when the parser could not tell who won.
@@ -43,7 +43,7 @@ SELECT
     JSONExtractBool(r.doc, 'settings', 'alwaysVisible')                  AS always_visible,
     JSONExtractBool(r.doc, 'settings', 'mapExplored')                    AS map_explored,
     JSONExtractBool(r.doc, 'settings', 'referees')                       AS referees,
-    JSONExtractString(r.doc, 'settings', 'observerMode')                 AS observer_mode,
+    toLowCardinality(JSONExtractString(r.doc, 'settings', 'observerMode')) AS observer_mode,
     JSONExtractBool(r.doc, 'settings', 'randomHero')                     AS random_hero,
     JSONExtractBool(r.doc, 'settings', 'randomRaces')                    AS random_races,
     JSONExtractBool(r.doc, 'settings', 'hideTerrain')                    AS hide_terrain

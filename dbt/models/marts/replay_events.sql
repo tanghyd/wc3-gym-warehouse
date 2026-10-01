@@ -13,8 +13,8 @@ SELECT
     o.time_ms                                     AS time_ms,
     o.kind                                        AS event_type,
     o.object_code                                 AS subject_code,
-    coalesce(nullIf(m.name, ''), o.object_code)   AS subject_name,
-    ''                                            AS detail,
+    toLowCardinality(coalesce(nullIf(m.name, ''), o.object_code)) AS subject_name,
+    toLowCardinality('')                          AS detail,
     o.seq                                         AS seq
 FROM {{ ref('player_order_events') }} AS o
 -- Join on (code, kind) so a code listed under two kinds cannot double a row.
@@ -24,10 +24,10 @@ UNION ALL
 
 SELECT
     h.race, h.matchup, h.replay_id, h.player_id, h.time_ms,
-    'hero_skill'                                  AS event_type,
+    toLowCardinality('hero_skill')                AS event_type,
     h.ability_id                                  AS subject_code,
-    coalesce(nullIf(ma.name, ''), h.ability_id)   AS subject_name,
-    coalesce(nullIf(mh.name, ''), h.hero_id)      AS detail,
+    toLowCardinality(coalesce(nullIf(ma.name, ''), h.ability_id)) AS subject_name,
+    toLowCardinality(coalesce(nullIf(mh.name, ''), h.hero_id)) AS detail,
     h.seq                                         AS seq
 FROM {{ ref('hero_ability_events') }} AS h
 LEFT JOIN {{ ref('mappings') }} AS ma ON ma.code = h.ability_id AND ma.kind = 'hero_skill'
@@ -37,10 +37,10 @@ UNION ALL
 
 SELECT
     f.race, f.matchup, f.replay_id, f.player_id, f.time_ms,
-    'hero_trained'                                AS event_type,
+    toLowCardinality('hero_trained')              AS event_type,
     f.hero_id                                     AS subject_code,
-    coalesce(nullIf(mh.name, ''), f.hero_id)      AS subject_name,
-    ''                                            AS detail,
+    toLowCardinality(coalesce(nullIf(mh.name, ''), f.hero_id)) AS subject_name,
+    toLowCardinality('')                          AS detail,
     toUInt32(0)                                   AS seq
 FROM (
     SELECT replay_id, player_id, hero_id, race, matchup, min(time_ms) AS time_ms
