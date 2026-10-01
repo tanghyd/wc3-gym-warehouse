@@ -73,6 +73,11 @@ web-lock:
 web-lint:
     docker build --target lint --output type=cacheonly --progress plain -f infrastructure/docker/Dockerfile.web .
 
+# the Playwright tests in web/e2e against the running stack, such as `just local::e2e --grep chat`; screenshots go to web/e2e/shots/
+[positional-arguments]
+e2e *args:
+    docker compose run --rm --user "$(id -u):$(id -g)" e2e "$@"
+
 # a full-page screenshot of an inspector page, such as `just local::web-shot /replays/<id> "$PWD/shot.png" 390 dark`
 [positional-arguments]
 web-shot path out width='1280' theme='light':

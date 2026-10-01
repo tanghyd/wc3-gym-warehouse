@@ -117,6 +117,24 @@ services:
     restart: unless-stopped
     depends_on: [api]
 
+  # One-shot: `just local::e2e`. Playwright tests of web/ and the page, run as you because it
+  # writes web/e2e/node_modules and web/e2e/shots/. The tag matches web/e2e/package.json.
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.55.0-noble
+    profiles: ["tools"]
+    init: true
+    shm_size: 1gb                   # Chromium runs out of the 64 MB default on long pages
+    working_dir: /e2e
+    environment:
+      HOME: /tmp
+      WEB_URL: http://web:3000
+      UI_URL: http://ui
+      API_URL: http://api:8000
+    entrypoint: ["sh", "-c", "npm install --no-audit --no-fund --loglevel=error && exec node_modules/.bin/playwright test \"$$@\"", "e2e"]
+    volumes:
+      - ./web/e2e:/e2e
+    depends_on: [web, ui]
+
   # A local stand-in for the R2 bucket.
   minio:
     image: minio/minio
