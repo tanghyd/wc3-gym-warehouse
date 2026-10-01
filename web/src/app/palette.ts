@@ -11,6 +11,7 @@ const light: Theme = {
   colors: {
     background: "#E8E9E3",
     surface: "#F4F5F1",
+    "surface-bright": "#FAFBF8",
     "surface-light": "#E1E4DD",
     "surface-variant": "#1C2420",
     "on-surface-variant": "#F2F4ED",
@@ -39,6 +40,7 @@ const dark: Theme = {
   colors: {
     background: "#080503",
     surface: "#0C0805",
+    "surface-bright": "#16140F",
     "surface-light": "#1B1915",
     "surface-variant": "#D5DBD1",
     "on-surface-variant": "#1A241E",

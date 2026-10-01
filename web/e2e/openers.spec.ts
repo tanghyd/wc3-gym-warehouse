@@ -8,12 +8,14 @@ const rows = (page: Page) => page.locator("tbody tr");
 const mss = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 const record = (w: number, l: number) => (w + l ? `${w} – ${l}` + (w + l >= 10 ? ` (${Math.round((100 * w) / (w + l))}%)` : "") : "—");
 const DECIDED = { result: ["win", "loss"] };
+// Night Elf on /openers is picked Night Elf: random 0
+const NE = { race: ["NE"], random: [0] };
 
 /**
  * The buildings after a prefix, every figure over player-games won or lost. Most played first, or
  * with sort=winrate rows from 10 games up first, by win share. Ties by win share, then games, then code.
  */
-async function level(request: APIRequestContext, filters: Record<string, string[]>, prefix: string[], sort = "popular"): Promise<Level> {
+async function level(request: APIRequestContext, filters: Record<string, (string | number)[]>, prefix: string[], sort = "popular"): Promise<Level> {
   const next = `opener_${prefix.length + 1}`;
   filters = { ...filters, ...DECIDED };
   prefix.forEach((c, i) => (filters = { ...filters, [`opener_${i + 1}`]: [c] }));
@@ -41,23 +43,23 @@ const expected = (lvl: Level, name: Record<string, string>) =>
 
 test.describe("openers tree", () => {
   test("Night Elf by default: the first level's games, record and length equal POST /query's", async ({ page, request }) => {
-    const root = await level(request, { race: ["NE"] }, []);
+    const root = await level(request, NE, []);
     expect(root.length).toBeGreaterThan(0);
     const name = await names(request, root.map((r) => r.code));
     await page.goto("/openers");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Openers");
-    await expect(page.getByRole("combobox", { name: "Race", exact: true })).toHaveValue("NE");
+    await expect(page.getByRole("button", { name: "Race: Night Elf" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Openers" })).toHaveAttribute("aria-current", "page");
     expect(await cells(page)).toEqual(expected(root, name));
     // one unit per row: its games are its wins plus its losses
     for (const r of root) expect(r.games).toBe(r.wins + r.losses);
-    const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { race: ["NE"], ...DECIDED } } })).json()).rows[0].games;
+    const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { ...NE, ...DECIDED } } })).json()).rows[0].games;
     await expect(page.locator(".bar .chip")).toHaveText(`${total} games won or lost`);
   });
 
   // 2.0 is the goldens' patch (build 6117), so it always has games
   test("the patch filter sets every figure, and a games link keeps it", async ({ page, request }) => {
-    const filters = { race: ["NE"], patch: ["2.0"] };
+    const filters = { ...NE, patch: ["2.0"] };
     const root = await level(request, filters, []);
     expect(root.length).toBeGreaterThan(0);
     const name = await names(request, root.map((r) => r.code));
@@ -80,7 +82,7 @@ test.describe("openers tree", () => {
   });
 
   test("best win rate puts rows from 10 games up first and keeps the sort while a row opens", async ({ page, request }) => {
-    const root = await level(request, { race: ["NE"] }, [], "winrate");
+    const root = await level(request, NE, [], "winrate");
     expect(root.some((r) => r.games < 10)).toBeTruthy();
     const name = await names(request, root.map((r) => r.code));
     await page.goto("/openers");
@@ -120,9 +122,9 @@ test.describe("openers tree", () => {
   });
 
   test("expanding a row shows the next level under it and puts the path in the URL", async ({ page, request }) => {
-    const root = await level(request, { race: ["NE"] }, []);
+    const root = await level(request, NE, []);
     const top = root[0].code;
-    const kids = await level(request, { race: ["NE"] }, [top]);
+    const kids = await level(request, NE, [top]);
     expect(kids.length).toBeGreaterThan(0);
     const name = await names(request, [...root, ...kids].map((r) => r.code));
     await page.goto("/openers");
@@ -147,7 +149,7 @@ test.describe("openers tree", () => {
   });
 
   test("a row's games link lands on the replay list of that opener, the page's filters kept", async ({ page, request }) => {
-    const filters = { race: ["NE"], opponent_race: ["OC"] };
+    const filters = { ...NE, opponent_race: ["OC"], opponent_random: [0] };
     const root = await level(request, filters, []);
     const kids = await level(request, filters, [root[0].code]);
     const name = await names(request, kids.map((r) => r.code));

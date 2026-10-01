@@ -4,6 +4,7 @@
    the --v-theme-* values for light and dark. */
 @theme inline {
   --color-surface: rgb(var(--v-theme-surface));
+  --color-surface-bright: rgb(var(--v-theme-surface-bright));
   --color-surface-light: rgb(var(--v-theme-surface-light));
   --color-surface-variant: rgb(var(--v-theme-surface-variant));
   --color-on-surface-variant: rgb(var(--v-theme-on-surface-variant));
@@ -84,6 +85,8 @@
   /* A card's title bar. */
   .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-height: 52px; padding: 10px 16px; }
   .bar h2 { font-size: 1.25rem; line-height: 1.3; color: rgb(var(--v-theme-primary)); }
+  /* A card that lets a menu out (overflow-visible) still rounds its title bar. */
+  .card > .bar:first-child { border-radius: calc(0.35rem - 1px) calc(0.35rem - 1px) 0 0; }
 
   .chip {
     display: inline-flex; align-items: center; gap: 0.25rem; border-radius: 9999px;
@@ -147,6 +150,36 @@
   }
   .field:focus-visible { outline-offset: 0; }
   .field:disabled { background: rgb(var(--v-theme-surface-light)); color: var(--color-muted); cursor: not-allowed; }
+
+  /* A popover: a raised surface over the page, such as a menu or a picker. */
+  .pop {
+    background: rgb(var(--v-theme-surface-bright)); border: 1px solid var(--color-border); border-radius: 0.35rem;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18); padding: 6px;
+  }
+
+  /* One row of a menu or a picker: icon, name, and a muted count at the end. */
+  .opt {
+    display: flex; width: 100%; align-items: center; gap: 10px; min-height: 36px; padding: 4px 8px;
+    border-radius: 0.3rem; text-align: left; font-size: 0.9375rem; cursor: pointer;
+  }
+  .opt:hover, .opt:focus-visible { background: rgba(var(--v-theme-on-surface), 0.06); }
+  .opt:focus-visible { outline-offset: -2px; }
+  .opt[aria-checked="true"], .opt[aria-current="true"] { background: rgb(var(--v-theme-surface-light)); font-weight: 700; }
+  .opt-count { margin-left: auto; padding-left: 12px; font-size: 0.8125rem; font-weight: 400; color: var(--color-muted); }
+  .opt-count.zero, .opt.zero .opt-name { color: rgba(var(--v-theme-on-surface), 0.5); }
+
+  /* The race menu under its button; the Random submenu beside its row, or under it on a phone. */
+  .race-menu {
+    position: absolute; z-index: 30; top: calc(100% + 4px); left: 0;
+    min-width: 100%; width: max-content; max-width: calc(100vw - 32px);
+  }
+  .race-sub { position: absolute; z-index: 31; top: -7px; left: calc(100% + 10px); width: max-content; }
+  @media (max-width: 639px) {
+    .race-sub { position: static; width: auto; margin: 2px 0 4px 18px; padding: 0; border: 0; box-shadow: none; }
+  }
+
+  /* A native checkbox in the gold of a chosen control. */
+  .check { width: 16px; height: 16px; accent-color: rgb(var(--v-theme-primary)); cursor: pointer; }
 
   /* A data table: hairline rows, a quiet hover, numbers right-aligned by the cell. */
   .table { width: 100%; text-align: left; }

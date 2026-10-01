@@ -1,15 +1,9 @@
 // Marks, fields and formats shared by the server pages and the client components.
-import type { ComponentProps, ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { GameEvent, Objects } from "./api";
+import { RACES } from "./races";
 
-/** Race code -> name, race-icons/ file and matchup letter. */
-export const RACES: Record<string, [string, string, string]> = {
-  HU: ["Human", "HUMAN", "H"],
-  OC: ["Orc", "ORC", "O"],
-  NE: ["Night Elf", "NIGHT_ELF", "N"],
-  UD: ["Undead", "UNDEAD", "U"],
-  RANDOM: ["Random", "RANDOM", "R"],
-};
+export { RACES };
 
 /** The matchup in the order the players are shown: a race letter each, teams joined by "v". */
 export function matchup(players: { race: string; team_id: number }[]) {
@@ -37,20 +31,6 @@ export function Field({ label, children, className = "" }: { label: string; chil
       <span className="text-muted">{label}</span>
       {children}
     </label>
-  );
-}
-
-/** The five races; "Any" first unless the race is required. */
-export function RaceSelect({ any = true, ...props }: ComponentProps<"select"> & { any?: boolean }) {
-  return (
-    <select className="field" {...props}>
-      {any && <option value="">Any</option>}
-      {Object.entries(RACES).map(([id, [label]]) => (
-        <option key={id} value={id}>
-          {label}
-        </option>
-      ))}
-    </select>
   );
 }
 

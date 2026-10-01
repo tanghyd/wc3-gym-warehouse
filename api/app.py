@@ -18,6 +18,7 @@ from compile import (
     ROWS_SQL,
     BadRequest,
     Model,
+    race_value,
     QueryRequest,
     SearchRequest,
     array,
@@ -131,10 +132,10 @@ def search(req: SearchRequest) -> dict[str, Any]:
                 "focus_player_id": focus[r["replay_id"]],
                 "players": [
                     {
-                        "player_id": pid, "name": name, "race": race, "team_id": team, "won": _won(team, r["winning_team_id"]),
+                        "player_id": pid, "name": name, "race": race_value(race, random), "team_id": team, "won": _won(team, r["winning_team_id"]),
                         "heroes": [{"code": code, "final_level": level} for _slot, code, level in heroes],
                     }
-                    for pid, name, race, team, heroes in r["players"]
+                    for pid, name, race, random, team, heroes in r["players"]
                 ],
             })
     return {"replays": rows, "sql": sql, "params": params}
@@ -152,7 +153,7 @@ def replay(replay_id: str) -> dict[str, Any]:
     h = header[0]
     players = [
         {
-            "player_id": r["player_id"], "name": r["name"], "race": r["race"], "team_id": r["team_id"],
+            "player_id": r["player_id"], "name": r["name"], "race": race_value(r["race"], r["random"]), "team_id": r["team_id"],
             "won": _won(r["team_id"], h["winning_team_id"]), "apm": r["apm"], "apm_per_minute": r["apm_per_minute"],
             "heroes": [{"slot": slot, "code": code, "final_level": level} for slot, code, level in r["heroes"]],
         }

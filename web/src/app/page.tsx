@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { type Filters, pickerValues, searchReplays, stepObjects } from "@/lib/api";
+import { type Filters, pickerValues, raceCounts, searchReplays, stepObjects } from "@/lib/api";
+import { parseRaces, raceFilters } from "@/lib/races";
 import { decodeSteps, KINDS } from "@/lib/steps";
 import { Field, matchup, mss, ObjIcon, PlayerName, record, Result } from "@/lib/ui";
 import { PlayerSlot } from "./PlayerSlot";
@@ -11,7 +12,9 @@ const LIMIT = 100; // games a search lists
 export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
   const value = (k: string) => (typeof sp[k] === "string" ? sp[k] : "");
-  const [objects, maps, patches, players] = await Promise.all([stepObjects(), pickerValues("map"), pickerValues("patch"), pickerValues("player")]);
+  const [objects, maps, patches, players, counts] = await Promise.all([stepObjects(), pickerValues("map"), pickerValues("patch"), pickerValues("player"), raceCounts({})]);
+  // race and opponent_race hold race values, such as NE or NE,RN
+  const [race, oppRace] = [parseRaces(value("race")), parseRaces(value("opponent_race"))];
   const byCode = Object.fromEntries(objects.map((o) => [o.code, o]));
   // A step's code gives its kind; a code that is no step object drops out.
   const steps = (k: string) => decodeSteps(value(k)).filter((s) => byCode[s.code]);
@@ -29,7 +32,8 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
 
   // Player 1 is the focus: the row whose result the table reports. Map, patch, length and opener ride on him.
   const filters: Filters = {};
-  for (const k of ["race", "opponent_race", "map", "patch", "player"]) if (value(k)) filters[k] = [value(k)];
+  Object.assign(filters, raceFilters(race), raceFilters(oppRace, "opponent_race", "opponent_random"));
+  for (const k of ["map", "patch", "player"]) if (value(k)) filters[k] = [value(k)];
   prefix.forEach((c, i) => (filters[OPENERS[i]] = [c]));
   if (value("opp_player")) filters.opponent = [value("opp_player")];
   if (RESULTS[value("result")]) filters.result = [RESULTS[value("result")]];
@@ -38,7 +42,8 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   if (min !== undefined || max !== undefined) filters.duration_ms = { gte: min, lte: max };
   // Player 2 is another player of the game: the focus's opponent, so each side names the other.
   const p2: Filters = {};
-  for (const [k, from] of [["race", "opponent_race"], ["opponent_race", "race"], ["player", "opp_player"], ["opponent", "player"]])
+  Object.assign(p2, raceFilters(oppRace), raceFilters(race, "opponent_race", "opponent_random"));
+  for (const [k, from] of [["player", "opp_player"], ["opponent", "player"]])
     if (value(from)) p2[k] = [value(from)];
   if (RESULTS[value("opp_result")]) p2.result = [RESULTS[value("opp_result")]];
   const p2Steps = apiSteps("opp_steps");
@@ -112,8 +117,8 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
           )}
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-          <PlayerSlot n={1} race={value("race")} name={value("player")} outcome={value("result")} steps={steps("steps")} objects={objects} />
-          <PlayerSlot n={2} race={value("opponent_race")} name={value("opp_player")} outcome={value("opp_result")} steps={steps("opp_steps")} objects={objects} />
+          <PlayerSlot n={1} race={race} counts={counts} name={value("player")} outcome={value("result")} steps={steps("steps")} objects={objects} />
+          <PlayerSlot n={2} race={oppRace} counts={counts} name={value("opp_player")} outcome={value("opp_result")} steps={steps("opp_steps")} objects={objects} />
         </div>
         <div className="flex items-center justify-end gap-4">
           {set && <Link href="/">Clear</Link>}

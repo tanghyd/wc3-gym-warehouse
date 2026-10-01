@@ -1,7 +1,9 @@
 "use client";
 import { useId, useMemo, useRef, useState } from "react";
 import { encodeSteps, fits, KINDS, type Kind, LETTERS, MAX_WITHIN, parseMss, type Step, type StepObject } from "@/lib/steps";
-import { Field, mss, ObjIcon, RaceIcon, RaceSelect } from "@/lib/ui";
+import { racePair } from "@/lib/races";
+import { Field, mss, ObjIcon, RaceIcon } from "@/lib/ui";
+import { RaceMenu } from "./RaceMenu";
 
 /** A step being edited: the field text as typed. */
 type Draft = { key: number; kind: Kind; code: string; within: string; from: string; to: string };
@@ -106,12 +108,14 @@ function Picker(props: { label: string; kind: Kind; race: string; objects: StepO
 }
 
 /** One player of the search: race, name, outcome and an ordered build, written to the form's fields. */
-export function PlayerSlot(props: { n: 1 | 2; race: string; name: string; outcome: string; steps: Step[]; objects: StepObject[] }) {
+export function PlayerSlot(props: { n: 1 | 2; race: string[]; name: string; outcome: string; steps: Step[]; objects: StepObject[]; counts: Record<string, number> }) {
   const { n, objects } = props;
   const f = FIELDS[n];
   const id = useId();
   const byCode = useMemo(() => Object.fromEntries(objects.map((o) => [o.code, o])), [objects]);
-  const [race, setRace] = useState(props.race);
+  const [races, setRaces] = useState(props.race);
+  // the played race the pickers list objects of; "" for any race or Random with no played race
+  const race = races.length ? racePair(races[0])[0] : "";
   const [steps, setSteps] = useState<Draft[]>(() =>
     props.steps.map((s, key) => ({ key, kind: byCode[s.code]?.kind ?? "building", code: s.code, within: s.within === null ? "" : String(s.within), from: toText(s.from), to: toText(s.to) })),
   );
@@ -143,16 +147,15 @@ export function PlayerSlot(props: { n: 1 | 2; race: string; name: string; outcom
   const encoded = encodeSteps(steps.filter((s) => s.code).map(toStep));
 
   return (
-    <section aria-labelledby={`${id}-title`} className="card">
+    <section aria-labelledby={`${id}-title`} className="card overflow-visible">
       <div className="bar">
         <h2 id={`${id}-title`}>Player {n}</h2>
-        <RaceIcon race={race} />
+        <RaceIcon race={races[0] ?? ""} />
       </div>
       <div className="flex flex-col gap-4 p-4">
         <div className="flex flex-wrap gap-3">
-          <Field label={f.race[1]}>
-            <RaceSelect name={f.race[0]} value={race} onChange={(e) => setRace(e.target.value)} />
-          </Field>
+          <RaceMenu label={f.race[1]} value={races} onChange={setRaces} counts={props.counts} />
+          <input type="hidden" name={races.length ? f.race[0] : undefined} value={races.join(",")} />
           <Field label={f.player[1]}>
             <input name={f.player[0]} list="players" defaultValue={props.name} className="field" autoComplete="off" />
           </Field>

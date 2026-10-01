@@ -76,6 +76,17 @@ class BadRequest(ValueError):
     pass
 
 
+RANDOM_OF = {"HU": "RH", "OC": "RO", "NE": "RN", "UD": "RU"}
+
+
+def race_value(race: str, random: int) -> str:
+    """A played race and its random flag as one race value: (NE, 0) is NE, (NE, 1) is RN, and a
+    Random player with no played race is R."""
+    if race not in RANDOM_OF:
+        return "R"
+    return RANDOM_OF[race] if random else race
+
+
 class Params:
     """Collects query parameters, so no request value is ever spliced into SQL."""
 
@@ -217,7 +228,7 @@ def compile_search(req: SearchRequest, model: Model) -> tuple[str, dict[str, str
 ROWS_SQL = """SELECT
     r.replay_id AS replay_id, r.map AS map, r.matchup AS matchup, r.duration_ms AS duration_ms,
     r.winning_team_id AS winning_team_id,
-    arraySort(groupArray((rp.player_id, rp.name, rp.race, rp.team_id, h.heroes))) AS players
+    arraySort(groupArray((rp.player_id, rp.name, rp.race, rp.random, rp.team_id, h.heroes))) AS players
 FROM w3g.replays AS r
 INNER JOIN w3g.replay_players AS rp ON rp.replay_id = r.replay_id
 -- each player's heroes in pick order, [] for a player with none
@@ -235,7 +246,7 @@ ORDER BY replay_id"""
 REPLAY_SQL = {
     "header": """SELECT replay_id, map, matchup, duration_ms, winning_team_id, version, patch
 FROM w3g.replays WHERE replay_id = {id:String}""",
-    "players": """SELECT p.player_id AS player_id, p.name AS name, p.race AS race, p.team_id AS team_id,
+    "players": """SELECT p.player_id AS player_id, p.name AS name, p.race AS race, p.random AS random, p.team_id AS team_id,
        p.apm AS apm, p.apm_timed AS apm_per_minute, h.heroes AS heroes
 FROM (SELECT * FROM w3g.replay_players WHERE replay_id = {id:String}) AS p
 LEFT JOIN (

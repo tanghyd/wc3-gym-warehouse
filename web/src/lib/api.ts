@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cache } from "react";
+import { raceValue } from "./races";
 import { KINDS, letterOf, type StepObject } from "./steps";
 
 const API_URL = process.env.API_URL ?? "http://api:8000";
@@ -43,7 +44,7 @@ async function api<T>(path: string, body?: object): Promise<T | null> {
 export const getReplay = cache((id: string) => api<Replay>(`/replays/${encodeURIComponent(id)}`));
 
 /** A dimension's allowed values, or a numeric range. */
-export type Filters = Record<string, string[] | { gte?: number; lte?: number }>;
+export type Filters = Record<string, (string | number)[] | { gte?: number; lte?: number }>;
 export type ApiStep = { type: string; code: string; within_prev_s: number | null; from_min: number | null; to_min: number | null };
 
 type Search = { replays: ReplayRow[]; sql: string; params: Record<string, string>; refused?: string };
@@ -105,4 +106,12 @@ export async function getObjects(codes: string[]): Promise<Objects> {
   const rows = [...res].sort((a, b) => Number(a.kind === "unknown") - Number(b.kind === "unknown"));
   for (const r of rows) if (!names.has(r.code)) names.set(r.code, r.name);
   return Object.fromEntries(codes.map((c) => [c, { name: names.get(c) || undefined, icon: iconOf(c) }]));
+}
+
+/** Player-games per race value (HU, RN, R, ...) under the filters, for the counts of a race menu. */
+export async function raceCounts(filters: Filters): Promise<Record<string, number>> {
+  const rows = await query<{ race: string; random: number; games: number }>({ dimensions: ["race", "random"], measures: ["games"], filters, limit: 100 });
+  const counts: Record<string, number> = {};
+  for (const r of rows) counts[raceValue(r.race, r.random)] = (counts[raceValue(r.race, r.random)] ?? 0) + r.games;
+  return counts;
 }

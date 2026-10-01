@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { type Filters, getObjects, pickerValues, query } from "@/lib/api";
-import { Field, mss, ObjIcon, RaceIcon, RACES, RaceSelect, record } from "@/lib/ui";
+import { type Filters, getObjects, pickerValues, query, raceCounts } from "@/lib/api";
+import { parseRaces, raceFilters, raceLabel } from "@/lib/races";
+import { Field, mss, ObjIcon, RaceIcon, record } from "@/lib/ui";
+import { RaceField } from "../RaceMenu";
 
 export const metadata: Metadata = { title: "Openers" };
 
@@ -54,11 +56,19 @@ function Chevron({ open }: { open: boolean }) {
 export default async function OpenersPage({ searchParams }: PageProps<"/openers">) {
   const sp = await searchParams;
   const value = (k: string) => (typeof sp[k] === "string" ? sp[k] : "");
-  const race = RACES[value("race")] ? value("race") : "NE";
+  // race and opponent_race hold race values, such as NE or NE,RN; Random Night Elf (RN) opens Night Elf buildings
+  const race = parseRaces(value("race")).length ? parseRaces(value("race")) : ["NE"];
+  const opp = parseRaces(value("opponent_race"));
   const sort = value("sort") === "winrate" ? "winrate" : "popular";
-  const pairs: [string, string][] = [["race", race], ...["opponent_race", "map", "patch", "player"].filter(value).map((k): [string, string] => [k, value(k)])];
+  const scope: [string, string][] = ["map", "patch", "player"].filter(value).map((k): [string, string] => [k, value(k)]);
+  const pairs: [string, string][] = [["race", race.join(",")], ...(opp.length ? [["opponent_race", opp.join(",")] as [string, string]] : []), ...scope];
   // only games with a known winner, so games equal wins plus losses
-  const base: Filters = { ...Object.fromEntries(pairs.map(([k, v]) => [k, [v]])), result: ["win", "loss"] };
+  const base: Filters = {
+    ...raceFilters(race),
+    ...raceFilters(opp, "opponent_race", "opponent_random"),
+    ...Object.fromEntries(scope.map(([k, v]) => [k, [v]])),
+    result: ["win", "loss"],
+  };
 
   // ?open= once per expanded row, its path of codes joined with "."; a path loads when every row above it is open
   const key = (p: string[]) => p.join(".");
@@ -66,8 +76,10 @@ export default async function OpenersPage({ searchParams }: PageProps<"/openers"
   const openKeys = new Set(open.map(key));
   const paths = [[], ...open.filter((p) => p.slice(0, -1).every((_, i) => openKeys.has(key(p.slice(0, i + 1)))))];
   const unique = [...new Map(paths.map((p) => [key(p), p])).values()];
-  const [[{ games: total }], maps, patches, players] = await Promise.all([
+  const [[{ games: total }], counts, maps, patches, players] = await Promise.all([
     query<{ games: number }>({ measures: ["games"], filters: base }),
+    // the race menus count player-games on the map and patch
+    raceCounts(Object.fromEntries(scope.filter(([k]) => k !== "player").map(([k, v]) => [k, [v]]))),
     pickerValues("map"),
     pickerValues("patch"),
     pickerValues("player"),
@@ -100,13 +112,9 @@ export default async function OpenersPage({ searchParams }: PageProps<"/openers"
     <main className="wrap py-6">
       <h1>Openers</h1>
 
-      <form key={JSON.stringify(sp)} className="card mt-4 flex flex-wrap items-end gap-3 p-4">
-        <Field label="Race">
-          <RaceSelect name="race" defaultValue={race} any={false} />
-        </Field>
-        <Field label="Opponent race">
-          <RaceSelect name="opponent_race" defaultValue={value("opponent_race")} />
-        </Field>
+      <form key={JSON.stringify(sp)} className="card mt-4 flex flex-wrap items-end gap-3 overflow-visible p-4">
+        <RaceField label="Race" name="race" value={race} counts={counts} any={false} />
+        <RaceField label="Opponent race" name="opponent_race" value={opp} counts={counts} />
         <Field label="Map">
           <select name="map" defaultValue={value("map")} className="field">
             <option value="">Any</option>
@@ -147,14 +155,14 @@ export default async function OpenersPage({ searchParams }: PageProps<"/openers"
           <button type="submit" className="btn btn-gold">
             Show openers
           </button>
-          {pairs.length > 1 && <Link href={`/openers?race=${race}`}>Clear</Link>}
+          {pairs.length > 1 && <Link href={`/openers?race=${race.join(",")}`}>Clear</Link>}
         </div>
       </form>
 
       <section className="card mt-4">
         <div className="bar">
-          <RaceIcon race={race} />
-          <h2>{RACES[race][0]}</h2>
+          <RaceIcon race={race[0]} />
+          <h2>{raceLabel(race)}</h2>
           <span className="chip bg-primary text-on-primary">{total} games won or lost</span>
         </div>
         {rows.length === 0 ? (
