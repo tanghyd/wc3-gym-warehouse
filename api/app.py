@@ -208,6 +208,7 @@ def replay(replay_id: str) -> dict[str, Any]:
         "patch": h["patch"], "download_url": None,
         "players": players,
         "events": run(REPLAY_SQL["events"], p),
+        "repeats": run(REPLAY_SQL["repeats"], p),
         "chat": run(REPLAY_SQL["chat"], p),
     }
 

@@ -496,6 +496,10 @@ ORDER BY p.player_id""",
     GROUP BY player_id, hero_id
 )
 ORDER BY time_ms, player_id, seq""",
+    # The repeat clicks the timeline leaves out. A search counts them, so step marks read them too.
+    "repeats": """SELECT player_id, time_ms, kind AS event_type, object_code AS code, CAST(NULL, 'Nullable(String)') AS hero_code
+FROM w3g.player_order_events WHERE replay_id = {id:String} AND kind != 'unknown' AND is_repeat = 1
+ORDER BY time_ms, player_id, seq""",
     # The page is public, so private chat stays out.
     "chat": """SELECT time_ms, player_id, mode, message FROM w3g.chat
 WHERE replay_id = {id:String} AND mode = 'All' ORDER BY time_ms, seq""",

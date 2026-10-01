@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { API, q, search } from "./helpers";
+import { API, q, search, type Step } from "./helpers";
 
 // A game opened from a search marks the orders each step matched, on the chart and in the list.
 // The spec's example: Demon Hunter first and 5 Archers by 6:00, against a Blademaster-first Orc.
@@ -49,6 +49,27 @@ test.describe("step marks", () => {
     await page.getByRole("link", { name: "Back to the search" }).click();
     await expect(page).toHaveURL(/\/\?race=NE&steps=/);
   });
+
+  // Every game a search lists holds its steps on its page, so the expected marks come from the search.
+  const CASES: { steps: string; body: Step[] }[] = [
+    // the first Archer mostly comes too early for the Ancient of Wind
+    { steps: "trained:earc,~30built:eaow", body: [{ kind: "unit", codes: ["earc"] }, { kind: "building", codes: ["eaow"], link: "then", within_s: 30 }] },
+    // the second order is mostly a repeat click
+    { steps: "built:etoa*2", body: [{ kind: "building", codes: ["etoa"], count: 2 }] },
+  ];
+  for (const c of CASES)
+    test(`every game listed for ${c.steps} is found on its page`, async ({ page, request }) => {
+      test.setTimeout(120_000); // one page per listed game
+      const answer = await search(request, { player: { race: ["NE"], groups: [{ steps: c.body }] } });
+      expect(answer.replays.length).toBeGreaterThan(0);
+      for (const row of answer.replays) {
+        await page.goto(`/replays/${row.replay_id}?${new URLSearchParams({ q: new URLSearchParams({ race: "NE", steps: c.steps }).toString(), side: row.player.name })}`);
+        await expect(page.getByRole("list", { name: "Steps of the player" })).toBeVisible();
+        await expect(page.getByText("Not found in this game"), row.replay_id).toHaveCount(0);
+        const lanes = page.getByRole("group", { name: `Orders of ${row.player.name}` });
+        for (let n = 1; n <= c.body.length; n++) await expect(lanes.getByRole("img", { name: new RegExp(`Step ${n} of the search$`) }), row.replay_id).not.toHaveCount(0);
+      }
+    });
 
   test("a game opened without steps has no marks", async ({ page, request }) => {
     const answer = await search(request, { player: { race: ["NE"] } });

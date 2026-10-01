@@ -1146,6 +1146,22 @@
           "hero_code": null
         }
       ],
+      "repeats": [
+        {
+          "player_id": 1,
+          "time_ms": 164642,
+          "event_type": "building",
+          "code": "etoa",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 833754,
+          "event_type": "upgrade",
+          "code": "Resw",
+          "hero_code": null
+        }
+      ],
       "chat": [
         {
           "time_ms": 9573,

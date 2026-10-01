@@ -578,6 +578,7 @@ Hero rows come from `player_heroes`. APM rows come from `replay_players.apm`: 89
 | `events[].event_type` | enum | The six step kinds, plus `hero_retrained` (timeline only, never a search step; queries.md 3.8, C9). `unknown` rows are left out. |
 | `events[].code` | string | Object code; the name comes from `/mappings`. On `hero_retrained`, the hero's code. |
 | `events[].hero_code` | string or null | On `hero_skill` and `hero_retrained`: the hero (`hero_ability_events.hero_id`). The UI nests skills under it. Null otherwise. |
+| `repeats[]` | array | The `is_repeat = 1` orders, in the `events[]` shape. A search counts them, so the page's step marks match on `events[]` and `repeats[]` together. |
 | `chat[]` | array | `{time_ms, player_id, mode, message}`, sorted by `time_ms`. Only `mode = 'All'`. |
 
 - Decided: hide private chat (`AND mode = 'All'`, queries.md 3.8). Why: the route is public and cached 1 hour. (F): 5 lines, 3 `All`, 2 `Private`.

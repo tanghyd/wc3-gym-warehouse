@@ -61,11 +61,15 @@ export default async function ReplayPage({ params, searchParams }: PageProps<"/r
   const players = [...r.players].sort((a, b) => a.player_id - b.player_id);
   const objects = await getObjects([...new Set([...r.events.map((e) => e.code), ...players.flatMap((p) => p.heroes.map((h) => h.code))])]);
   const who = new Map(players.map((p) => [p.player_id, p]));
-  const marks = typeof q === "string" && typeof side === "string" ? await searchMarks(q, side, players, r.events) : [];
-  // per player, the step numbers of each matched order, keyed "event_type/code/time_ms"
+  // a search counts repeat clicks, so the marks match on them too
+  const orders = [...r.events, ...r.repeats].sort((a, b) => a.time_ms - b.time_ms);
+  const marks = typeof q === "string" && typeof side === "string" ? await searchMarks(q, side, players, orders) : [];
+  // per player, the step numbers of each matched order, keyed "event_type/code/time_ms"; a repeat
+  // click keys on the order it repeats, the last one the timeline shows at or before it
+  const shown = (id: number, h: Hit) => r.events.findLast((e) => e.player_id === id && e.event_type === h.event_type && e.code === h.code && e.time_ms <= h.time_ms)?.time_ms ?? h.time_ms;
   const hits: Record<number, Record<string, number[]>> = {};
   for (const m of marks)
-    for (const s of m.steps) for (const h of s.hits) ((hits[m.player.player_id] ??= {})[`${h.event_type}/${h.code}/${h.time_ms}`] ??= []).push(h.n);
+    for (const s of m.steps) for (const h of s.hits) ((hits[m.player.player_id] ??= {})[`${h.event_type}/${h.code}/${shown(m.player.player_id, h)}`] ??= []).push(h.n);
 
   return (
     <>

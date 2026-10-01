@@ -23,7 +23,10 @@ const fits = (e: GameEvent, s: ApiStep) =>
   TYPES[s.kind].includes(e.event_type) && s.codes.includes(e.code) && (s.from_s == null || e.time_ms >= s.from_s * 1000) && (s.to_s == null || e.time_ms <= s.to_s * 1000);
 const hit = (n: number, e: GameEvent): Hit => ({ n, event_type: e.event_type, code: e.code, time_ms: e.time_ms });
 
-/** The orders of one chain, steps numbered from `first`: the earliest that hold it in order, or null. */
+/**
+ * The orders of one chain, steps numbered from `first`, or null. Like sequenceMatch it tries every
+ * pairing: the earliest orders that hold the steps in order, each "then within" step inside its gap.
+ */
 function chain(steps: ApiStep[], first: number, events: GameEvent[], heroes: string[]): Hit[] | null {
   for (const s of steps) if (s.nth && !s.codes.includes(heroes[s.nth - 1])) return null;
   const s = steps[0];
@@ -36,18 +39,25 @@ function chain(steps: ApiStep[], first: number, events: GameEvent[], heroes: str
     const fit = events.filter((e) => fits(e, s));
     return fit.length >= s.count ? fit.slice(0, s.count).map((e) => hit(first, e)) : null;
   }
-  // in order: each step's orders after the order before, the first within its gap
-  const out: Hit[] = [];
-  let at = -1;
-  for (const [k, st] of steps.entries())
-    for (let c = 0; c < st.count; c++) {
-      const i = events.findIndex((e, x) => x > at && fits(e, st));
-      if (i < 0) return null;
-      if (c === 0 && k > 0 && st.within_s != null && events[i].time_ms - events[at].time_ms > st.within_s * 1000) return null;
-      out.push(hit(first + k, events[i]));
-      at = i;
+  // one slot per counted order: its step, and the most ms after the order before when it opens a "then within" step
+  const slots = steps.flatMap((st, k) => Array.from({ length: st.count }, (_, c) => ({ st, k, gap: c === 0 && k > 0 && st.within_s != null ? st.within_s * 1000 : null })));
+  const fit = events.filter((e) => steps.some((st) => fits(e, st)));
+  const dead = new Set<string>(); // "slot/order before" with no way on from there
+  // the fit indexes of slots j onward, each after the order at index `at`
+  const pick = (j: number, at: number): number[] | null => {
+    if (j === slots.length) return [];
+    if (dead.has(`${j}/${at}`)) return null;
+    const { st, gap } = slots[j];
+    for (let i = at + 1; i < fit.length; i++) {
+      if (gap != null && fit[i].time_ms - fit[at].time_ms > gap) break;
+      if (!fits(fit[i], st)) continue;
+      const rest = pick(j + 1, i);
+      if (rest) return [i, ...rest];
     }
-  return out;
+    dead.add(`${j}/${at}`);
+    return null;
+  };
+  return pick(0, -1)?.map((i, j) => hit(first + slots[j].k, fit[i])) ?? null;
 }
 
 /** The orders of one group's steps, or null when the group does not hold. */
