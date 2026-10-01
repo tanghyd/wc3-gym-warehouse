@@ -5,3 +5,4 @@ target/
 __pycache__/
 .venv/
 data/
+dbt/logs/

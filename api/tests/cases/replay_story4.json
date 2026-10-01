@@ -1,0 +1,1188 @@
+{
+  "route": "/replays/dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
+  "response": {
+    "status": 200,
+    "body": {
+      "replay_id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
+      "map": "Concealed Hill",
+      "matchup": "NvO",
+      "duration_ms": 937219,
+      "winning_team_id": 0,
+      "version": "2.00",
+      "gnl": {
+        "series_id": 9003,
+        "game_no": 1
+      },
+      "download_url": null,
+      "players": [
+        {
+          "player_id": 1,
+          "name": "thanks#11187",
+          "race": "NE",
+          "team_id": 0,
+          "won": true,
+          "apm": 140,
+          "apm_per_minute": [
+            110,
+            96,
+            162,
+            130,
+            149,
+            136,
+            121,
+            135,
+            152,
+            137,
+            149,
+            157,
+            160,
+            151,
+            147,
+            102
+          ],
+          "heroes": [
+            {
+              "slot": 0,
+              "code": "Edem",
+              "final_level": 4
+            },
+            {
+              "slot": 1,
+              "code": "Ekee",
+              "final_level": 4
+            }
+          ]
+        },
+        {
+          "player_id": 2,
+          "name": "Okeanos#22605",
+          "race": "OC",
+          "team_id": 1,
+          "won": false,
+          "apm": 89,
+          "apm_per_minute": [
+            54,
+            36,
+            72,
+            84,
+            98,
+            100,
+            88,
+            74,
+            114,
+            105,
+            107,
+            100,
+            65,
+            100,
+            142,
+            55
+          ],
+          "heroes": [
+            {
+              "slot": 0,
+              "code": "Ofar",
+              "final_level": 3
+            },
+            {
+              "slot": 1,
+              "code": "Oshd",
+              "final_level": 2
+            },
+            {
+              "slot": 2,
+              "code": "Otch",
+              "final_level": 1
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "player_id": 2,
+          "time_ms": 2105,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 2601,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 6722,
+          "event_type": "building",
+          "code": "oalt",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 8025,
+          "event_type": "building",
+          "code": "eate",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 8584,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 16198,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 18264,
+          "event_type": "building",
+          "code": "emow",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 19034,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 22557,
+          "event_type": "building",
+          "code": "otrb",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 27158,
+          "event_type": "building",
+          "code": "eaom",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 34996,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 35121,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 51953,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 53588,
+          "event_type": "building",
+          "code": "ofor",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 58808,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 65652,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 71711,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 74187,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 76261,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 91458,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 92385,
+          "event_type": "building",
+          "code": "obar",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 95077,
+          "event_type": "unit",
+          "code": "earc",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 103084,
+          "event_type": "building",
+          "code": "emow",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 105219,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 105867,
+          "event_type": "unit",
+          "code": "earc",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 108246,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 110823,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 120827,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 124147,
+          "event_type": "building",
+          "code": "otrb",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 137034,
+          "event_type": "hero_trained",
+          "code": "Ofar",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 137034,
+          "event_type": "hero_skill",
+          "code": "AOsf",
+          "hero_code": "Ofar"
+        },
+        {
+          "player_id": 1,
+          "time_ms": 137312,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 142254,
+          "event_type": "hero_trained",
+          "code": "Edem",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 142254,
+          "event_type": "hero_skill",
+          "code": "AEim",
+          "hero_code": "Edem"
+        },
+        {
+          "player_id": 1,
+          "time_ms": 148378,
+          "event_type": "building",
+          "code": "eden",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 148997,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 158821,
+          "event_type": "unit",
+          "code": "ohun",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 163093,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 164487,
+          "event_type": "building",
+          "code": "etoa",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 164642,
+          "event_type": "building",
+          "code": "etoa",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 179442,
+          "event_type": "unit",
+          "code": "ohun",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 186007,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 189946,
+          "event_type": "building",
+          "code": "emow",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 203024,
+          "event_type": "unit",
+          "code": "earc",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 204291,
+          "event_type": "unit",
+          "code": "ohun",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 208612,
+          "event_type": "item",
+          "code": "cnob",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 215492,
+          "event_type": "building",
+          "code": "ostr",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 220572,
+          "event_type": "item",
+          "code": "bspd",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 220758,
+          "event_type": "item",
+          "code": "bspd",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 246470,
+          "event_type": "hero_skill",
+          "code": "AEmb",
+          "hero_code": "Edem"
+        },
+        {
+          "player_id": 2,
+          "time_ms": 257712,
+          "event_type": "unit",
+          "code": "ohun",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 257960,
+          "event_type": "unit",
+          "code": "ohun",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 262699,
+          "event_type": "unit",
+          "code": "earc",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 271658,
+          "event_type": "building",
+          "code": "edob",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 293471,
+          "event_type": "building",
+          "code": "ovln",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 293751,
+          "event_type": "unit",
+          "code": "earc",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 320224,
+          "event_type": "unit",
+          "code": "earc",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 325084,
+          "event_type": "building",
+          "code": "eden",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 327343,
+          "event_type": "unit",
+          "code": "ohun",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 337065,
+          "event_type": "building",
+          "code": "eaoe",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 339202,
+          "event_type": "building",
+          "code": "eaoe",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 340870,
+          "event_type": "building",
+          "code": "eaoe",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 349972,
+          "event_type": "building",
+          "code": "otrb",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 355017,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 355420,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 356813,
+          "event_type": "building",
+          "code": "emow",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 357898,
+          "event_type": "building",
+          "code": "ofrt",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 360468,
+          "event_type": "building",
+          "code": "obea",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 366193,
+          "event_type": "building",
+          "code": "osld",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 378737,
+          "event_type": "upgrade",
+          "code": "Rotr",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 378923,
+          "event_type": "item",
+          "code": "stel",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 384628,
+          "event_type": "building",
+          "code": "otrb",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 388065,
+          "event_type": "upgrade",
+          "code": "Rorb",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 388498,
+          "event_type": "upgrade",
+          "code": "Rora",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 400465,
+          "event_type": "hero_skill",
+          "code": "AEmb",
+          "hero_code": "Edem"
+        },
+        {
+          "player_id": 2,
+          "time_ms": 404890,
+          "event_type": "item",
+          "code": "hslv",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 409087,
+          "event_type": "upgrade",
+          "code": "Reuv",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 409429,
+          "event_type": "hero_skill",
+          "code": "AOcl",
+          "hero_code": "Ofar"
+        },
+        {
+          "player_id": 1,
+          "time_ms": 437913,
+          "event_type": "unit",
+          "code": "edoc",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 438720,
+          "event_type": "upgrade",
+          "code": "Redc",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 451758,
+          "event_type": "unit",
+          "code": "okod",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 462648,
+          "event_type": "item",
+          "code": "hslv",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 463760,
+          "event_type": "item",
+          "code": "moon",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 474385,
+          "event_type": "unit",
+          "code": "odoc",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 477578,
+          "event_type": "building",
+          "code": "etoe",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 481511,
+          "event_type": "unit",
+          "code": "oshm",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 483708,
+          "event_type": "hero_trained",
+          "code": "Ekee",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 483708,
+          "event_type": "hero_skill",
+          "code": "AEer",
+          "hero_code": "Ekee"
+        },
+        {
+          "player_id": 1,
+          "time_ms": 485721,
+          "event_type": "item",
+          "code": "spre",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 493173,
+          "event_type": "item",
+          "code": "shas",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 493980,
+          "event_type": "item",
+          "code": "plcl",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 504456,
+          "event_type": "upgrade",
+          "code": "Reuv",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 505264,
+          "event_type": "hero_trained",
+          "code": "Oshd",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 505264,
+          "event_type": "hero_skill",
+          "code": "AOhx",
+          "hero_code": "Oshd"
+        },
+        {
+          "player_id": 1,
+          "time_ms": 549466,
+          "event_type": "unit",
+          "code": "edoc",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 550177,
+          "event_type": "unit",
+          "code": "edoc",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 554421,
+          "event_type": "hero_skill",
+          "code": "AEah",
+          "hero_code": "Ekee"
+        },
+        {
+          "player_id": 1,
+          "time_ms": 559708,
+          "event_type": "item",
+          "code": "pnvl",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 566516,
+          "event_type": "upgrade",
+          "code": "Resw",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 570266,
+          "event_type": "upgrade",
+          "code": "Robk",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 571446,
+          "event_type": "unit",
+          "code": "ohun",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 577876,
+          "event_type": "item",
+          "code": "moon",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 577907,
+          "event_type": "item",
+          "code": "plcl",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 590950,
+          "event_type": "upgrade",
+          "code": "Reib",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 593918,
+          "event_type": "unit",
+          "code": "edoc",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 598781,
+          "event_type": "hero_skill",
+          "code": "AOsf",
+          "hero_code": "Ofar"
+        },
+        {
+          "player_id": 2,
+          "time_ms": 618877,
+          "event_type": "unit",
+          "code": "okod",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 619279,
+          "event_type": "upgrade",
+          "code": "Rwdm",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 621015,
+          "event_type": "unit",
+          "code": "oshm",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 621354,
+          "event_type": "upgrade",
+          "code": "Rost",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 622163,
+          "event_type": "upgrade",
+          "code": "Redc",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 623803,
+          "event_type": "upgrade",
+          "code": "Rews",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 639315,
+          "event_type": "building",
+          "code": "emow",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 640489,
+          "event_type": "unit",
+          "code": "otbk",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 642873,
+          "event_type": "item",
+          "code": "oven",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 647143,
+          "event_type": "hero_trained",
+          "code": "Otch",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 647143,
+          "event_type": "hero_skill",
+          "code": "AOws",
+          "hero_code": "Otch"
+        },
+        {
+          "player_id": 2,
+          "time_ms": 660184,
+          "event_type": "unit",
+          "code": "otbk",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 687876,
+          "event_type": "hero_skill",
+          "code": "AEer",
+          "hero_code": "Ekee"
+        },
+        {
+          "player_id": 1,
+          "time_ms": 703022,
+          "event_type": "building",
+          "code": "emow",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 704846,
+          "event_type": "building",
+          "code": "emow",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 705751,
+          "event_type": "upgrade",
+          "code": "Renb",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 706274,
+          "event_type": "upgrade",
+          "code": "Resw",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 707423,
+          "event_type": "unit",
+          "code": "edoc",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 714233,
+          "event_type": "hero_skill",
+          "code": "AEim",
+          "hero_code": "Edem"
+        },
+        {
+          "player_id": 2,
+          "time_ms": 743557,
+          "event_type": "hero_skill",
+          "code": "AOhw",
+          "hero_code": "Oshd"
+        },
+        {
+          "player_id": 2,
+          "time_ms": 757170,
+          "event_type": "upgrade",
+          "code": "Rowd",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 757294,
+          "event_type": "item",
+          "code": "moon",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 757520,
+          "event_type": "upgrade",
+          "code": "Rost",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 758914,
+          "event_type": "item",
+          "code": "plcl",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 759750,
+          "event_type": "unit",
+          "code": "otbk",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 765414,
+          "event_type": "unit",
+          "code": "oshm",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 770360,
+          "event_type": "upgrade",
+          "code": "Rerh",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 771843,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 772246,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 773299,
+          "event_type": "upgrade",
+          "code": "Reeb",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 773797,
+          "event_type": "upgrade",
+          "code": "Resi",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 815199,
+          "event_type": "hero_skill",
+          "code": "AEah",
+          "hero_code": "Ekee"
+        },
+        {
+          "player_id": 2,
+          "time_ms": 820591,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 820932,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 821148,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 830164,
+          "event_type": "unit",
+          "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 830812,
+          "event_type": "unit",
+          "code": "edoc",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 832484,
+          "event_type": "unit",
+          "code": "edry",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 833596,
+          "event_type": "upgrade",
+          "code": "Resw",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 833754,
+          "event_type": "upgrade",
+          "code": "Resw",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 856092,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 856496,
+          "event_type": "unit",
+          "code": "opeo",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 867144,
+          "event_type": "unit",
+          "code": "edoc",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 869125,
+          "event_type": "upgrade",
+          "code": "Rerh",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 899394,
+          "event_type": "unit",
+          "code": "edoc",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
+          "time_ms": 899518,
+          "event_type": "unit",
+          "code": "edoc",
+          "hero_code": null
+        }
+      ],
+      "chat": [
+        {
+          "time_ms": 9573,
+          "player_id": 1,
+          "mode": "All",
+          "message": "glhf"
+        },
+        {
+          "time_ms": 14188,
+          "player_id": 1,
+          "mode": "All",
+          "message": "-commands"
+        },
+        {
+          "time_ms": 34008,
+          "player_id": 1,
+          "mode": "All",
+          "message": "-ping"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,919 @@
+code,name,kind,category
+BS02,Cosmetic,unknown,other
+BS05,Val'sharah,unknown,other
+BS06,High Exarch Yrel,unknown,other
+BS11,Cosmetic,unknown,other
+BS12,Naka,unknown,other
+BS13,Ragnaros,unknown,other
+DS01,DoomGuard,unknown,other
+DS02,Whitemane,unknown,other
+DS03,Yogg,unknown,other
+H027,War Lord,unknown,other
+H058,Crypt Lord,unknown,other
+H05G,Fire Lord,unknown,other
+H05I,Draenei Chieftain,unknown,other
+H05J,Dragon Turtle,unknown,other
+H05K,Magnataur,unknown,other
+H08U,Burning Legion,unknown,other
+H0D6,Dragon Turtle,unknown,other
+I000,Sword of Pwnage,unknown,item
+I001,Unkillable,unknown,item
+I002,Tome of 400 hp,unknown,item
+I003,Tome of 4 Damage,unknown,item
+I004,Flute of Accuracy,unknown,item
+PS06,VoidWalker,unknown,other
+PS16,Villager,unknown,other
+PS18,VoidWalker,unknown,other
+PW3C,W3C Hero Icon,unknown,other
+R000,King Hit Points (1),unknown,upgrade
+R001,King Attack (1),unknown,upgrade
+R002,King Regeneration (1),unknown,upgrade
+R003,Basic Lumberjack Training 1,unknown,upgrade
+R004,Creeps HP Modifier 1-12,unknown,upgrade
+R005,Creeps ATK Modifier,unknown,upgrade
+R006,King Armor (1),unknown,upgrade
+R007,King Attack Speed (1),unknown,upgrade
+R008,King HP Modifier,unknown,upgrade
+R009,Speed Bonus,unknown,upgrade
+R00A,ASPD Bonus,unknown,upgrade
+R00B,Mana Regen Bonus,unknown,upgrade
+R00C,HP Regen Bonus,unknown,upgrade
+R00D,Change Builder,unknown,upgrade
+R00E,Creeps HP Modifier 13-23,unknown,upgrade
+R00F,Creeps HP Modifier 24-30,unknown,upgrade
+R00G,Change Tower,unknown,upgrade
+R00H,Advanced Lumberjack Training 10,unknown,upgrade
+R00I,Change Builder to Mercenary,unknown,upgrade
+R995,Upgrade King's Purge,unknown,upgrade
+R996,Harvest reduced,unknown,upgrade
+R997,Harvest increased,unknown,upgrade
+R998,Royal Presence,unknown,upgrade
+R999,Dark Presence,unknown,upgrade
+Rdum,Level 4 Fighting Phase,unknown,upgrade
+afac,Flute of Accuracy,unknown,item
+ajen,Chalice of Endurance,unknown,item
+ankh,Cross of Rebirth,unknown,item
+belv,Kehl-Talas boots,unknown,item
+bgst,Warrior's Belt(+6),unknown,item
+brac,Rune Bracelets,unknown,item
+bspd,Boots-walkers,unknown,item
+ciri,Mage robe(+6),unknown,item
+ckng,Royal crown(+5),unknown,item
+clfm,Fire cloak,unknown,item
+cnob,Crown of nobility,unknown,item
+crys,crystal ball,unknown,item
+desc,Mage's dagger,unknown,item
+e000,Race Picker,unknown,ui-menu
+e002,Next Page,unknown,ui-menu
+e003,Wisp ++,unknown,ui-menu
+e004,Previous Page,unknown,ui-menu
+e005,Race Picker,unknown,ui-menu
+e006,Race Picker,unknown,ui-menu
+e007,Race Picker,unknown,ui-menu
+e008,Wisp +++,unknown,ui-menu
+e031,Engineer,unknown,ui-menu
+edot,Druid-crow,unknown,other
+edtm,Druid-crow,unknown,other
+evtl,Talisman of Protection,unknown,item
+ewsp,Glowworm,unknown,ui-menu
+fgdg,Demon figurine,unknown,item
+fgfh,Collar with spikes,unknown,item
+fgrd,Dragon egg,unknown,item
+fgrg,Stone talisman,unknown,item
+g999,Draenei Chieftain,unknown,other
+gcel,Gloves of Speed,unknown,item
+h000,Murloc,unknown,other
+h001,Quilbeast,unknown,other
+h002,Crab,unknown,other
+h003,Rock Golem,unknown,other
+h004,Satyr,unknown,other
+h005,Scorpion,unknown,other
+h006,Frost Wyrm,unknown,other
+h007,Acolyte,unknown,other
+h008,Zombie,unknown,other
+h009,Draenei Chieftain,unknown,other
+h00A,Clockwerk Goblin,unknown,other
+h00B,Siren,unknown,other
+h00C,Couatl,unknown,other
+h00D,Tuskar Warrior,unknown,other
+h00E,Centaur,unknown,other
+h00F,Lightning Chicken,unknown,other
+h00G,Flesh Golem,unknown,other
+h00H,Sludge Flinger,unknown,other
+h00I,Hawk,unknown,other
+h00J,Giant Spider,unknown,other
+h00K,The King,unknown,other
+h00L,Peewee,unknown,other
+h00M,Peewee,unknown,tower
+h00N,Tempest,unknown,tower
+h00O,Infantry,unknown,tower
+h00P,Captain,unknown,tower
+h00Q,Cyborg,unknown,tower
+h00R,Shadow Council,unknown,tower
+h00S,Neotank,unknown,tower
+h00T,Veteran,unknown,tower
+h00U,Leviathan,unknown,tower
+h00W,Krogoth,unknown,tower
+h00X,Zeus,unknown,tower
+h00Y,Pyro,unknown,tower
+h00Z,Admiral,unknown,tower
+h010,Gnoll Warrior,unknown,tower
+h011,Gnoll Savage,unknown,tower
+h012,Ogre Basher,unknown,tower
+h013,Ogre Pulverizer,unknown,tower
+h014,Harpy,unknown,tower
+h015,Medusa,unknown,tower
+h016,Troll Fighter,unknown,tower
+h017,Troll Champion,unknown,tower
+h018,Grizzly,unknown,tower
+h019,Greymane,unknown,tower
+h01A,Spawn of Dragon,unknown,tower
+h01B,Dragon Aspect,unknown,tower
+h01C,Ent,unknown,tower
+h01D,Guardian,unknown,tower
+h01E,Ranger,unknown,tower
+h01F,Meliai,unknown,tower
+h01G,Thunderbird,unknown,tower
+h01H,Sprite,unknown,tower
+h01I,Tree of Travel,unknown,tower
+h01J,Tree of Time,unknown,tower
+h01K,Halfbreed,unknown,tower
+h01L,Goliath,unknown,tower
+h01M,Yggdrasil,unknown,tower
+h01N,Tree of Life,unknown,tower
+h01O,Tree of Knowledge,unknown,tower
+h01P,Bone Warrior,unknown,tower
+h01Q,Skeletor,unknown,tower
+h01R,Fire Archer,unknown,tower
+h01S,Dark Mage,unknown,tower
+h01T,Carrion Spitter,unknown,tower
+h01U,Nightcrawler,unknown,tower
+h01V,Gateguard,unknown,tower
+h01W,Harbinger,unknown,tower
+h01X,Overseer,unknown,tower
+h01Y,Keeper of Souls,unknown,tower
+h01Z,Nightmare,unknown,tower
+h01q,Skeletor Prime,unknown,tower
+h020,Doppelganger,unknown,tower
+h021,Lord of Death,unknown,tower
+h022,Hades,unknown,tower
+h023,Town,unknown,other
+h024,Farm Level 1,unknown,tower
+h025,Worker,unknown,builder
+h026,Militia Captain,unknown,other
+h028,Veteran,unknown,other
+h029,Captain,unknown,other
+h02A,Admiral,unknown,other
+h02B,Infantry,unknown,other
+h02C,Pyro,unknown,other
+h02D,Zeus,unknown,other
+h02E,Neotank,unknown,other
+h02G,Tempest,unknown,other
+h02H,Leviathan,unknown,other
+h02I,Cyborg,unknown,other
+h02J,Krogoth,unknown,other
+h02K,Militia Captain,unknown,other
+h02L,Gnoll Warrior,unknown,other
+h02M,Gnoll Savage,unknown,other
+h02N,Ogre Basher,unknown,other
+h02O,Ogre Pulverizer,unknown,other
+h02P,Harpy,unknown,other
+h02Q,Medusa,unknown,other
+h02R,Troll Fighter,unknown,other
+h02S,Troll Champion,unknown,other
+h02T,Grizzly,unknown,other
+h02U,Greymane,unknown,other
+h02V,Spawn of Dragon,unknown,other
+h02W,Dragon Aspect,unknown,other
+h02X,Ent,unknown,other
+h02Y,Guardian,unknown,other
+h02Z,Ranger,unknown,other
+h030,Meliai,unknown,other
+h031,Sprite,unknown,other
+h032,Thunderbird,unknown,other
+h033,Tree of Travel,unknown,other
+h034,Tree of Time,unknown,other
+h035,Halfbreed,unknown,other
+h036,Goliath,unknown,other
+h037,Yggdrasil,unknown,other
+h038,Tree of Life,unknown,other
+h039,Tree of Knowledge,unknown,other
+h03A,Bone Warrior,unknown,other
+h03B,Skeletor,unknown,other
+h03C,Fire Archer,unknown,other
+h03D,Dark Mage,unknown,other
+h03E,Carrion Spitter,unknown,other
+h03F,Nightcrawler,unknown,other
+h03G,Gateguard,unknown,other
+h03H,Harbinger,unknown,other
+h03I,Overseer,unknown,other
+h03J,Keeper of Souls,unknown,other
+h03K,Nightmare,unknown,other
+h03L,Doppelganger,unknown,other
+h03M,Lord of Death,unknown,other
+h03N,Hades,unknown,other
+h03O,Dragon Turtle,unknown,other
+h03P,Hippogryph,unknown,other
+h03Q,Mammoth,unknown,other
+h03R,Wildkin,unknown,other
+h03S,Myrmidon,unknown,other
+h03T,Revenant,unknown,other
+h03U,Succubus,unknown,other
+h03V,Doom Guard,unknown,other
+h03W,Juggernaut,unknown,other
+h03X,Druid,unknown,other
+h03Y,Magnataur,unknown,other
+h03Z,Warlock,unknown,other
+h03b,Skeletor Prime,unknown,other
+h040,Proton,unknown,tower
+h041,Adept,unknown,tower
+h042,Aqua Spirit,unknown,tower
+h043,Oceanus,unknown,tower
+h044,Watcher,unknown,tower
+h045,Violet,unknown,tower
+h046,Mudman,unknown,tower
+h047,Golem,unknown,tower
+h048,Disciple,unknown,tower
+h049,Messiah,unknown,tower
+h04A,Seer of Darkness,unknown,tower
+h04B,Fenix,unknown,tower
+h04C,Proton,unknown,other
+h04D,Adept,unknown,other
+h04E,Aqua Spirit,unknown,other
+h04F,Oceanus,unknown,other
+h04G,Watcher,unknown,other
+h04H,Violet,unknown,other
+h04I,Mudman,unknown,other
+h04J,Golem,unknown,other
+h04K,Disciple,unknown,other
+h04L,Messiah,unknown,other
+h04M,Seer of Darkness,unknown,other
+h04N,Fenix,unknown,other
+h04O,Militia,unknown,other
+h04P,Bowman,unknown,other
+h04Q,Whelp,unknown,other
+h04R,Ghoul,unknown,other
+h04S,Warrior,unknown,other
+h04T,Hermit,unknown,other
+h04U,Dino,unknown,other
+h04V,Commander,unknown,other
+h04W,Furbolg,unknown,other
+h04X,Wyvern,unknown,other
+h04Y,Chariot,unknown,other
+h04Z,Blood Orc,unknown,other
+h050,Frost Wolf,unknown,other
+h051,Ice Troll,unknown,other
+h052,Warlock,unknown,other
+h053,Pandaren,unknown,other
+h054,Dark Draenei,unknown,other
+h055,Ballista,unknown,other
+h056,Shaman,unknown,other
+h057,Pudge,unknown,other
+h058,Sergeant,unknown,other
+h059,Behemoth,unknown,other
+h05A,Infernal,unknown,other
+h05B,Kraken,unknown,other
+h05C,Barracks,unknown,other
+h05D,Advanced Barracks,unknown,other
+h05E,Barracks,unknown,other
+h05F,Advanced Barracks,unknown,other
+h05H,Summoned Phoenix Egg,unknown,other
+h05I,Summoned Phoenix Egg Slow,unknown,other
+h05K,The King,unknown,other
+h05L,Pit Lord,unknown,other
+h05M,Gargoyle,unknown,other
+h05N,Specter,unknown,tower
+h05O,Wraith,unknown,tower
+h05P,Mercurial,unknown,tower
+h05Q,Soul of Hero (O),unknown,other
+h05R,Phantom,unknown,tower
+h05S,Wanderer,unknown,tower
+h05T,Soul of Villain,unknown,other
+h05U,Hellghost,unknown,tower
+h05V,Outcast,unknown,tower
+h05W,Forsaken One,unknown,tower
+h05X,Apparition,unknown,tower
+h05Y,Gravekeeper,unknown,tower
+h05Z,Dark Priest,unknown,tower
+h060,Meridian,unknown,tower
+h061,Specter,unknown,other
+h062,Soul of Hero (D),unknown,tower
+h063,Wraith,unknown,other
+h064,Mercurial,unknown,other
+h065,Wanderer,unknown,other
+h066,Soul of Hero (O),unknown,other
+h067,Soul of Hero (D),unknown,other
+h068,Soul of Villain,unknown,other
+h069,Phantom,unknown,other
+h06A,Hellghost,unknown,other
+h06B,Outcast,unknown,other
+h06C,Forsaken One,unknown,other
+h06D,Apparition,unknown,other
+h06E,Gravekeeper,unknown,other
+h06F,Dark Priest,unknown,other
+h06G,Meridian,unknown,other
+h06H,The King,unknown,other
+h06I,Mutant,unknown,other
+h06J,Goblin Scientist,unknown,tower
+h06K,Servant,unknown,tower
+h06L,Slavemaster,unknown,tower
+h06M,Tribesman,unknown,tower
+h06N,Alpha Male,unknown,tower
+h06O,Medicine Man,unknown,tower
+h06P,Oracle,unknown,tower
+h06Q,Harlot,unknown,tower
+h06R,Mistress,unknown,tower
+h06S,Minotaur,unknown,tower
+h06T,Bigfoot,unknown,tower
+h06U,Goblin Scientist,unknown,other
+h06V,Tribesman,unknown,other
+h06W,Mutant,unknown,other
+h06X,Servant,unknown,other
+h06Y,Slavemaster,unknown,other
+h06Z,Alpha Male,unknown,other
+h070,Medicine Man,unknown,other
+h071,Oracle,unknown,other
+h072,Harlot,unknown,other
+h073,Mistress,unknown,other
+h074,Minotaur,unknown,other
+h075,Bigfoot,unknown,other
+h076,Mutant (juiced),unknown,other
+h077,Mutant (juiced),unknown,other
+h078,Dwarven Engineer,unknown,tower
+h079,Dwarven Engineer,unknown,other
+h07B,Flame Archer,unknown,tower
+h07C,Flame Archer,unknown,other
+h07D,Morph [Tier 1],unknown,tower
+h07E,Morph [Tier 2],unknown,tower
+h07F,Morph [Tier 4],unknown,tower
+h07G,Morph [Tier 3],unknown,tower
+h07H,Morph [Tier 5],unknown,tower
+h07I,Morph [Tier 6],unknown,tower
+h07J,Hatchling,unknown,tower
+h07K,Hatchling,unknown,other
+h07L,Swamprunner,unknown,tower
+h07M,Defiler,unknown,tower
+h07N,Fangtooth,unknown,tower
+h07O,Egg Sack,unknown,tower
+h07P,Sky Dragon,unknown,tower
+h07Q,Bottom Feeder,unknown,tower
+h07R,King Claw,unknown,tower
+h07S,Mermaid,unknown,tower
+h07T,Highborne,unknown,tower
+h07U,Komodo,unknown,tower
+h07V,Trident,unknown,tower
+h07W,Sea Giant,unknown,tower
+h07X,Hydra,unknown,tower
+h07Y,Mini Hydra,unknown,other
+h07Z,Swamprunner,unknown,other
+h080,Defiler,unknown,other
+h081,Fangtooth,unknown,other
+h082,Egg Sack,unknown,other
+h083,Sky Dragon,unknown,other
+h084,Bottom Feeder,unknown,other
+h085,King Claw,unknown,other
+h086,Mermaid,unknown,other
+h087,Highborne,unknown,other
+h088,Trident,unknown,other
+h089,Sea Giant,unknown,other
+h08A,Hydra,unknown,other
+h08B,Komodo,unknown,other
+h08C,Farm Level 2,unknown,tower
+h08D,Farm Level 3,unknown,tower
+h08E,Colt,unknown,other
+h08F,Colt,unknown,tower
+h08G,Novice,unknown,other
+h08H,Novice,unknown,tower
+h08I,Rider,unknown,tower
+h08J,Rider,unknown,other
+h08K,Crusader,unknown,other
+h08L,Crusader,unknown,tower
+h08M,Sentry,unknown,other
+h08N,Sentry,unknown,tower
+h08O,Nightsaber,unknown,other
+h08P,Nightsaber,unknown,tower
+h08Q,Prisoner,unknown,tower
+h08R,Prisoner,unknown,other
+h08S,Maverick,unknown,tower
+h08T,Maverick,unknown,other
+h08V,Druid,unknown,tower
+h08W,Sword Mage,unknown,other
+h08X,Ascendant,unknown,other
+h08Y,Ascendant,unknown,tower
+h08Z,Sword Mage,unknown,tower
+h090,Moon Guard,unknown,tower
+h091,Moon Guard,unknown,other
+h092,Druid,unknown,other
+h093,Warden,unknown,tower
+h094,Warden,unknown,other
+h095,Farm Level 6,unknown,tower
+h096,Farm Level 7,unknown,tower
+h097,Farm Level 8,unknown,tower
+h098,Farm Level 9,unknown,tower
+h099,Farm Level 10,unknown,tower
+h09A,High Elven Farm level 1,unknown,tower
+h09B,Farm Level 4,unknown,tower
+h09C,Farm Level 5,unknown,tower
+h09D,Knight,unknown,other
+h09E,Ice Troll,unknown,other
+h09F,Peasant,unknown,other
+h09G,Elite Archer,unknown,other
+h09H,Militia,unknown,other
+h09I,Royal Gryphon,unknown,other
+h09J,High Elven Farm level 3,unknown,tower
+h09K,Militia,unknown,other
+h09L,Peasant,unknown,tower
+h09M,Elite Archer,unknown,tower
+h09N,Footman,unknown,tower
+h09O,Highguard,unknown,tower
+h09P,Highguard,unknown,other
+h09Q,Priest,unknown,other
+h09R,Priest,unknown,tower
+h09S,High Priest,unknown,tower
+h09T,Knight,unknown,tower
+h09U,Cavalier,unknown,tower
+h09W,Archer Apprentice,unknown,tower
+h09X,Cavalier,unknown,other
+h09Y,Archer Apprentice,unknown,other
+h09Z,High Priest,unknown,other
+h09m,Militia (s),unknown,other
+h0A0,Royal Gryphon,unknown,tower
+h0A1,High Elven Farm level 6,unknown,tower
+h0A2,Dragon Hawk,unknown,other
+h0A3,Dragon Hawk,unknown,tower
+h0A4,High Elven Farm level 5,unknown,tower
+h0A5,High Elven Farm level 4,unknown,tower
+h0A6,High Elven Farm level 2,unknown,tower
+h0A7,Small Land Mine,unknown,other
+h0A8,Small Land Mine,unknown,tower
+h0A9,Machine Robot,unknown,other
+h0AA,Machine Robot,unknown,tower
+h0AB,Machine Turret,unknown,tower
+h0AC,Machine Turret,unknown,other
+h0AD,Geomancer,unknown,other
+h0AE,Geomancer,unknown,tower
+h0AF,Clockwerk,unknown,tower
+h0AG,Clockwerk,unknown,other
+h0AH,Flying Machine,unknown,tower
+h0AI,Flying Machine,unknown,other
+h0AJ,Helicopter,unknown,tower
+h0AK,Helicopter,unknown,other
+h0AL,Goblin Brawler,unknown,tower
+h0AM,Goblin Brawler,unknown,other
+h0AN,Goblin Blaster,unknown,other
+h0AO,Goblin Blaster,unknown,tower
+h0AP,Assault Tank,unknown,other
+h0AQ,Assault Tank,unknown,tower
+h0AR,Steamroller,unknown,tower
+h0AS,Steamroller,unknown,other
+h0AT,Medium Land Mine,unknown,tower
+h0AU,Ultra Land Mine,unknown,tower
+h0AV,Medium Land Mine,unknown,other
+h0AW,Ultra Land Mine,unknown,other
+h0AX,Clockwerk,unknown,other
+h0AY,Orc Warrior,unknown,other
+h0AZ,Advanced Barracks,unknown,other
+h0B0,Advanced Barracks,unknown,other
+h0B1,Warlock,unknown,other
+h0B2,Pandaren,unknown,other
+h0B3,Dark Draenei,unknown,other
+h0B4,Ballista,unknown,other
+h0B5,Shaman,unknown,other
+h0B6,Pudge,unknown,other
+h0B7,Gargoyle,unknown,other
+h0B8,Behemoth,unknown,other
+h0B9,Infernal,unknown,other
+h0BA,Kraken,unknown,other
+h0BB,Frost Wolf,unknown,other
+h0BC,Tuskarr,unknown,tower
+h0BD,Tuskarr Spearman,unknown,tower
+h0BE,Frost Wolf,unknown,tower
+h0BF,Orc Warrior,unknown,tower
+h0BG,Pandaren,unknown,tower
+h0BH,Ice Troll,unknown,tower
+h0BI,Ice Troll Shaman,unknown,tower
+h0BJ,Polar Bear,unknown,tower
+h0BK,Magnataur,unknown,tower
+h0BL,Ancient Wandigoo,unknown,tower
+h0BM,Wandigoo,unknown,tower
+h0BN,Young Frost Dragon,unknown,other
+h0BO,Young Frost Dragon,unknown,tower
+h0BP,Azure Drake,unknown,tower
+h0BQ,Demon,unknown,other
+h0BR,Demon,unknown,other
+h0BS,Blood Orc Warrior,unknown,tower
+h0BT,Blood Orc Warrior,unknown,other
+h0BU,Wolverine,unknown,tower
+h0BV,Orc Warlock,unknown,tower
+h0BW,Blood Orc Warlock,unknown,tower
+h0BX,Raider,unknown,tower
+h0BY,Raider,unknown,other
+h0BZ,Blood Raider,unknown,other
+h0C0,Blood Raider,unknown,tower
+h0C1,Elder Witch Doctor,unknown,other
+h0C2,Elder Witch Doctor,unknown,tower
+h0C3,Young Witch Doctor,unknown,other
+h0C4,Young Witch Doctor,unknown,tower
+h0C5,Wyvern,unknown,tower
+h0C6,Wyvern,unknown,other
+h0C7,Wind Rider,unknown,other
+h0C8,Wind Rider,unknown,tower
+h0C9,Orc Warchief,unknown,tower
+h0CA,Orc Warchief,unknown,other
+h0CB,Thrall,unknown,other
+h0CC,Thrall,unknown,tower
+h0CD,Wolverine,unknown,other
+h0CE,Acolyte,unknown,other
+h0CF,Acolyte,unknown,tower
+h0CG,Revenant,unknown,other
+h0CH,Revenant,unknown,tower
+h0CI,Ghoul,unknown,tower
+h0CJ,Ghoul,unknown,other
+h0CK,Frenzy Ghoul,unknown,tower
+h0CL,Frenzy Ghoul,unknown,other
+h0CM,Meat Wagon,unknown,other
+h0CN,War Machine,unknown,other
+h0CO,Meat Wagon,unknown,tower
+h0CP,War Machine,unknown,tower
+h0CQ,Necromancer,unknown,tower
+h0CR,Necromancer,unknown,other
+h0CS,Necrolyte,unknown,tower
+h0CT,Necrolyte,unknown,other
+h0CU,Ghost,unknown,other
+h0CV,Ghost,unknown,tower
+h0CW,Zombie,unknown,tower
+h0CX,Zombie,unknown,other
+h0CY,The Butcher,unknown,tower
+h0CZ,The Butcher,unknown,other
+h0D0,Guardian of Death,unknown,tower
+h0D1,Guardian of Death,unknown,other
+h0D2,Death Dragon,unknown,tower
+h0D3,Death Dragon,unknown,other
+h0D5,Geomancer,unknown,other
+h0D7,The Burning Legion,unknown,other
+h0D9,Advanced Barracks,unknown,other
+h0DA,Death Knight - [Level 3],unknown,tower
+h0DB,Altar of Heroes,unknown,other
+h0DC,Death Knight - [Level 3],unknown,other
+h0DD,Death Knight - [Level 2],unknown,tower
+h0DE,Death Knight - [Level 1],unknown,tower
+h0DF,Death Knight - [Level 1],unknown,other
+h0DG,Death Knight - [Level 2],unknown,other
+h0DH,Sycophant,unknown,tower
+h0DL,Ancient Wandigoo,unknown,other
+h0DO,Death Knight - [Level 5],unknown,other
+h0DP,Death Knight - [Level 4],unknown,other
+h0DQ,Death Knight - [Level 8],unknown,other
+h0DR,Death Knight - [Level 6],unknown,other
+h0DS,Death Knight - [Level 7],unknown,other
+h0DT,Death Knight - [Level 10],unknown,other
+h0DU,Death Knight - [Level 9],unknown,other
+h0DV,Death Knight - [Level 11],unknown,other
+h0DY,Dark Ranger - [Level 1],unknown,tower
+h0DZ,Dark Ranger - [Level 2],unknown,tower
+h0E0,Dark Ranger - [Level 3],unknown,tower
+h0EF,Dark Ranger - [Level 3],unknown,other
+h0EG,Dark Ranger - [Level 2],unknown,other
+h0EH,Dark Ranger - [Level 1],unknown,other
+h0EJ,Keeper of the Grove - [Level 1],unknown,tower
+h0EK,Paladin - [Level 1],unknown,tower
+h0EL,Priestess of the Moon - [Level 2],unknown,tower
+h0EO,Tauren Chieftain - [Level 1],unknown,tower
+h0EP,Dread Lord - [Level 9],unknown,other
+h0EQ,Mountain King - [Level 1],unknown,tower
+h0ES,Keeper of the Grove - [Level 1],unknown,other
+h0ET,Keeper of the Grove - [Level 2],unknown,other
+h0F1,Keeper of the Grove - [Level 3],unknown,other
+h0F2,Keeper of the Grove - [Level 7],unknown,other
+h0F3,Keeper of the Grove - [Level 8],unknown,other
+h0F4,Keeper of the Grove - [Level 9],unknown,other
+h0F5,Keeper of the Grove - [Level 10],unknown,other
+h0F6,Keeper of the Grove - [Level 3],unknown,tower
+h0F7,Keeper of the Grove - [Level 6],unknown,other
+h0F8,Keeper of the Grove - [Level 11],unknown,other
+h0F9,Keeper of the Grove - [Level 5],unknown,other
+h0FA,Keeper of the Grove - [Level 4],unknown,other
+h0FB,Keeper of the Grove - [Level 2],unknown,tower
+h0FC,Priestess of the Moon - [Level 3],unknown,tower
+h0FD,Priestess of the Moon - [Level 4],unknown,other
+h0FE,Priestess of the Moon - [Level 5],unknown,other
+h0FF,Priestess of the Moon - [Level 6],unknown,other
+h0FG,Priestess of the Moon - [Level 7],unknown,other
+h0FH,Priestess of the Moon - [Level 8],unknown,other
+h0FI,Priestess of the Moon - [Level 9],unknown,other
+h0FJ,Priestess of the Moon - [Level 10],unknown,other
+h0FK,Priestess of the Moon - [Level 1],unknown,tower
+h0FL,Priestess of the Moon - [Level 11],unknown,other
+h0FM,Priestess of the Moon - [Level 1],unknown,other
+h0FN,Priestess of the Moon - [Level 2],unknown,other
+h0FO,Priestess of the Moon - [Level 3],unknown,other
+h0G3,Archmage - [Level 3],unknown,tower
+h0G4,Archmage - [Level 2],unknown,tower
+h0G5,Archmage - [Level 1],unknown,tower
+h0GE,Archmage - [Level 3],unknown,other
+h0GF,Archmage - [Level 2],unknown,other
+h0GG,Sycophant,unknown,other
+h0GH,Archmage - [Level 1],unknown,other
+h0GI,Dread Lord - [Level 1],unknown,tower
+h0GJ,Dread Lord - [Level 3],unknown,tower
+h0GK,Dread Lord - [Level 4],unknown,other
+h0GL,Dread Lord - [Level 7],unknown,other
+h0GM,Dread Lord - [Level 5],unknown,other
+h0GN,Dread Lord - [Level 8],unknown,other
+h0GO,Dread Lord - [Level 11],unknown,other
+h0GP,Dread Lord - [Level 6],unknown,other
+h0GQ,Dread Lord - [Level 10],unknown,other
+h0GS,Dread Lord - [Level 2],unknown,tower
+h0GT,Dread Lord - [Level 2],unknown,other
+h0GZ,Dread Lord - [Level 3],unknown,other
+h0H0,Dread Lord - [Level 1],unknown,other
+h0H6,Naga Sea Witch - [Level 2],unknown,tower
+h0H7,Naga Sea Witch - [Level 3],unknown,tower
+h0HC,Naga Sea Witch - [Level 1],unknown,tower
+h0HI,Naga Sea Witch - [Level 3],unknown,other
+h0HJ,Naga Sea Witch - [Level 2],unknown,other
+h0HK,Naga Sea Witch - [Level 1],unknown,other
+h0HO,Mountain King - [Level 2],unknown,tower
+h0HP,Mountain King - [Level 3],unknown,tower
+h0HQ,Mountain King - [Level 4],unknown,other
+h0HR,Mountain King - [Level 5],unknown,other
+h0HS,Mountain King - [Level 6],unknown,other
+h0HT,Mountain King - [Level 7],unknown,other
+h0HU,Mountain King - [Level 8],unknown,other
+h0HV,Mountain King - [Level 9],unknown,other
+h0HW,Mountain King - [Level 10],unknown,other
+h0HX,Mountain King - [Level 11],unknown,other
+h0HY,Mountain King - [Level 1],unknown,other
+h0HZ,Mountain King - [Level 2],unknown,other
+h0I0,Mountain King - [Level 3],unknown,other
+h0I9,Tauren Chieftain - [Level 2],unknown,tower
+h0IA,Tauren Chieftain - [Level 3],unknown,tower
+h0IB,Tauren Chieftain - [Level 4],unknown,other
+h0IC,Tauren Chieftain - [Level 5],unknown,other
+h0ID,Tauren Chieftain - [Level 6],unknown,other
+h0IE,Tauren Chieftain - [Level 7],unknown,other
+h0IF,Tauren Chieftain - [Level 8],unknown,other
+h0IG,Tauren Chieftain - [Level 9],unknown,other
+h0IH,Tauren Chieftain - [Level 10],unknown,other
+h0II,Tauren Chieftain - [Level 11],unknown,other
+h0IJ,Tauren Chieftain - [Level 1],unknown,other
+h0IM,Tauren Chieftain - [Level 2],unknown,other
+h0IN,Tauren Chieftain - [Level 3],unknown,other
+h0IU,Paladin - [Level 2],unknown,tower
+h0IV,Paladin - [Level 3],unknown,tower
+h0IW,Paladin - [Level 4],unknown,other
+h0IX,Paladin - [Level 5],unknown,other
+h0IY,Paladin - [Level 6],unknown,other
+h0IZ,Paladin - [Level 7],unknown,other
+h0J0,Paladin - [Level 8],unknown,other
+h0J1,Paladin - [Level 9],unknown,other
+h0J2,Paladin - [Level 10],unknown,other
+h0J3,Paladin - [Level 11],unknown,other
+h0J6,Paladin - [Level 1],unknown,other
+h0J7,Paladin - [Level 2],unknown,other
+h0J8,Paladin - [Level 3],unknown,other
+h0JF,Advanced Barracks,unknown,other
+h0SN,Shadow Council,unknown,other
+h11Y,Destroyer,unknown,tower
+h123,Relocate,unknown,other
+h12M,Hogger,unknown,other
+h12N,Hogger,unknown,tower
+h149,Obelisk of Eternity,unknown,other
+h14D,Elementalist,unknown,other
+h14E,Elementalist,unknown,tower
+h14O,Militia,unknown,other
+h14P,Bowman,unknown,other
+h14Q,Whelp,unknown,other
+h14R,Ghoul,unknown,other
+h14S,Warrior,unknown,other
+h14T,Hermit,unknown,other
+h14U,Dino,unknown,other
+h14V,Commander,unknown,other
+h14W,Furbolg,unknown,other
+h14X,Wyvern,unknown,other
+h14Y,Chariot,unknown,other
+h14Z,Blood Orc,unknown,other
+h150,Frost Wolf,unknown,other
+h151,Ice Troll,unknown,other
+h152,Warlock,unknown,other
+h153,Pandaren,unknown,other
+h154,Dark Draenei,unknown,other
+h155,Ballista,unknown,other
+h156,Shaman,unknown,other
+h157,Pudge,unknown,other
+h158,Sergeant,unknown,tower
+h159,Behemoth,unknown,other
+h15A,Infernal,unknown,other
+h15B,Kraken,unknown,other
+h15C,Barracks,unknown,other
+h15D,Advanced Barracks,unknown,other
+h15M,Gargoyle,unknown,other
+h17M,Gorloc,unknown,other
+h180,Gorloc,unknown,other
+h18J,Gryphon Rider,unknown,other
+h1BR,Demon,unknown,other
+h1DD,Turtle Cannon,unknown,other
+h22C,Destroyer,unknown,other
+h22O,Tree of Battle,unknown,tower
+h250,Frost Wolf,unknown,other
+h251,Ice Troll,unknown,other
+h252,Warlock,unknown,other
+h253,Pandaren,unknown,other
+h254,Dark Draenei,unknown,other
+h255,Ballista,unknown,other
+h256,Shaman,unknown,other
+h257,Pudge,unknown,other
+h259,Behemoth,unknown,other
+h25A,Infernal,unknown,other
+h25B,Kraken,unknown,other
+h25D,Advanced Barracks,unknown,other
+h25M,Gargoyle,unknown,other
+h28J,Gryphon Rider,unknown,tower
+h2BR,Demon,unknown,other
+h2DD,Turtle Cannon,unknown,tower
+h301,Yogg Tentacle,unknown,other
+h302,Yogg Tentacle Club,unknown,other
+h305,Lotus Portal Pet,unknown,other
+h306,Pet Cloud,unknown,other
+h5bp,The Parthenon,unknown,other
+h995,War Room,unknown,tower
+h996,Altar of Heroes,unknown,tower
+h997,Hellraiser,unknown,other
+h998,Hellraiser,unknown,tower
+h999,Tree of Battle,unknown,other
+hGLY,Glyph,unknown,other
+hTTT,MELEE TEST UNIT,unknown,other
+hcmp,The Campfire,unknown,other
+hlb1,Kel'Thuzad - [Level 1],unknown,tower
+hlb2,Kel'Thuzad - [Level 2],unknown,tower
+hlb3,Kel'Thuzad - [Level 3],unknown,tower
+hlf1,Kel'Thuzad - [Level 1],unknown,other
+hlf2,Kel'Thuzad - [Level 2],unknown,other
+hlf3,Kel'Thuzad - [Level 3],unknown,other
+hp3b,Orc Warrior,unknown,other
+iglo,Glory,unknown,item
+kpin,Flute of Insight,unknown,item
+lgdh,Legion Trumpet,unknown,item
+lhst,Horn of Winds,unknown,item
+manh,Medical treatise,unknown,item
+mcou,Medal of Courage,unknown,item
+modt,Death mask,unknown,item
+n001,Fiend,unknown,other
+n002,Fanatic,unknown,other
+n004,Imp,unknown,other
+n005,Ghoul Fanatic,unknown,other
+n007,Storm Geyser,unknown,other
+n009,Withdraw Effect,unknown,other
+n00B,Tuskarr,unknown,other
+n00E,Ice Troll Shaman,unknown,other
+n00G,Magnataur,unknown,other
+n00H,Ancient Wandigoo,unknown,other
+n00I,Wandigoo,unknown,other
+n00J,Azure Drake,unknown,other
+n00L,PanicX,unknown,other
+n00M,LISK,unknown,other
+n00N,Egze,unknown,other
+n00O,HuanAk,unknown,other
+n00P,Blood Orc Warlock,unknown,other
+n00Q,Wolf,unknown,other
+n00R,Blood Wolf,unknown,other
+nba2,Gatekeeper of Hell,unknown,other
+ndr1,Lesser Servant of Darkness,unknown,other
+nfel,Hell hunter,unknown,other
+nfra,Beorn-warrior,unknown,other
+nfrl,Beorn,unknown,other
+ngst,Stone golem,unknown,other
+nhl2,Yobbo Builder,unknown,other
+nrdr,Red Dragon,unknown,other
+nrvi,Ghost knight,unknown,other
+nsca,Skeleton-archer,unknown,other
+nsce,Skeleton,unknown,other
+o001,Ice Troll,unknown,other
+o002,Orc Warlock,unknown,other
+oeye,Invisible Guardian,unknown,other
+ofro,Sphere of Ice,unknown,item
+ohwd,Spirit-healer,unknown,other
+pdiv,Elixir of Invulnerability,unknown,item
+penr,Amulet of Energy,unknown,item
+pghe,Healing potion,unknown,item
+pgma,Elixir of Mana,unknown,item
+pmna,Amulet of Mana,unknown,item
+pnvl,Brew of Invincibility,unknown,item
+pomn,Potion of All Vision,unknown,item
+pres,Elixir of Rebirth,unknown,item
+prvt,Talisman of Health,unknown,item
+ps18,GoF Penguin,unknown,other
+ps19,GoF Packhorse,unknown,other
+ps20,GoF Chicken,unknown,other
+ps21,GoF Penguin,unknown,other
+ps22,GoF Stag,unknown,other
+ps23,GoF Crab,unknown,other
+ps24,GoF Frog,unknown,other
+ps25,GoF Hydralisk,unknown,other
+ps26,GoF Hellraiser,unknown,other
+ps27,GoF Pig,unknown,other
+ps28,GoF Raccoon,unknown,other
+ps29,GoF Cloud,unknown,other
+rag1,Shoes of Agility(+3),unknown,item
+rat6,Battle claws(+6),unknown,item
+rat9,Battle claws(+9),unknown,item
+ratc,Battle claws(+12),unknown,item
+ratf,Battle claws(+15),unknown,item
+rde1,Ring of Protection(+2),unknown,item
+rde2,Ring of Protection(+3),unknown,item
+rde3,Ring of Protection(+4),unknown,item
+rde4,Ring of Protection(+5),unknown,item
+rej3,Rejuvenation Potion,unknown,item
+rhth,Life Stone,unknown,item
+rin1,Scholar's Mantle(+3),unknown,item
+rst1,Ogre gauntlets(+3),unknown,item
+rwiz,Sobi mask,unknown,item
+sand,Scroll of Electroplating,unknown,item
+sbch,Bone bells,unknown,item
+shar,Ice shard,unknown,item
+spsh,Amulet of Protection,unknown,item
+sres,Scroll of Rebirth,unknown,item
+tdex,Book of Dexterity,unknown,item
+tdx2,Book of Dexterity(+2),unknown,item
+texp,Experience Book,unknown,item
+tin2,Book of Wisdom(+2),unknown,item
+tint,Book of Wisdom,unknown,item
+tkno,Knowledge Book,unknown,item
+totw,Talisman of the Forest,unknown,item
+tpow,Knowledge Book,unknown,item
+tst2,Book of Power(+2),unknown,item
+tstr,Book of Power,unknown,item
+u000,Mech,unknown,builder
+u001,Beast,unknown,builder
+u002,Shadow,unknown,builder
+u003,Nature,unknown,builder
+u004,Round In Progress,unknown,other
+u005,Diabolic,unknown,other
+u006,Dummy Caster,unknown,other
+u007,Dummy Caster,unknown,other
+u008,Upgrade King Hit Points,unknown,other
+u009,Upgrade King Attack,unknown,other
+u00A,Upgrade King Regeneration,unknown,other
+u00B,Wave - Level 4,unknown,other
+u00C,Element,unknown,builder
+u00D,Wave has not started yet,unknown,other
+u00E,Random Builder,unknown,other
+u00F,Red is picking a game mode,unknown,other
+u00G,Ghost,unknown,builder
+u00H,Demi-Human,unknown,builder
+u00I,Hybrid,unknown,builder
+u00J,Marine,unknown,builder
+u00K,Arctic,unknown,builder
+u00L,Elf,unknown,builder
+u00M,Goblin,unknown,builder
+u00N,600 value ( Mode = -li ),unknown,other
+u00O,Paladin,unknown,builder
+u00P,Mercenary,unknown,other
+u00Q,350 value ( Mode = -li ),unknown,other
+u00R,6000 value,unknown,other
+u00S,4000 value,unknown,other
+u00T,Prophet,unknown,builder
+u00U,Orc,unknown,builder
+u00V,Less than 50% of Recommend Value,unknown,other
+u00W,Dummy Caster,unknown,other
+u00Z,Undead,unknown,builder
+u011,Fire Archer,unknown,other
+u012,500 value,unknown,other
+u013,Dummy Vision,unknown,other
+u014,Fire Archer,unknown,other
+u01D,500 value,unknown,other
+u01K,Unused,unknown,other
+u0B6,Thicc Dummy Caster,unknown,other
+u834,Hero Unavailable During This Game,unknown,upgrade
+u835,Archmage is Not Available This Game,unknown,upgrade
+u836,Dark Ranger is Not Available This Game,unknown,upgrade
+u837,Naga Sea Witch is Not Available This Game,unknown,upgrade
+u838,Priestess of the Moon is Not Available This Game,unknown,upgrade
+u839,Mountain King is Not Available This Game,unknown,upgrade
+u840,Tauren Chieftain is Not Available This Game,unknown,upgrade
+u841,Dread Lord is Not Available This Game,unknown,upgrade
+u842,Paladin is Not Available This Game,unknown,upgrade
+u843,Death Knight is Not Available This Game,unknown,upgrade
+u844,Keeper of the Grove is Not Available This Game,unknown,upgrade
+u847,W3Champions Version,unknown,upgrade
+u848,Battle.Net Version,unknown,upgrade
+u849,At Least 4 Players In The Game,unknown,upgrade
+u850,Completion Of The Following,unknown,upgrade
+u851,Completion Of The Following,unknown,upgrade
+u852,Completion Of The Following,unknown,upgrade
+u853,Completion Of The Following,unknown,upgrade
+u854,Completion Of The Following,unknown,upgrade
+u997,King's Purge Upgrade,unknown,other
+u998,Upgrade King Hit Points x5,unknown,other
+u999,Upgrade King Attack x5,unknown,other
+u99A,Upgrade King Regeneration x5,unknown,other
+u99d,Dark Presence,unknown,other
+u99r,Royal Presence,unknown,other
+ward,Orc War Drums,unknown,item
+wcyc,Rod of Winds,unknown,item
+whwd,Perfume-healers,unknown,item
+wild,Amulet of the Forest,unknown,item
+wlsd,Lightning Rod,unknown,item
+woms,Wand of Drain Mana,unknown,item
+wshs,Wand of Alien Eyes,unknown,item
+wswd,Invisible Guardians,unknown,item

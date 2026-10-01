@@ -1,0 +1,13 @@
+[project]
+name = "warehouse-api"
+version = "0.1.0"
+description = "Semantic query API over the dbt marts in ClickHouse."
+requires-python = ">=3.13"
+dependencies = ["fastapi", "uvicorn"]
+
+[dependency-groups]
+dev = ["pytest", "httpx"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

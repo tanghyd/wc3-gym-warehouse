@@ -1,0 +1,53 @@
+{
+  "route": "/query",
+  "request": {
+    "dimensions": [
+      "player",
+      "opponent_race"
+    ],
+    "measures": [
+      "games",
+      "wins"
+    ],
+    "steps": [
+      {
+        "type": "building",
+        "code": "eate"
+      },
+      {
+        "type": "building",
+        "code": "eaom",
+        "within_prev_s": 60
+      }
+    ],
+    "order_by": [
+      "player",
+      "opponent_race"
+    ]
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "rows": [
+        {
+          "player": "Medusa#31315",
+          "opponent_race": "HU",
+          "games": 1,
+          "wins": 1
+        },
+        {
+          "player": "Medusa#31315",
+          "opponent_race": "OC",
+          "games": 1,
+          "wins": 1
+        },
+        {
+          "player": "thanks#11187",
+          "opponent_race": "OC",
+          "games": 1,
+          "wins": 1
+        }
+      ]
+    }
+  }
+}

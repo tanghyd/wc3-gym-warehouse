@@ -1,0 +1,41 @@
+{
+  "route": "/query",
+  "request": {
+    "dimensions": [
+      "opener_1",
+      "opener_2"
+    ],
+    "measures": [
+      "games",
+      "wins",
+      "minutes_total"
+    ],
+    "filters": {
+      "race": [
+        "NE"
+      ],
+      "result": [
+        "win",
+        "loss"
+      ]
+    },
+    "order_by": [
+      "opener_1",
+      "opener_2"
+    ]
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "rows": [
+        {
+          "opener_1": "eate",
+          "opener_2": "eaom",
+          "games": 3,
+          "wins": 3,
+          "minutes_total": 29.11865
+        }
+      ]
+    }
+  }
+}

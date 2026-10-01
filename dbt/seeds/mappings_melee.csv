@@ -1,0 +1,650 @@
+"code","name","kind","race","hero","is_supply_building"
+"AEah","Thorns Aura","hero_skill","","Keeper of the Grove",0
+"AEar","Trueshot Aura","hero_skill","","Priestess of the Moon",0
+"AEbl","Blink","hero_skill","","Warden",0
+"AEer","Entangling Roots","hero_skill","","Keeper of the Grove",0
+"AEev","Evasion","hero_skill","","Demon Hunter",0
+"AEfk","Fan of Knives","hero_skill","","Warden",0
+"AEfn","Force of Nature","hero_skill","","Keeper of the Grove",0
+"AEim","Immolation","hero_skill","","Demon Hunter",0
+"AEmb","Mana Burn","hero_skill","","Demon Hunter",0
+"AEme","Metamorphosis","hero_skill","","Demon Hunter",0
+"AEsf","Starfall","hero_skill","","Priestess of the Moon",0
+"AEsh","Shadow Strike","hero_skill","","Warden",0
+"AEst","Scout","hero_skill","","Priestess of the Moon",0
+"AEsv","Spirit of Vengeance","hero_skill","","Warden",0
+"AEtq","Tranquility","hero_skill","","Keeper of the Grove",0
+"AHab","Brilliance Aura","hero_skill","","Archmage",0
+"AHad","Devotion Aura","hero_skill","","Paladin",0
+"AHav","Avatar","hero_skill","","Mountain King",0
+"AHbh","Bash","hero_skill","","Mountain King",0
+"AHbn","Banish","hero_skill","","Blood Mage",0
+"AHbz","Blizzard","hero_skill","","Archmage",0
+"AHdr","Siphon Mana","hero_skill","","Blood Mage",0
+"AHds","Divine Shield","hero_skill","","Paladin",0
+"AHfa","Searing Arrows","hero_skill","","Priestess of the Moon",0
+"AHfs","Flame Strike","hero_skill","","Blood Mage",0
+"AHhb","Holy Light","hero_skill","","Paladin",0
+"AHmt","Mass Teleport","hero_skill","","Archmage",0
+"AHpx","Summon Phoenix","hero_skill","","Blood Mage",0
+"AHre","Resurrection","hero_skill","","Paladin",0
+"AHtb","Storm Bolt","hero_skill","","Mountain King",0
+"AHtc","Thunder Clap","hero_skill","","Mountain King",0
+"AHwe","Summon Water Elemental","hero_skill","","Archmage",0
+"ANab","Acid Bomb","hero_skill","","Goblin Alchemist",0
+"ANba","Black Arrow","hero_skill","","Dark Ranger",0
+"ANbf","Breath of Fire","hero_skill","","Pandaren Brewmaster",0
+"ANc1","Cluster Rockets","hero_skill","","Goblin Tinker",0
+"ANc2","Cluster Rockets","hero_skill","","Goblin Tinker",0
+"ANc3","Cluster Rockets","hero_skill","","Goblin Tinker",0
+"ANca","Cleaving Attack","hero_skill","","Pit Lord",0
+"ANch","Charm","hero_skill","","Dark Ranger",0
+"ANcr","Chemical Rage","hero_skill","","Goblin Alchemist",0
+"ANcs","Cluster Rockets","hero_skill","","Goblin Tinker",0
+"ANdb","Drunken Brawler","hero_skill","","Pandaren Brewmaster",0
+"ANdh","Drunken Haze","hero_skill","","Pandaren Brewmaster",0
+"ANdo","Doom","hero_skill","","Pit Lord",0
+"ANdr","Life Drain","hero_skill","","Dark Ranger",0
+"ANef","Storm Earth and Fire","hero_skill","","Pandaren Brewmaster",0
+"ANeg","Engineering Upgrade","hero_skill","","Goblin Tinker",0
+"ANfa","Frost Arrows","hero_skill","","Naga Sea Witch",0
+"ANfl","Forked Lightning","hero_skill","","Naga Sea Witch",0
+"ANg1","Robo-Goblin","hero_skill","","Goblin Tinker",0
+"ANg2","Robo-Goblin","hero_skill","","Goblin Tinker",0
+"ANg3","Robo-Goblin","hero_skill","","Goblin Tinker",0
+"ANhs","Healing Spray","hero_skill","","Goblin Alchemist",0
+"ANht","Howl of Terror","hero_skill","","Pit Lord",0
+"ANia","Incinerate","hero_skill","","Firelord",0
+"ANic","Incinerate","hero_skill","","Firelord",0
+"ANlm","Summon Lava Spawn","hero_skill","","Firelord",0
+"ANms","Mana Shield","hero_skill","","Naga Sea Witch",0
+"ANrf","Rain of Fire","hero_skill","","Pit Lord",0
+"ANrg","Robo-Goblin","hero_skill","","Goblin Tinker",0
+"ANs1","Pocket Factory","hero_skill","","Goblin Tinker",0
+"ANs2","Pocket Factory","hero_skill","","Goblin Tinker",0
+"ANs3","Pocket Factory","hero_skill","","Goblin Tinker",0
+"ANsg","Summon Bear","hero_skill","","Beastmaster",0
+"ANsi","Silence","hero_skill","","Dark Ranger",0
+"ANso","Soul Burn","hero_skill","","Firelord",0
+"ANsq","Summon Quilbeast","hero_skill","","Beastmaster",0
+"ANst","Stampede","hero_skill","","Beastmaster",0
+"ANsw","Summon Hawk","hero_skill","","Beastmaster",0
+"ANsy","Pocket Factory","hero_skill","","Goblin Tinker",0
+"ANtm","Transmute","hero_skill","","Goblin Alchemist",0
+"ANto","Tornado","hero_skill","","Naga Sea Witch",0
+"ANvc","Volcano","hero_skill","","Firelord",0
+"AOae","Endurance Aura","hero_skill","","Tauren Chieftain",0
+"AOcl","Chain Lighting","hero_skill","","Far Seer",0
+"AOcr","Critical Strike","hero_skill","","Blademaster",0
+"AOeq","Earth Quake","hero_skill","","Far Seer",0
+"AOfs","Far Sight","hero_skill","","Far Seer",0
+"AOhw","Healing Wave","hero_skill","","Shadow Hunter",0
+"AOhx","Hex","hero_skill","","Shadow Hunter",0
+"AOmi","Mirror Image","hero_skill","","Blademaster",0
+"AOre","Reincarnation","hero_skill","","Tauren Chieftain",0
+"AOsf","Feral Spirit","hero_skill","","Far Seer",0
+"AOsh","Shockwave","hero_skill","","Tauren Chieftain",0
+"AOsw","Serpent Ward","hero_skill","","Shadow Hunter",0
+"AOvd","Big Bad Voodoo","hero_skill","","Shadow Hunter",0
+"AOwk","Wind Walk","hero_skill","","Blademaster",0
+"AOws","War Stomp","hero_skill","","Tauren Chieftain",0
+"AOww","Bladestorm","hero_skill","","Blademaster",0
+"AUan","Animate Dead","hero_skill","","Death Knight",0
+"AUau","Unholy Aura","hero_skill","","Death Knight",0
+"AUav","Vampiric Aura","hero_skill","","Dreadlord",0
+"AUcb","Carrion Beetles","hero_skill","","Crypt Lord",0
+"AUcs","Carrion Swarm","hero_skill","","Dreadlord",0
+"AUdc","Death Coil","hero_skill","","Death Knight",0
+"AUdd","Death and Decay","hero_skill","","Lich",0
+"AUdp","Death Pact","hero_skill","","Death Knight",0
+"AUdr","Dark Ritual","hero_skill","","Lich",0
+"AUfa","Frost Armor","hero_skill","","Lich",0
+"AUfn","Frost Nova","hero_skill","","Lich",0
+"AUfu","Frost Armor","hero_skill","","Lich",0
+"AUim","Impale","hero_skill","","Crypt Lord",0
+"AUin","Inferno","hero_skill","","Dreadlord",0
+"AUls","Locust Swarm","hero_skill","","Crypt Lord",0
+"AUsl","Sleep","hero_skill","","Dreadlord",0
+"AUts","Spiked Carapace","hero_skill","","Crypt Lord",0
+"Edem","Demon Hunter","hero","night_elf","",0
+"Ekee","Keeper of the Grove","hero","night_elf","",0
+"Emoo","Priestess of the Moon","hero","night_elf","",0
+"Ewar","Warden","hero","night_elf","",0
+"Hamg","Archmage","hero","human","",0
+"Hblm","Blood Mage","hero","human","",0
+"Hmkg","Mountain King","hero","human","",0
+"Hpal","Paladin","hero","human","",0
+"Nalc","Goblin Alchemist","hero","neutral","",0
+"Nbrn","Dark Ranger","hero","neutral","",0
+"Nbst","Beastmaster","hero","neutral","",0
+"Nfir","Firelord","hero","neutral","",0
+"Nngs","Naga Sea Witch","hero","neutral","",0
+"Npbm","Pandaren Brewmaster","hero","neutral","",0
+"Nplh","Pit Lord","hero","neutral","",0
+"Ntin","Goblin Tinker","hero","neutral","",0
+"Obla","Blademaster","hero","orc","",0
+"Ofar","Far Seer","hero","orc","",0
+"Oshd","Shadow Hunter","hero","orc","",0
+"Otch","Tauren Chieftain","hero","orc","",0
+"Recb","Corrosive Breath","upgrade","","",0
+"Redc","Druid of the Claw Training","upgrade","","",0
+"Redt","Druid of the Talon Training","upgrade","","",0
+"Reeb","Mark of the Claw","upgrade","","",0
+"Reec","Mark of the Talon","upgrade","","",0
+"Rehs","Hardened Skin","upgrade","","",0
+"Reht","Hippogryph Taming","upgrade","","",0
+"Reib","Improved Bows","upgrade","","",0
+"Rema","Moon Armor","upgrade","","",0
+"Remg","Upgrade Moon Glaive","upgrade","","",0
+"Remk","Marksmanship","upgrade","","",0
+"Renb","Nature's Blessing","upgrade","","",0
+"Repb","Vorpal Blades","upgrade","","",0
+"Repm","Backpack","upgrade","","",0
+"Rerh","Reinforced Hides","upgrade","","",0
+"Rers","Resistant Skin","upgrade","","",0
+"Resc","Sentinel","upgrade","","",0
+"Resi","Abolish Magic","upgrade","","",0
+"Resm","Strength of the Moon","upgrade","","",0
+"Resw","Strength of the Wild","upgrade","","",0
+"Reuv","Ultravision","upgrade","","",0
+"Rews","Well Spring","upgrade","","",0
+"Rhac","Masonry","upgrade","","",0
+"Rhan","Animal War Training","upgrade","","",0
+"Rhar","Plating","upgrade","","",0
+"Rhcd","Cloud","upgrade","","",0
+"Rhde","Defend","upgrade","","",0
+"Rhfc","Flak Cannons","upgrade","","",0
+"Rhfl","Flare","upgrade","","",0
+"Rhfs","Fragmentation Shards","upgrade","","",0
+"Rhgb","Flying Machine Bombs","upgrade","","",0
+"Rhhb","Storm Hammers","upgrade","","",0
+"Rhla","Armor","upgrade","","",0
+"Rhlh","Lumber Harvesting","upgrade","","",0
+"Rhme","Swords","upgrade","","",0
+"Rhpm","Backpack","upgrade","","",0
+"Rhpt","Priest Training","upgrade","","",0
+"Rhra","Gunpowder","upgrade","","",0
+"Rhri","Long Rifles","upgrade","","",0
+"Rhrt","Barrage","upgrade","","",0
+"Rhse","Magic Sentry","upgrade","","",0
+"Rhss","Control Magic","upgrade","","",0
+"Rhst","Sorceress Training","upgrade","","",0
+"Roar","Armor","upgrade","","",0
+"Robf","Burning Oil","upgrade","","",0
+"Robk","Berserker Upgrade","upgrade","","",0
+"Robs","Berserker Strength","upgrade","","",0
+"Roch","Chaos","upgrade","","",0
+"Roen","Ensnare","upgrade","","",0
+"Rolf","Liquid Fire","upgrade","","",0
+"Rome","Melee Weapons","upgrade","","",0
+"Ropg","Pillage","upgrade","","",0
+"Ropm","Backpack","upgrade","","",0
+"Rora","Ranged Weapons","upgrade","","",0
+"Rorb","Reinforced Defenses","upgrade","","",0
+"Rosp","Spiked Barricades","upgrade","","",0
+"Rost","Shaman Training","upgrade","","",0
+"Rotr","Troll Regeneration","upgrade","","",0
+"Rovs","Envenomed Spears","upgrade","","",0
+"Rowd","Witch Doctor Training","upgrade","","",0
+"Rows","Pulverize","upgrade","","",0
+"Rowt","Spirit Walker Training","upgrade","","",0
+"Ruac","Cannibalize","upgrade","","",0
+"Ruar","Unholy Armor","upgrade","","",0
+"Ruba","Banshee Training","upgrade","","",0
+"Rubu","Burrow","upgrade","","",0
+"Rucr","Creature Carapace","upgrade","","",0
+"Ruex","Exhume Corpses","upgrade","","",0
+"Rufb","Freezing Breath","upgrade","","",0
+"Rugf","Ghoul Frenzy","upgrade","","",0
+"Rume","Unholy Strength","upgrade","","",0
+"Rune","Necromancer Training","upgrade","","",0
+"Rupc","Disease Cloud","upgrade","","",0
+"Rupm","Backpack","upgrade","","",0
+"Rura","Creature Attack","upgrade","","",0
+"Rusf","Stone Form","upgrade","","",0
+"Rusl","Skeletal Longevity","upgrade","","",0
+"Rusm","Skeletal Mastery","upgrade","","",0
+"Rusp","Destroyer Form","upgrade","","",0
+"Ruwb","Web","upgrade","","",0
+"Rwdm","War Drums Damage Increase","upgrade","","",0
+"Ucrl","Crypt Lord","hero","undead","",0
+"Udea","Death Knight","hero","undead","",0
+"Udre","Dreadlord","hero","undead","",0
+"Ulic","Lich","hero","undead","",0
+"afac","Alleria's Flute of Accuracy","item","","",0
+"ajen","Ancient Janggo of Endurance","item","","",0
+"amrc","Amulet of Recall","item","","",0
+"anfg","Ancient Figurine","item","","",0
+"ankh","Ankh of Reincarnation","item","","",0
+"arsc","Arcane Scroll","item","","",0
+"arsh","Arcanite Shield","item","","",0
+"asbl","Assassin's Blade","item","","",0
+"axas","Ancestral Staff","item","","",0
+"belv","Boots of Quel'Thalas +6","item","","",0
+"bfhr","Bloodfeather's Heart","item","","",0
+"bgst","Belt of Giant Strength +6","item","","",0
+"blba","Bladebane Armor","item","","",0
+"brac","Runed Bracers","item","","",0
+"brag","Bracer of Agility","item","","",0
+"bspd","Boots of Speed","item","","",0
+"btst","Battle Standard","item","","",0
+"ccmd","Scepter of Mastery","item","","",0
+"ches","Cheese","item","","",0
+"ciri","Robe of the Magi +6","item","","",0
+"ckng","Crown of Kings +5","item","","",0
+"clfm","Cloak of Flames","item","","",0
+"clsd","Cloak of Shadows","item","","",0
+"cnob","Circlet of Nobility","item","","",0
+"cosl","Celestial Orb of Souls","item","","",0
+"crdt","Crown of the Deathlord","item","","",0
+"crys","Crystal Ball","item","","",0
+"desc","Kelen's Dagger of Escape","item","","",0
+"dkfw","Keg of Thunderwater","item","","",0
+"dphe","Thunder Phoenix Egg","item","","",0
+"drph","Druid Pouch","item","","",0
+"dsum","Diamond of Summoning","item","","",0
+"dthb","Thunderbloom Bulb","item","","",0
+"dtsb","Drek'thar's Spellbook","item","","",0
+"dust","Dust of Appearance","item","","",0
+"eaoe","Ancient of Lore","building","night_elf","",0
+"eaom","Ancient of War","building","night_elf","",0
+"eaow","Ancient of Wind","building","night_elf","",0
+"earc","Archer","unit","night_elf","",0
+"eate","Altar of Elders","building","night_elf","",0
+"ebal","Glaive Thrower","unit","night_elf","",0
+"echm","Chimaera","unit","night_elf","",0
+"eden","Ancient of Wonders","building","night_elf","",0
+"edob","Hunter's Hall","building","night_elf","",0
+"edoc","Druid of the Claw","unit","night_elf","",0
+"edos","Chimaera Roost","building","night_elf","",0
+"edot","Druid of the Talon","unit","night_elf","",0
+"edry","Dryad","unit","night_elf","",0
+"efdr","Faerie Dragon","unit","night_elf","",0
+"ehip","Hippogryph","unit","night_elf","",0
+"emow","Moon Well","building","night_elf","",1
+"emtg","Mountain Giant","unit","night_elf","",0
+"engs","Enchanted Gemstone","item","night_elf","",0
+"envl","Enchanted Vial","item","night_elf","",0
+"esen","Huntress","unit","night_elf","",0
+"etoa","Tree of Ages","building","night_elf","",0
+"etoe","Tree of Eternity","building","night_elf","",0
+"etol","Tree of Life","building","night_elf","",0
+"etrp","Ancient Protector","building","night_elf","",0
+"evtl","Talisman of Evasion","item","night_elf","",0
+"ewsp","Wisp","unit","night_elf","",0
+"fgdg","Demonic Figurine","item","","",0
+"fgfh","Spiked Collar","item","","",0
+"fgrd","Red Drake Egg","item","","",0
+"fgrg","Stone Token","item","","",0
+"fgsk","Book of the Dead","item","","",0
+"fgun","Flare Gun","item","","",0
+"frgd","Frostguard","item","","",0
+"frhg","Firehand Gauntlets","item","","",0
+"fwss","Frost Wyrm Skull Shield","item","","",0
+"gcel","Gloves of Haste","item","","",0
+"gemt","Gem of True Seeing","item","","",0
+"gfor","Glyph of Fortification","item","","",0
+"gldo","Orb of Kil'jaeden","item","","",0
+"gobm","Goblin Land Mines","item","","",0
+"gold","Gold Coins","item","","",0
+"gomn","Glyph of Omniscience","item","","",0
+"gopr","Glyph of Purification","item","","",0
+"grsl","Grimoire of Souls","item","","",0
+"gsou","Soul Gem","item","","",0
+"guvi","Glyph of Ultravision","item","","",0
+"gvsm","Gloves of Spell Mastery","item","","",0
+"halt","Altar of Kings","building","human","",0
+"harm","Workshop","building","human","",0
+"hars","Arcane Sanctum","building","human","",0
+"hatw","Arcane Tower","building","human","",0
+"hbar","Barracks","building","human","",0
+"hbla","Blacksmith","building","human","",0
+"hbth","Helm of Battlethirst","item","human","",0
+"hcas","Castle","building","human","",0
+"hctw","Cannon Tower","building","human","",0
+"hcun","Hood of Cunning","item","human","",0
+"hdhw","Dragonhawk Rider","unit","human","",0
+"hfoo","Footman","unit","human","",0
+"hgra","Gryphon Aviary","building","human","",0
+"hgry","Gryphon Rider","unit","human","",0
+"hgtw","Guard Tower","building","human","",0
+"hgyr","Flying Machine","unit","human","",0
+"hhou","Farm","building","human","",1
+"hkee","Keep","building","human","",0
+"hkni","Knight","unit","human","",0
+"hlst","Health Stone","item","human","",0
+"hlum","Lumber Mill","building","human","",0
+"hmpr","Priest","unit","human","",0
+"hmtm","Mortar Team","unit","human","",0
+"hmtt","Siege Engine","unit","human","",0
+"horl","Sacred Relic","item","human","",0
+"hpea","Peasant","unit","human","",0
+"hrif","Rifleman","unit","human","",0
+"hrtt","Siege Engine","unit","human","",0
+"hslv","Healing Salve","item","human","",0
+"hsor","Sorceress","unit","human","",0
+"hspt","Spell Breaker","unit","human","",0
+"htow","Town Hall","building","human","",0
+"hval","Helm of Valor","item","human","",0
+"hvlt","Arcane Vault","building","human","",0
+"hwtw","Scout Tower","building","human","",0
+"infs","Inferno Stone","item","","",0
+"iwbr","Ironwood Branch","item","","",0
+"jdrn","Jade Ring","item","","",0
+"k3m1","Mooncrystal","item","","",0
+"kgal","Keg of Ale","item","","",0
+"klmm","Killmaim","item","","",0
+"kpin","Khadgar's Pipe of Insight","item","","",0
+"lgdh","Legion Doom-Horn","item","","",0
+"lhst","The Lion Horn of Stormwind","item","","",0
+"lmbr","Bundle of Lumber","item","","",0
+"lnrn","Lion's Ring","item","","",0
+"lure","Monster Lure","item","","",0
+"manh","Manual of Health","item","","",0
+"mcou","Medallion of Courage","item","","",0
+"mcri","Mechanical Critter","item","","",0
+"mdpb","Medusa Pebble","item","","",0
+"mgtk","Magic Key Chain","item","","",0
+"mlst","Maul of Strength","item","","",0
+"mnsf","Mindstaff","item","","",0
+"mnst","Mana Stone","item","","",0
+"modt","Mask of Death","item","","",0
+"moon","Moonstone","item","","",0
+"mort","Mogrin's Report","item","","",0
+"nadk","Blue Drake","unit","neutral","",0
+"nadr","Blue Dragon","unit","neutral","",0
+"nadw","Blue Dragon Whelp","unit","neutral","",0
+"nanb","Barbed Arachnathid","unit","neutral","",0
+"nanm","Barbed Arachnathid","unit","neutral","",0
+"nass","Assassin","unit","neutral","",0
+"nban","Bandit","unit","neutral","",0
+"nbdk","Black Drake","unit","neutral","",0
+"nbdm","Blue Dragonspawn Meddler","unit","neutral","",0
+"nbdr","Black Dragon Whelp","unit","neutral","",0
+"nbot","Transport Ship","unit","neutral","",0
+"nbwm","Black Dragon","unit","neutral","",0
+"nbzd","Bronze Dragon","unit","neutral","",0
+"nbzk","Bronze Drake","unit","neutral","",0
+"nbzw","Bronze Dragon Whelp","unit","neutral","",0
+"ncea","Centaur Archer","unit","neutral","",0
+"ncen","Centaur Outrunner","unit","neutral","",0
+"ncer","Centaur Drudge","unit","neutral","",0
+"ndrd","Draenei Darkslayer","unit","neutral","",0
+"ndrm","Draenei Disciple","unit","neutral","",0
+"ndtb","Dark Troll Berserker","unit","neutral","",0
+"ndth","Dark Troll High Priest","unit","neutral","",0
+"ndtp","Dark Troll Shadow Priest","unit","neutral","",0
+"ndtr","Dark Troll","unit","neutral","",0
+"ndtt","Dark Troll Trapper","unit","neutral","",0
+"ndtw","Dark Troll Warlord","unit","neutral","",0
+"nenf","Enforcer","unit","neutral","",0
+"nfps","Polar Furbolg Shaman","unit","neutral","",0
+"nfrs","Furbolg Shaman","unit","neutral","",0
+"nfsh","Forest Troll High Priest","unit","neutral","",0
+"nfsp","Forest Troll Shadow Priest","unit","neutral","",0
+"nftb","Forest Troll Berserker","unit","neutral","",0
+"nftk","Forest Troll Warlord","unit","neutral","",0
+"nftr","Forest Troll","unit","neutral","",0
+"nftt","Forest Troll Trapper","unit","neutral","",0
+"ngdk","Green Drake","unit","neutral","",0
+"ngir","Goblin Shredder","unit","neutral","",0
+"ngna","Gnoll Poacher","unit","neutral","",0
+"ngnb","Gnoll Brute","unit","neutral","",0
+"ngno","Gnoll","unit","neutral","",0
+"ngns","Gnoll Assassin","unit","neutral","",0
+"ngnv","Gnoll Overseer","unit","neutral","",0
+"ngnw","Gnoll Warden","unit","neutral","",0
+"ngrd","Green Dragon","unit","neutral","",0
+"ngrk","Mud Golem","unit","neutral","",0
+"ngrw","Green Dragon Whelp","unit","neutral","",0
+"ngsp","Goblin Sapper","unit","neutral","",0
+"nhrr","Harpy Rogue","unit","neutral","",0
+"nhrw","Harpy Windwitch","unit","neutral","",0
+"nitb","Icy Treasure Box","unit","neutral","",0
+"nits","Ice Troll Berserker","unit","neutral","",0
+"nitt","Ice Troll Trapper","unit","neutral","",0
+"nkob","Kobold","unit","neutral","",0
+"nkog","Kobold Geomancer","unit","neutral","",0
+"nlds","Makrura Deepseer","unit","neutral","",0
+"nlsn","Makrura Snapper","unit","neutral","",0
+"nmfs","Murloc Flesheater","unit","neutral","",0
+"nmgv","Magic Vault","unit","neutral","",0
+"nmgw","Magnataur Warrior","unit","neutral","",0
+"nmrr","Murloc Huntsman","unit","neutral","",0
+"nmsn","Mur'gul Snarecaster","unit","neutral","",0
+"nndk","Nether Drake","unit","neutral","",0
+"nndr","Nether Dragon","unit","neutral","",0
+"nnht","Nether Dragon Hatchling","unit","neutral","",0
+"nnwa","Nerubian Warrior","unit","neutral","",0
+"nnwl","Nerubian Webspinner","unit","neutral","",0
+"nogl","Ogre Lord","unit","neutral","",0
+"nogm","Ogre Mauler","unit","neutral","",0
+"nogr","Ogre Warrior","unit","neutral","",0
+"nomg","Ogre Magi","unit","neutral","",0
+"nowb","Wildkin","unit","neutral","",0
+"npfl","Fel Beast","unit","neutral","",0
+"nrdk","Red Dragon Whelp","unit","neutral","",0
+"nrdr","Red Drake","unit","neutral","",0
+"nrog","Rogue","unit","neutral","",0
+"nrvs","Frost Revenant","unit","neutral","",0
+"nrwm","Red Dragon","unit","neutral","",0
+"nrzm","Razormane Medicine Man","unit","neutral","",0
+"nsc2","Spider Crab Limbripper","unit","neutral","",0
+"nsc3","Spider Crab Behemoth","unit","neutral","",0
+"nscb","Spider Crab Shorecrawler","unit","neutral","",0
+"nskf","Burning Archer","unit","neutral","",0
+"nskm","Skeletal Marksman","unit","neutral","",0
+"nslf","Sludge Flinger","unit","neutral","",0
+"nspi","Necklace of Spell Immunity","item","neutral","",0
+"nstl","Satyr Soulstealer","unit","neutral","",0
+"nsts","Satyr Shadowdancer","unit","neutral","",0
+"nthl","Thunder Lizard","unit","neutral","",0
+"ntrt","Giant Sea Turtle","unit","neutral","",0
+"nvdg","Greater Voidwalker","unit","neutral","",0
+"nvdw","Voidwalker","unit","neutral","",0
+"nws1","Dragon Hawk","unit","neutral","",0
+"nzep","Goblin Zeppelin","unit","neutral","",0
+"oalt","Altar of Storms","building","orc","",0
+"obar","Barracks","building","orc","",0
+"obea","Beastiary","building","orc","",0
+"ocat","Demolisher","unit","orc","",0
+"ocor","Orb of Corruption","item","orc","",0
+"odef","Orb of Darkness","item","orc","",0
+"odoc","Troll Witch Doctor","unit","orc","",0
+"ofir","Orb of Fire","item","orc","",0
+"ofor","War Mill","building","orc","",0
+"ofro","Orb of Frost","item","orc","",0
+"ofrt","Fortress","building","orc","",0
+"ogre","Great Hall","building","orc","",0
+"ogru","Grunt","unit","orc","",0
+"ohun","Troll Headhunter/Berserker","unit","orc","",0
+"okod","Kodo Beast","unit","orc","",0
+"oli2","Orb of Lightning","item","orc","",0
+"olig","Orb of Lightning","item","orc","",0
+"opeo","Peon","unit","orc","",0
+"orai","Raider","unit","orc","",0
+"orbr","Reinforced Orc Burrow","building","orc","",0
+"oshm","Shaman","unit","orc","",0
+"osld","Spirit Lodge","building","orc","",0
+"oslo","Orb of Slow","item","orc","",0
+"ospm","Spirit Walker","unit","orc","",0
+"ospw","Spirit Walker","unit","orc","",0
+"ostr","Stronghold","building","orc","",0
+"otau","Tauren","unit","orc","",0
+"otbk","Troll Headhunter/Berserker","unit","orc","",0
+"otbr","Troll Batrider","unit","orc","",0
+"otrb","Orc Burrow","building","orc","",0
+"otto","Tauren Totem","building","orc","",0
+"oven","Orb of Venom","item","orc","",0
+"ovln","Voodoo Lounge","building","orc","",0
+"owtw","Watch Tower","building","orc","",0
+"owyv","Wind Rider","unit","orc","",0
+"pams","Anti-magic Potion","item","","",0
+"pclr","Clarity Potion","item","","",0
+"pdiv","Potion of Divinity","item","","",0
+"penr","Pendant of Energy","item","","",0
+"pghe","Potion of Greater Healing","item","","",0
+"pgin","Potion of Greater Invisibility","item","","",0
+"pgma","Potion of Greater Mana","item","","",0
+"phea","Potion of Healing","item","","",0
+"phlt","Phat Lewt","item","","",0
+"pinv","Potion of Invisibility","item","","",0
+"plcl","Lesser Clarity Potion","item","","",0
+"pman","Potion of Mana","item","","",0
+"pmna","Pendant of Mana","item","","",0
+"pnvl","Potion of Lesser Invulnerability","item","","",0
+"pnvu","Potion of Invulnerability","item","","",0
+"pomn","Potion of Omniscience","item","","",0
+"pres","Potion of Restoration","item","","",0
+"prvt","Periapt of Vitality","item","","",0
+"pspd","Potion of Speed","item","","",0
+"rag1","Slippers of Agility +3","item","","",0
+"ram1","Ring of the Archmagi","item","","",0
+"ram2","Ring of the Archmagi","item","","",0
+"ram3","Ring of the Archmagi","item","","",0
+"ram4","Ring of the Archmagi","item","","",0
+"rat3","Claws of Attack +3","item","","",0
+"rat6","Claws of Attack +6","item","","",0
+"rat9","Claws of Attack +9","item","","",0
+"ratc","Claws of Attack +12","item","","",0
+"ratf","Claws of Attack +15","item","","",0
+"rde0","Ring of Protection +1","item","","",0
+"rde1","Ring of Protection +2","item","","",0
+"rde2","Ring of Protection +3","item","","",0
+"rde3","Ring of Protection +4","item","","",0
+"rde4","Ring of Protection +5","item","","",0
+"rdis","Rune of Dispel Magic","item","","",0
+"rej1","Minor Replenishment Potion","item","","",0
+"rej2","Lesser Replenishment Potion","item","","",0
+"rej3","Replenishment Potion","item","","",0
+"rej4","Greater Replenishment Potion","item","","",0
+"rej5","Lesser Scroll of Replenishment ","item","","",0
+"rej6","Greater Scroll of Replenishment ","item","","",0
+"rhth","Khadgar's Gem of Health","item","","",0
+"rin1","Mantle of Intelligence +3","item","","",0
+"rlif","Ring of Regeneration","item","","",0
+"rnec","Rod of Necromancy","item","","",0
+"rnsp","Ring of Superiority","item","","",0
+"rots","Scepter of the Sea","item","","",0
+"rst1","Gauntlets of Ogre Strength +3","item","","",0
+"rugt","Runed Gauntlets","item","","",0
+"rump","Rusty Mining Pick","item","","",0
+"rwat","Rune of the Watcher","item","","",0
+"rwiz","Sobi Mask","item","","",0
+"sand","Scroll of Animate Dead","item","","",0
+"sbch","Scourge Bone Chimes","item","","",0
+"sbok","Spell Book","item","","",0
+"schl","Scepter of Healing","item","","",0
+"sclp","Secret Level Powerup","item","","",0
+"scul","Scroll of the Unholy Legion","item","","",0
+"sfog","Horn of the Clouds","item","","",0
+"shar","Ice Shard","item","","",0
+"shas","Scroll of Speed","item","","",0
+"shcw","Shaman Claws","item","","",0
+"shdt","Shield of the Deathlord","item","","",0
+"shea","Scroll of Healing","item","","",0
+"shen","Enchanted Shield","item","","",0
+"shhn","Shield of Honor","item","","",0
+"shrs","Shimmerglaze Roast","item","","",0
+"shtm","Shamanic Totem","item","","",0
+"shwd","Shimmerweed","item","","",0
+"silk","Spider Silk Broach","item","","",0
+"skrt","Skeletal Artifact","item","","",0
+"sksh","Skull Shield","item","","",0
+"skul","Sacrificial Skull","item","","",0
+"sman","Scroll of Mana","item","","",0
+"sneg","Staff of Negation","item","","",0
+"sor1","Shadow Orb +1","item","","",0
+"sor2","Shadow Orb +2","item","","",0
+"sor3","Shadow Orb +3","item","","",0
+"sor4","Shadow Orb +4","item","","",0
+"sor5","Shadow Orb +5","item","","",0
+"sor6","Shadow Orb +6","item","","",0
+"sor7","Shadow Orb +7","item","","",0
+"sor8","Shadow Orb +8","item","","",0
+"sor9","Shadow Orb +9","item","","",0
+"sora","Shadow Orb +10","item","","",0
+"sorf","Shadow Orb Fragment","item","","",0
+"soul","Soul","item","","",0
+"spre","Staff of Preservation","item","","",0
+"sprn","Spider Ring","item","","",0
+"spro","Scroll of Protection","item","","",0
+"spsh","Amulet of Spell Shield","item","","",0
+"srbd","Searing Blade","item","","",0
+"sreg","Scroll of Regeneration","item","","",0
+"sres","Scroll of Restoration","item","","",0
+"sror","Scroll of the Beast","item","","",0
+"srrc","Scroll of Resurrection","item","","",0
+"srtl","Serathil","item","","",0
+"ssan","Staff of Sanctuary","item","","",0
+"ssil","Staff of Silence","item","","",0
+"stel","Staff of Teleportation","item","","",0
+"stpg","Clockwork Penguin","item","","",0
+"stre","Staff of Reanimation","item","","",0
+"stwa","Sturdy War Axe","item","","",0
+"stwp","Scroll of Town Portal","item","","",0
+"tbak","Tiny Altar of Kings","item","","",0
+"tbar","Tiny Barracks","item","","",0
+"tbsm","Tiny Blacksmith","item","","",0
+"tcas","Tiny Castle","item","","",0
+"tdex","Tome of Agility","item","","",0
+"tdx2","Tome of Agility +2","item","","",0
+"tels","Goblin Night Scope","item","","",0
+"texp","Tome of Experience","item","","",0
+"tfar","Tiny Farm","item","","",0
+"tgrh","Tiny Great Hall","item","","",0
+"tgxp","Tome of Greater Experience","item","","",0
+"thdm","Thunderlizard Diamond","item","","",0
+"thle","Thunder Lizard Egg","item","","",0
+"tin2","Tome of Intelligence +2","item","","",0
+"tint","Tome of Intelligence","item","","",0
+"tkno","Tome of Power","item","","",0
+"tlum","Tiny Lumber Mill","item","","",0
+"tmmt","Totem of Might","item","","",0
+"tmsc","Tome of Sacrifices","item","","",0
+"totw","Talisman of the Wild","item","","",0
+"tpow","Tome of Knowledge","item","","",0
+"tret","Tome of Retraining","item","","",0
+"tsct","Ivory Tower","item","","",0
+"tst2","Tome of Strength +2","item","","",0
+"tstr","Tome of Strength","item","","",0
+"uabo","Abomination","unit","undead","",0
+"uaco","Acolyte","unit","undead","",0
+"uaod","Altar of Darkness","building","undead","",0
+"uban","Banshee","unit","undead","",0
+"ubon","Boneyard","building","undead","",0
+"ubsp","Destroyer","unit","undead","",0
+"ucry","Crypt Fiend","unit","undead","",0
+"ufro","Frost Wyrm","unit","undead","",0
+"ugar","Gargoyle","unit","undead","",0
+"ugho","Ghoul","unit","undead","",0
+"ugol","Haunted Gold Mine","building","undead","",0
+"ugrv","Graveyard","building","undead","",0
+"umtw","Meatwagon","unit","undead","",0
+"unec","Necromancer","unit","undead","",0
+"unp1","Halls of the Dead","building","undead","",0
+"unp2","Black Citadel","building","undead","",0
+"unpl","Necropolis","building","undead","",0
+"uobs","Obsidian Statue","unit","undead","",0
+"usap","Sacrificial Pit","building","undead","",0
+"usep","Crypt","building","undead","",0
+"ushd","Shade","unit","undead","",0
+"uslh","Slaughterhouse","building","undead","",0
+"utod","Temple of the Damned","building","undead","",0
+"utom","Tomb of Relics","building","undead","",0
+"uzg1","Spirit Tower","building","undead","",0
+"uzg2","Nerubian Tower","building","undead","",0
+"uzig","Ziggurat","building","undead","",1
+"vamp","Vampiric Potion","item","","",0
+"vddl","Voodoo Doll","item","","",0
+"ward","Warsong Battle Drums","item","","",0
+"wcyc","Wand of the Wind","item","","",0
+"whwd","Healing Wards","item","","",0
+"wild","Amulet of the Wild","item","","",0
+"will","Wand of Illusion","item","","",0
+"wlsd","Wand of Lightning Shield","item","","",0
+"wneg","Wand of Negation","item","","",0
+"wneu","Wand of Neutralization","item","","",0
+"woms","Wand of Mana Stealing","item","","",0
+"wshs","Wand of Shadowsight","item","","",0
+"wswd","Sentry Wards","item","","",0

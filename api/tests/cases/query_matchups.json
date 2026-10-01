@@ -1,0 +1,63 @@
+{
+  "route": "/query",
+  "request": {
+    "dimensions": [
+      "race",
+      "opponent_race"
+    ],
+    "measures": [
+      "games",
+      "wins",
+      "losses",
+      "win_rate",
+      "avg_minutes"
+    ],
+    "order_by": [
+      "race",
+      "opponent_race"
+    ]
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "rows": [
+        {
+          "race": "HU",
+          "opponent_race": "NE",
+          "games": 1,
+          "wins": 0,
+          "losses": 1,
+          "win_rate": 0,
+          "avg_minutes": 6.8
+        },
+        {
+          "race": "NE",
+          "opponent_race": "HU",
+          "games": 1,
+          "wins": 1,
+          "losses": 0,
+          "win_rate": 1,
+          "avg_minutes": 6.8
+        },
+        {
+          "race": "NE",
+          "opponent_race": "OC",
+          "games": 2,
+          "wins": 2,
+          "losses": 0,
+          "win_rate": 1,
+          "avg_minutes": 11.2
+        },
+        {
+          "race": "OC",
+          "opponent_race": "NE",
+          "games": 2,
+          "wins": 0,
+          "losses": 2,
+          "win_rate": 0,
+          "avg_minutes": 11.2
+        }
+      ]
+    }
+  }
+}

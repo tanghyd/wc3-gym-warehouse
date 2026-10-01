@@ -1,0 +1,5 @@
+seeds:
+  - name: mappings_melee
+    description: The parser's melee object tables, written by `just mappings` (export-mappings in the drain image). Never edit by hand.
+  - name: mappings_custom
+    description: Custom-map rawcodes with a display name and a category (ui-menu, builder, tower, upgrade, item, other) from the map's own object data. Kept by hand.

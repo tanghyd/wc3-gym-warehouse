@@ -1,0 +1,16 @@
+{
+  "route": "/search",
+  "request": {
+    "filters": {
+      "player": [
+        "a'b\\c"
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "replays": []
+    }
+  }
+}

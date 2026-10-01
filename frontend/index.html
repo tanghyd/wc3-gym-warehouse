@@ -108,7 +108,8 @@
       <v-alert v-if="fatal" type="error" variant="tonal" class="mb-4">
         {{ fatal }}
         <div class="text-caption mt-2">
-          The page reads ClickHouse at {{ chUrl }}. Start it with <code>just up</code>.
+          The page reads the warehouse API at /api/. Start it with <code>just up</code>,
+          then load the data with <code>just dbt build</code>.
         </div>
       </v-alert>
 
@@ -433,9 +434,8 @@
 <script>
 const { createApp, ref, reactive, computed, onMounted } = Vue;
 
-// ClickHouse speaks HTTP on the host and answers cross-origin already, so this
-// page needs no backend of its own.
-const CH_URL = 'http://127.0.0.1:8123/';
+// Every read goes through the warehouse API, which nginx serves on this origin.
+const API = 'api/';
 
 // Win and loss are the one place colour carries meaning, so the pair is a real
 // diverging pair rather than a theme accent. Checked for colour-blind
@@ -447,15 +447,15 @@ const WR_FLOOR = 10;
 // The opener rollup caps a stored prefix at six buildings.
 const MAX_OPENER_DEPTH = 6;
 
-// A race owns a letter in the data and a letter at the head of every object
+// A race has a GNL id in the data (the API's vocabulary) and a letter at the head of every object
 // code, so `race` also picks which subjects a step can name.
 const RACES = [
-  { letter: 'H', name: 'Human',     codePrefix: 'h', icon: 'race-icons/HUMAN.png' },
-  { letter: 'O', name: 'Orc',       codePrefix: 'o', icon: 'race-icons/ORC.png' },
-  { letter: 'N', name: 'Night Elf', codePrefix: 'e', icon: 'race-icons/NIGHT_ELF.png' },
-  { letter: 'U', name: 'Undead',    codePrefix: 'u', icon: 'race-icons/UNDEAD.png' },
+  { id: 'HU', name: 'Human',     codePrefix: 'h', icon: 'race-icons/HUMAN.png' },
+  { id: 'OC', name: 'Orc',       codePrefix: 'o', icon: 'race-icons/ORC.png' },
+  { id: 'NE', name: 'Night Elf', codePrefix: 'e', icon: 'race-icons/NIGHT_ELF.png' },
+  { id: 'UD', name: 'Undead',    codePrefix: 'u', icon: 'race-icons/UNDEAD.png' },
 ];
-const raceIcon = (letter) => RACES.find(r => r.letter === letter)?.icon || '';
+const raceIcon = (id) => RACES.find(r => r.id === id)?.icon || '';
 
 // What a step can be. `value` is the replay_events.event_type it filters on;
 // `kind` is the w3g.mappings.kind that supplies its pickable subjects.
@@ -467,8 +467,6 @@ const STEP_TYPES = [
   { title: 'used skill', value: 'hero_skill',   kind: 'hero_skill' },
   { title: 'bought',     value: 'item',         kind: 'item' },
 ];
-
-const q = (s) => "'" + String(s).replace(/'/g, "''") + "'";
 
 const RACE_PREFIXES = new Set(['h', 'o', 'e', 'u']);
 
@@ -491,21 +489,18 @@ function subjectFitsRace(code, kind, codePrefix) {
 // A blank timing box means "no constraint", which is not the same as zero.
 const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
 
-async function chQuery(sql) {
-  const res = await fetch(CH_URL + '?default_format=JSON', {
+async function api(path, body) {
+  const res = await fetch(API + path, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: sql,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
-  const text = await res.text();
-  let body;
-  try { body = JSON.parse(text); } catch { body = null; }
-  // With default_format=JSON an error arrives as a JSON object carrying
-  // `exception`, so the first line of the body is just "{".
-  if (!res.ok || body?.exception) {
-    throw new Error((body?.exception || text).trim().split('\n')[0]);
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const d = data?.detail;
+    throw new Error(typeof d === 'string' ? d : (d ? JSON.stringify(d) : res.statusText));
   }
-  return body.data;
+  return data;
 }
 
 let nextKey = 1;
@@ -530,7 +525,7 @@ const RaceSelect = {
   },
   emits: ['update:modelValue'],
   setup() {
-    return { races: RACES.map(r => ({ title: r.name, value: r.letter, icon: r.icon })) };
+    return { races: RACES.map(r => ({ title: r.name, value: r.id, icon: r.icon })) };
   },
   template: `
     <v-autocomplete class="race-select" :model-value="modelValue" :label="label"
@@ -598,7 +593,7 @@ createApp({
     const subjects = ref([]);
     const iconMap = ref({});
     const mainTab = ref('search');
-    const op = reactive({ race: 'N', opponent: null, map: null, sort: 'popular', players: [] });
+    const op = reactive({ race: 'NE', opponent: null, map: null, sort: 'popular', players: [] });
     const playerNames = ref([]);
     const openerRows = ref([]);
     const openerError = ref('');
@@ -650,7 +645,7 @@ createApp({
     function subjectsFor(slot, step) {
       const type = STEP_TYPES.find(t => t.value === step.type);
       if (!type) return [];
-      const race = RACES.find(r => r.letter === (slot.race || scope.race));
+      const race = RACES.find(r => r.id === slotRace(slot));
       return subjects.value
         .filter(s => s.subject_kind === type.kind)
         .filter(s => !race || subjectFitsRace(s.code, type.kind, race.codePrefix))
@@ -677,166 +672,62 @@ createApp({
         .map(slot => ({ slot, steps: slot.steps.filter(s => s.code) }))
         .filter(x => x.steps.length));
 
-    function matchupLiteral() {
-      if (!scope.race || !scope.opponent) return null;
-      return [scope.race, scope.opponent].sort().join('v');
+    // Player 1 is the scope's race; every other player defaults to the opponent's.
+    function slotRace(slot) {
+      return slot.race || (slots.value.indexOf(slot) === 0 ? scope.race : scope.opponent);
     }
 
-    // One player's ordered build, as a set of (replay, player) pairs.
-    // sequenceMatch takes its conditions positionally, so `(?1).*(?2)` reads
-    // "condition 1, then later condition 2".
-    // The object a step names, plus its own window in game time when one is set.
-    function stepCondition(s) {
-      const parts = ['event_type = ' + q(s.type), 'subject_code = ' + q(s.code)];
-      const from = num(s.fromMin), to = num(s.toMin);
-      if (from !== null) parts.push('time_ms >= ' + Math.round(from * 60000));
-      if (to !== null) parts.push('time_ms <= ' + Math.round(to * 60000));
-      return parts.join(' AND ');
+    // A step as the API takes it. A blank timing box sends null: no constraint.
+    function apiStep(s) {
+      return {
+        type: s.type, code: s.code,
+        within_prev_s: num(s.withinPrev), from_min: num(s.fromMin), to_min: num(s.toMin),
+      };
     }
 
-    // `(?t<=N)` caps the gap to the step before, in the timestamp's own unit,
-    // which is milliseconds here. `.*` in its place leaves the gap open.
-    function slotPattern(steps) {
-      return steps.slice(1).reduce((acc, s, i) => {
-        const within = num(s.withinPrev);
-        const link = within === null ? '.*' : '(?t<=' + Math.round(within * 1000) + ')';
-        return acc + link + '(?' + (i + 2) + ')';
-      }, '(?1)');
+    // Who a slot may be: a race, a result, named players, an ordered build.
+    function apiPlayer(slot) {
+      const filters = {};
+      const race = slotRace(slot);
+      if (race) filters.race = [race];
+      if (slot.outcome !== 'either') filters.result = [slot.outcome];
+      if (slot.players.length) filters.player = slot.players;
+      return { filters, steps: slot.steps.filter(s => s.code).map(apiStep) };
     }
+    const named = (p) => Object.keys(p.filters).length || p.steps.length;
 
-    function slotSelect({ slot, steps }) {
-      const pattern = slotPattern(steps);
-      const conds = steps.map(s => '        ' + stepCondition(s)).join(',\n');
-      const where = [];
-      const race = slot.race || scope.race;
-      if (race) where.push('e.race = ' + q(race));
-      const mu = matchupLiteral();
-      if (mu) where.push('e.matchup = ' + q(mu));
-      // Narrow the scan to the objects the pattern mentions before grouping.
-      const types = [...new Set(steps.map(s => s.type))].map(q).join(', ');
-      const codes = [...new Set(steps.map(s => s.code))].map(q).join(', ');
-      where.push('e.event_type IN (' + types + ')');
-      where.push('e.subject_code IN (' + codes + ')');
-      // One step needs no ordering, so its own condition is the whole test.
-      if (steps.length < 2) where.push('(' + stepCondition(steps[0]) + ')');
-      const head = '    SELECT replay_id, player_id\n' +
-        '    FROM w3g.replay_events AS e\n' +
-        '    WHERE ' + where.join('\n      AND ') + '\n' +
-        '    GROUP BY replay_id, player_id';
-      if (steps.length < 2) return head;
-      return head + '\n' +
-        '    HAVING sequenceMatch(' + q(pattern) + ')(\n' +
-        '        time_ms,\n' + conds + '\n' +
-        '    ) = 1';
-    }
-
-    // Who this slot may be: a named player, a result, or both. Neither lives on
-    // the event stream, so both read the header tables through `alias`.
-    function slotGate(slot, alias) {
-      const parts = [];
-      if (slot.outcome === 'win') parts.push('r.winning_team_id = ' + alias + '.team_id');
-      if (slot.outcome === 'loss') {
-        parts.push('r.winning_team_id != ' + alias + '.team_id', 'r.winning_team_id >= 0');
-      }
-      if (slot.players.length) {
-        parts.push(alias + '.name IN (' + slot.players.map(q).join(', ') + ')');
-      }
-      return parts;
-    }
-
-    function buildSql() {
-      const limit = Math.max(1, Math.min(1000, maxResults.value || 100));
-      const filled = filledSlots.value;
-      const where = ["r.type = '1on1'"];
-      if (scope.map) where.push('mp.map = ' + q(scope.map));
-      if (scope.minMinutes) where.push('r.duration_ms >= ' + Math.round(scope.minMinutes * 60000));
-      if (scope.maxMinutes) where.push('r.duration_ms <= ' + Math.round(scope.maxMinutes * 60000));
-
-      // No steps anywhere: this is a plain browse of the scope.
-      if (!filled.length) {
-        const mu = matchupLiteral();
-        if (mu) where.push('r.matchup = ' + q(mu));
-        const named = slots.value.flatMap(sl => sl.players);
-        if (named.length) {
-          where.push('r.replay_id IN (\n' +
-            '    SELECT replay_id FROM w3g.replay_players FINAL\n' +
-            '    WHERE name IN (' + [...new Set(named)].map(q).join(', ') + ')\n  )');
-        }
-        return 'SELECT DISTINCT r.replay_id AS replay_id, 255 AS player_id\n' +
-          'FROM w3g.replays AS r FINAL\n' +
-          'INNER JOIN w3g.replay_map AS mp ON mp.replay_id = r.replay_id\n' +
-          'WHERE ' + where.join('\n  AND ') + '\n' +
-          'ORDER BY replay_id\nLIMIT ' + limit;
-      }
-
-      // Player 1 drives the result column, so its player_id is the one returned.
-      where.push(...slotGate(filled[0].slot, 'rp'));
-      // Every further player is an extra membership test on the same replay.
-      filled.slice(1).forEach((f, i) => {
-        const alias = 'rp' + (i + 2);
-        const extra = slotGate(f.slot, alias);
-        const inner = extra.length
-          ? '    SELECT s.replay_id\n    FROM (\n' +
-            slotSelect(f).replace(/^/gm, '    ') + '\n    ) AS s\n' +
-            '    INNER JOIN w3g.replay_players AS ' + alias + ' FINAL\n' +
-            '        ON ' + alias + '.replay_id = s.replay_id AND ' + alias + '.player_id = s.player_id\n' +
-            '    INNER JOIN w3g.replays AS r FINAL ON r.replay_id = s.replay_id\n' +
-            '    WHERE ' + extra.join(' AND ')
-          : '    SELECT s.replay_id\n    FROM (\n' +
-            slotSelect(f).replace(/^/gm, '    ') + '\n    ) AS s';
-        where.push('r.replay_id IN (\n' + inner + '\n  )');
-      });
-
-      return 'SELECT DISTINCT m.replay_id AS replay_id, m.player_id AS player_id\n' +
-        'FROM (\n' + slotSelect(filled[0]) + '\n) AS m\n' +
-        'INNER JOIN w3g.replay_players AS rp FINAL\n' +
-        '    ON rp.replay_id = m.replay_id AND rp.player_id = m.player_id\n' +
-        'INNER JOIN w3g.replays AS r FINAL ON r.replay_id = m.replay_id\n' +
-        'INNER JOIN w3g.replay_map AS mp ON mp.replay_id = m.replay_id\n' +
-        'WHERE ' + where.join('\n  AND ') + '\n' +
-        'ORDER BY replay_id\nLIMIT ' + limit;
+    // Player 1 is the focus the result column reports; the scope's map, length
+    // and opponent race ride on that player's row.
+    function buildSearch() {
+      const [first, ...rest] = slots.value.map(apiPlayer);
+      const filters = { ...first.filters };
+      if (scope.opponent) filters.opponent_race = [scope.opponent];
+      if (scope.map) filters.map = [scope.map];
+      const from = num(scope.minMinutes), to = num(scope.maxMinutes);
+      if (from !== null || to !== null) filters.minutes = { gte: from, lte: to };
+      return {
+        focused: named(first),
+        body: {
+          filters, steps: first.steps, others: rest.filter(named),
+          limit: Math.max(1, Math.min(1000, maxResults.value || 100)),
+        },
+      };
     }
 
     // One replay as the table shows it. `focusId` is the player whose result the
     // Player 1 column reports; leave it out and that column stays blank.
     function describeReplay(d, focusId) {
-      const players = d.players.map(p => ({
-        id: Number(p[0]), name: p[1], race: p[2], team: Number(p[3]),
-      }));
-      const focus = players.find(p => p.id === focusId) || null;
-      const winner = Number(d.winning_team_id);
+      const focus = d.players.find(p => p.player_id === focusId) || null;
       return {
         replay_id: d.replay_id,
-        series: d.series,
-        game: d.game,
+        series: d.gnl?.series_id ?? null,
+        game: d.gnl?.game_no ?? null,
         map: d.map,
         matchup: d.matchup,
-        minutes: d.minutes,
-        players: players.sort((a, b) => a.id - b.id),
-        result: !focus || winner < 0 ? null : (winner === focus.team ? 'Won' : 'Lost'),
+        minutes: Math.round(d.duration_ms / 6000) / 10,
+        players: d.players,
+        result: !focus || focus.won === null ? null : (focus.won ? 'Won' : 'Lost'),
       };
-    }
-
-    // The matched ids, then one plain lookup for what to show. Two small
-    // queries read better than one query that does both jobs.
-    async function detailsFor(ids) {
-      const list = ids.map(q).join(', ');
-      return chQuery(
-        'SELECT\n' +
-        '    r.replay_id AS replay_id,\n' +
-        '    r.gnl_series_id AS series,\n' +
-        '    r.gnl_game_no AS game,\n' +
-        '    mp.map AS map,\n' +
-        '    r.matchup AS matchup,\n' +
-        '    round(r.duration_ms / 60000, 1) AS minutes,\n' +
-        '    r.winning_team_id AS winning_team_id,\n' +
-        '    groupArray((rp.player_id, rp.name, rp.race, rp.team_id)) AS players\n' +
-        'FROM w3g.replays AS r FINAL\n' +
-        'INNER JOIN w3g.replay_map AS mp ON mp.replay_id = r.replay_id\n' +
-        'INNER JOIN w3g.replay_players AS rp FINAL ON rp.replay_id = r.replay_id\n' +
-        'WHERE r.replay_id IN (' + list + ')\n' +
-        'GROUP BY replay_id, series, game, map, matchup, r.duration_ms, winning_team_id\n' +
-        'ORDER BY series, game');
     }
 
     async function run() {
@@ -844,11 +735,10 @@ createApp({
       error.value = '';
       const started = performance.now();
       try {
-        sql.value = buildSql();
-        const matched = await chQuery(sql.value);
-        const byId = new Map(matched.map(m => [m.replay_id, Number(m.player_id)]));
-        const details = matched.length ? await detailsFor([...byId.keys()]) : [];
-        rows.value = details.map(d => describeReplay(d, byId.get(d.replay_id)));
+        const { focused, body } = buildSearch();
+        const res = await api('search', body);
+        sql.value = res.sql + '\n\n-- parameters\n' + JSON.stringify(res.params, null, 2);
+        rows.value = res.replays.map(d => describeReplay(d, focused ? d.focus_player_id : null));
       } catch (e) {
         error.value = e.message;
         rows.value = [];
@@ -878,58 +768,54 @@ createApp({
       return m.length % 2 ? m[mid] : Math.round(((m[mid - 1] + m[mid]) / 2) * 10) / 10;
     });
 
-    // ---- Openers: the build tree over w3g.opener_rollup ----
+    // ---- Openers: the build tree, one grouped query per level ----
 
-    function openerWhere(prefix) {
-      const w = ['race = ' + q(op.race)];
-      if (op.opponent) w.push('opponent_race = ' + q(op.opponent));
-      if (op.map) w.push('map = ' + q(op.map));
-      if (op.players.length) w.push('player_name IN (' + op.players.map(q).join(', ') + ')');
-      if (prefix.length) {
-        w.push('arraySlice(seq, 1, ' + prefix.length + ') = [' + prefix.map(q).join(', ') + ']');
-      }
-      return w;
+    // The games under `prefix`. Unknown winners stay out, so a win rate is wins
+    // over decided games.
+    function openerFilters(prefix) {
+      const f = { race: [op.race], result: ['win', 'loss'] };
+      if (op.opponent) f.opponent_race = [op.opponent];
+      if (op.map) f.map = [op.map];
+      if (op.players.length) f.player = op.players;
+      prefix.forEach((code, i) => { f['opener_' + (i + 1)] = [code]; });
+      return f;
     }
 
-    // One level of the tree: what came next after `prefix`, with how many ways
-    // each of those continues, so a row can say whether it opens further.
+    // One level of the tree: what came next after `prefix`. Grouping by the next
+    // two buildings also counts how many ways each row continues.
     async function openerLevel(prefix) {
       const d = prefix.length;
-      const where = openerWhere(prefix);
+      const next = 'opener_' + (d + 1), after = 'opener_' + (d + 2);
+      const { rows } = await api('query', {
+        dimensions: d + 1 < MAX_OPENER_DEPTH ? [next, after] : [next],
+        measures: ['games', 'wins', 'minutes_total'],
+        filters: openerFilters(prefix),
+        limit: 10000,
+      });
+      const byCode = new Map();
+      for (const r of rows) {
+        if (!r[next]) continue;               // the opener ended before this depth
+        const c = byCode.get(r[next]) || { code: r[next], matches: 0, wins: 0, minutes: 0, branch: 0 };
+        c.matches += r.games;
+        c.wins += r.wins;
+        c.minutes += r.minutes_total;
+        if (r[after]) c.branch += 1;
+        byCode.set(r[next], c);
+      }
+      const rate = (c) => c.wins / c.matches;
+      // A rate over a handful of games is noise, so popularity breaks the tie
+      // and anything under the floor sorts below what clears it.
       const order = op.sort === 'winrate'
-        // A rate over a handful of games is noise, so popularity breaks the tie
-        // and anything under the floor sorts below what clears it.
-        ? 'ORDER BY c.matches >= ' + WR_FLOOR + ' DESC, c.wins / c.matches DESC, c.matches DESC'
-        : 'ORDER BY c.matches DESC, c.wins / c.matches DESC';
-      // w3g.replay_openers is one row per player per game, so a player filter
-      // is a plain WHERE. The pre-aggregated rollup has no player to filter on.
-      const rows = await chQuery(
-        'SELECT c.code AS code, c.matches AS matches, c.wins AS wins,\n' +
-        '       round(c.dur_ms / c.matches / 60000, 1) AS avgMin,\n' +
-        '       ifNull(b.bf, 0) AS branch\n' +
-        'FROM (\n' +
-        '    SELECT seq[' + (d + 1) + '] AS code, count() AS matches,\n' +
-        '           sum(won) AS wins, sum(duration_ms) AS dur_ms\n' +
-        '    FROM w3g.replay_openers\n' +
-        '    WHERE length(seq) >= ' + (d + 1) + ' AND ' + where.join(' AND ') + '\n' +
-        '    GROUP BY code\n' +
-        ') AS c\n' +
-        'LEFT JOIN (\n' +
-        '    SELECT seq[' + (d + 1) + '] AS code, uniqExact(seq[' + (d + 2) + ']) AS bf\n' +
-        '    FROM w3g.replay_openers\n' +
-        '    WHERE length(seq) >= ' + (d + 2) + ' AND ' + where.join(' AND ') + '\n' +
-        '    GROUP BY code\n' +
-        ') AS b ON b.code = c.code\n' +
-        order);
-      return rows.map(r => ({
-        key: [...prefix, r.code].join('>'),
-        prefix: [...prefix, r.code],
-        code: r.code,
-        matches: Number(r.matches),
-        wins: Number(r.wins),
-        avgMin: r.avgMin,
-        // The rollup stores nothing past six, so the last level never expands.
-        branch: d + 1 >= MAX_OPENER_DEPTH ? 0 : Number(r.branch),
+        ? (a, b) => (b.matches >= WR_FLOOR) - (a.matches >= WR_FLOOR) || rate(b) - rate(a) || b.matches - a.matches
+        : (a, b) => b.matches - a.matches || rate(b) - rate(a);
+      return [...byCode.values()].sort(order).map(c => ({
+        key: [...prefix, c.code].join('>'),
+        prefix: [...prefix, c.code],
+        code: c.code,
+        matches: c.matches,
+        wins: c.wins,
+        avgMin: Math.round(c.minutes / c.matches * 10) / 10,
+        branch: c.branch,
         expanded: false,
       }));
     }
@@ -980,14 +866,8 @@ createApp({
       openerDialogLoading.value = true;
       openerDialogRows.value = [];
       try {
-        const ids = await chQuery(
-          'SELECT DISTINCT replay_id\n' +
-          'FROM w3g.replay_openers\n' +
-          'WHERE length(seq) >= ' + row.prefix.length + ' AND ' +
-          openerWhere(row.prefix).join(' AND '));
-        openerDialogRows.value = ids.length
-          ? (await detailsFor(ids.map(r => r.replay_id))).map(d => describeReplay(d))
-          : [];
+        const res = await api('search', { filters: openerFilters(row.prefix), limit: 1000 });
+        openerDialogRows.value = res.replays.map(d => describeReplay(d));
       } catch (e) {
         openerError.value = e.message;
         openerDialog.value = false;
@@ -1008,21 +888,22 @@ createApp({
 
     onMounted(async () => {
       try {
-        subjects.value = await chQuery(
-          'SELECT m.code AS code, any(m.name) AS label, any(m.kind) AS subject_kind\n' +
-          'FROM w3g.mappings AS m\n' +
-          "WHERE m.kind != 'unknown' AND m.name != ''\n" +
-          'GROUP BY m.code ORDER BY label');
-        const m = await chQuery('SELECT DISTINCT map FROM w3g.replay_map ORDER BY map');
-        maps.value = m.map(r => r.map).filter(Boolean);
+        const objects = await api('query', {
+          model: 'mappings', dimensions: ['code', 'name', 'kind'], order_by: ['name'], limit: 10000,
+          filters: { kind: STEP_TYPES.map(t => t.kind) },
+        });
+        subjects.value = objects.rows
+          .filter(r => r.name)
+          .map(r => ({ code: r.code, label: r.name, subject_kind: r.kind }));
+        const m = await api('query', { dimensions: ['map'], measures: ['games'], order_by: ['map'], limit: 10000 });
+        maps.value = m.rows.map(r => r.map).filter(Boolean);
         // Command-card art, keyed by object code. A code with no art shows none.
         iconMap.value = await (await fetch('icons.json')).json();
-        const pl = await chQuery(
-          'SELECT DISTINCT name FROM w3g.replay_players FINAL WHERE name != \'\' ORDER BY name');
-        playerNames.value = pl.map(r => r.name);
+        const pl = await api('query', { dimensions: ['player'], measures: ['games'], order_by: ['player'], limit: 10000 });
+        playerNames.value = pl.rows.map(r => r.player).filter(Boolean);
         await loadOpeners();
       } catch (e) {
-        fatal.value = 'Cannot reach ClickHouse: ' + e.message;
+        fatal.value = 'Cannot reach the warehouse API: ' + e.message;
       }
     });
 
@@ -1031,7 +912,7 @@ createApp({
       scope, slots, maxResults, maps, rows, sql, tab, loading, ran, error, fatal, headers,
       elapsedMs, copied, typeItems, outcomeItems, subjectsFor, ready, hasTiming,
       winRate, winRateColor, medianMinutes, run, addSlot, removeSlot, addStep, removeStep,
-      copySql, chUrl: CH_URL, COLOR_WIN, COLOR_LOSS, WR_FLOOR,
+      copySql, COLOR_WIN, COLOR_LOSS, WR_FLOOR,
       mainTab, op, sortItems, openerHeaders, openerRows, openerError, loadOpeners,
       onOpenerRow, winrateColor, showOpenerReplays, nameFor, iconFor, playerNames,
       openerDialog, openerDialogLoading, openerDialogRows,

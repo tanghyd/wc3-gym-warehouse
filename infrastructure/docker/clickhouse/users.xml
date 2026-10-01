@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!--
+  default: dbt's user. It may read the parsed_docs named collection.
+  api: the query API's user. Read only, the w3g database only, with a time and
+  memory cap per query so one bad filter cannot starve the server.
+-->
+<clickhouse>
+    <users>
+        <default>
+            <named_collection_control>1</named_collection_control>
+        </default>
+        <api>
+            <password from_env="CLICKHOUSE_API_PASSWORD"/>
+            <profile>api</profile>
+            <quota>default</quota>
+            <networks><ip>::/0</ip></networks>
+            <allow_databases><database>w3g</database></allow_databases>
+        </api>
+    </users>
+    <profiles>
+        <api>
+            <readonly>1</readonly>
+            <max_execution_time>10</max_execution_time>
+            <max_memory_usage>2000000000</max_memory_usage>
+            <!-- count() is UInt64; answer it as a JSON number, not a string -->
+            <output_format_json_quote_64bit_integers>0</output_format_json_quote_64bit_integers>
+        </api>
+    </profiles>
+</clickhouse>

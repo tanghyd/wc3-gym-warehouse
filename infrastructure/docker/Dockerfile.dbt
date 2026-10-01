@@ -1,0 +1,7 @@
+# dbt v2: one binary with the ClickHouse adapter built in. It fetches its ADBC
+# driver on first connect; compose keeps that cache in a volume.
+FROM python:3.13-slim
+RUN pip install --no-cache-dir dbt==2.0.6
+WORKDIR /dbt
+ENV DBT_PROFILES_DIR=/dbt
+ENTRYPOINT ["dbt"]

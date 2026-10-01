@@ -1,0 +1,36 @@
+{
+  "route": "/query",
+  "request": {
+    "dimensions": [
+      "player"
+    ],
+    "measures": [
+      "games"
+    ],
+    "steps": [
+      {
+        "type": "hero_trained",
+        "code": "Edem",
+        "to_min": 2.5
+      }
+    ],
+    "order_by": [
+      "player"
+    ]
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "rows": [
+        {
+          "player": "Medusa#31315",
+          "games": 2
+        },
+        {
+          "player": "thanks#11187",
+          "games": 1
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "route": "/query",
+  "request": {
+    "dimensions": [
+      "map"
+    ],
+    "measures": [
+      "replays"
+    ],
+    "filters": {
+      "minutes": {
+        "gte": 10
+      }
+    },
+    "order_by": [
+      "map"
+    ]
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "rows": [
+        {
+          "map": "Concealed Hill",
+          "replays": 1
+        }
+      ]
+    }
+  }
+}

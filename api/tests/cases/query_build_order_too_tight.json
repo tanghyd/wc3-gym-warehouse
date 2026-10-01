@@ -1,0 +1,29 @@
+{
+  "route": "/query",
+  "request": {
+    "measures": [
+      "games"
+    ],
+    "steps": [
+      {
+        "type": "building",
+        "code": "eate"
+      },
+      {
+        "type": "building",
+        "code": "eaom",
+        "within_prev_s": 1
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "rows": [
+        {
+          "games": 0
+        }
+      ]
+    }
+  }
+}

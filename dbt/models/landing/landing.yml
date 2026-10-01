@@ -1,0 +1,6 @@
+models:
+  - name: raw_replays
+    description: The parsed replay documents as loaded from the bucket, one per replay.
+    columns:
+      - name: replay_id
+        data_tests: [unique, not_null]

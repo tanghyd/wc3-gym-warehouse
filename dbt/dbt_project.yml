@@ -1,0 +1,19 @@
+# The warehouse transform: parsed replay JSON in the bucket -> ClickHouse marts.
+# `just dbt build` runs it in the dbt container against the local ClickHouse.
+name: w3g
+version: "1.0"
+profile: w3g
+require-dbt-version: ">=2.0.0,<3.0.0"
+
+models:
+  w3g:
+    # ponytail: marts rebuild in full every run (an atomic swap, readers never see
+    # half a table). Switch a mart to incremental on replay_id when a build takes minutes.
+    +materialized: table
+
+seeds:
+  w3g:
+    mappings_melee:
+      +column_types: {code: String, name: String, kind: String, race: String, hero: String, is_supply_building: UInt8}
+    mappings_custom:
+      +column_types: {code: String, name: String, kind: String, category: String}

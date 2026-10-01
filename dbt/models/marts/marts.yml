@@ -1,0 +1,84 @@
+# `meta.semantic` is the query API's catalog (api/app.py reads it from
+# target/manifest.json): `dimensions` are the columns a caller may group or filter
+# on, `measures` are named aggregate expressions. A model whose dimensions include
+# replay_id and player_id also takes a build-order `steps` filter.
+models:
+  - name: player_games
+    description: One row per player per 1v1 replay.
+    config:
+      meta:
+        semantic:
+          dimensions: [replay_id, player_id, player, race, opponent, opponent_race, matchup, map,
+                       minutes, result, apm, first_hero, opener_1, opener_2, opener_3, opener_4,
+                       opener_5, opener_6, gnl_series_id, gnl_game_no]
+          measures:
+            games: count()
+            wins: countIf(result = 'win')
+            losses: countIf(result = 'loss')
+            win_rate: round(countIf(result = 'win') / nullIf(countIf(result != 'unknown'), 0), 3)
+            avg_minutes: round(avg(duration_ms) / 60000, 1)
+            # Sums, so a caller can combine groups and still average exactly.
+            minutes_total: sum(duration_ms) / 60000
+            avg_apm: round(avg(apm))
+            replays: uniqExact(replay_id)
+            players: uniqExact(player)
+    columns:
+      - name: replay_id
+        data_tests: [not_null]
+      - name: player_id
+      - name: player
+        description: The player's battle tag as the replay wrote it.
+      - name: race
+        description: GNL race id (HU, OC, NE, UD, RANDOM).
+      - name: opponent
+      - name: opponent_race
+      - name: matchup
+        description: Both races, sorted, joined by v (HvN).
+      - name: map
+        description: Readable map name.
+      - name: minutes
+        description: Game length, one decimal.
+      - name: result
+        description: win, loss, or unknown when the parser could not tell.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [win, loss, unknown]
+      - name: first_hero
+        description: Hero code of the first hero to spend a skill point; '' for none.
+      - name: opener_1
+        description: First non-supply building ordered; opener_2..opener_6 follow.
+      - name: gnl_series_id
+        description: GNL series the replay was reported on; 0 outside GNL.
+
+  - name: mappings
+    description: WC3 object codes and their display names.
+    config:
+      meta:
+        semantic:
+          dimensions: [code, name, kind, race, hero, category, is_supply_building]
+          measures:
+            objects: count()
+    columns:
+      - name: code
+        data_tests: [not_null]
+      - name: kind
+        description: building, unit, item, upgrade, hero, hero_skill, or unknown (custom map).
+
+  - name: replays
+    description: One row per replay, the header and settings.
+    columns:
+      - name: replay_id
+        data_tests: [unique, not_null]
+
+  - name: replay_events
+    description: Every order and hero skill per player in time order; build-order steps match here.
+  - name: replay_players
+  - name: player_order_events
+    description: Every order per player, keyed by replay; the replay page reads it.
+  - name: hero_ability_events
+    description: Every hero skill point and retrain, keyed by replay.
+  - name: player_heroes
+  - name: player_group_hotkeys
+  - name: chat
+  - name: resource_transfers
