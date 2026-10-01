@@ -2,8 +2,10 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 
 // The provisioned Grafana dashboards: every panel query returns rows, and every panel renders.
-// Needs API traffic in the last 6 hours and a `just dbt build` in the last 7 days.
+// Needs a `just dbt build` in the last 7 days. It makes its own API traffic, and a query may wait one
+// system.query_log flush (7.5 s) before its rows show.
 const GRAFANA = process.env.GRAFANA_URL ?? "http://grafana:3000";
+const API = process.env.API_URL ?? "http://api:8000";
 const DASHBOARDS = [
   ["server", "clickhouse-server"],
   ["api", "query-api"],
@@ -23,6 +25,12 @@ const ms = (span: string) => {
 // One tall viewport holds every panel, so none waits for a scroll to load.
 test.use({ viewport: { width: 1600, height: 1400 } });
 
+test.beforeAll(async ({ playwright }) => {
+  const api = await playwright.request.newContext();
+  expect((await api.post(`${API}/query`, { data: { measures: ["games"] } })).ok()).toBe(true);
+  await api.dispose();
+});
+
 for (const [name, uid] of DASHBOARDS) {
   test.describe(`grafana ${name}`, () => {
     test("every panel query returns rows", async ({ request }) => {
@@ -31,14 +39,19 @@ for (const [name, uid] of DASHBOARDS) {
       for (const panel of dashboard.panels as Panel[]) {
         for (const target of panel.targets) {
           const intervalMs = Math.max(panel.interval ? ms(panel.interval) : 1000, Math.round(range / 1000));
-          const res = await request.post(`${GRAFANA}/api/ds/query`, {
-            data: { from: dashboard.time.from, to: dashboard.time.to, queries: [{ ...target, intervalMs, maxDataPoints: 1000 }] },
-          });
-          const result = (await res.json()).results[target.refId];
-          const rows = (result.frames ?? []).reduce((sum: number, f: { data: { values: unknown[][] } }) => sum + (f.data.values[0]?.length ?? 0), 0);
-          console.log(`${uid} | ${panel.title} | ${target.refId} | ${result.error ?? "ok"} | ${rows} rows`);
-          expect(result.error, `${panel.title} ${target.refId}`).toBeUndefined();
-          expect(rows, `${panel.title} ${target.refId}`).toBeGreaterThan(0);
+          let error: string | undefined;
+          let rows = 0;
+          // -1 while the query errors, so an error fails the poll as well as no rows
+          await expect.poll(async () => {
+            const res = await request.post(`${GRAFANA}/api/ds/query`, {
+              data: { from: dashboard.time.from, to: dashboard.time.to, queries: [{ ...target, intervalMs, maxDataPoints: 1000 }] },
+            });
+            const result = (await res.json()).results[target.refId];
+            error = result.error;
+            rows = (result.frames ?? []).reduce((sum: number, f: { data: { values: unknown[][] } }) => sum + (f.data.values[0]?.length ?? 0), 0);
+            return error ? -1 : rows;
+          }, { message: `${panel.title} ${target.refId}`, timeout: 20_000 }).toBeGreaterThan(0);
+          console.log(`${uid} | ${panel.title} | ${target.refId} | ${error ?? "ok"} | ${rows} rows`);
         }
       }
     });
