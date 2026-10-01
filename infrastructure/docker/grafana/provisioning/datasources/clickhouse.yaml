@@ -1,0 +1,21 @@
+# ClickHouse over the native protocol on the compose network, as the read-only
+# `grafana` user. The dashboards name the datasource by its uid.
+apiVersion: 1
+
+datasources:
+  - name: ClickHouse
+    uid: clickhouse
+    type: grafana-clickhouse-datasource
+    access: proxy
+    isDefault: true
+    editable: false
+    jsonData:
+      host: clickhouse
+      port: 9000
+      protocol: native
+      username: grafana
+      defaultDatabase: w3g
+      # The driver sends max_execution_time = timeout + 5; the user's profile caps it at 10.
+      queryTimeout: 5
+    secureJsonData:
+      password: ${CLICKHOUSE_GRAFANA_PASSWORD}

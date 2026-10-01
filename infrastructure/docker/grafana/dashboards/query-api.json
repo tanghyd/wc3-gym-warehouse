@@ -1,0 +1,71 @@
+{
+  "uid": "query-api",
+  "title": "Query API",
+  "tags": ["warehouse", "api"],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "editable": false,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "timeseries", "title": "Queries per minute",
+      "interval": "1m",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "editorType": "sql", "format": 0, "queryType": "timeseries",
+        "rawSql": "SELECT $__timeInterval(event_time) AS time, count() * 60 / $__interval_s AS queries\nFROM system.query_log\nWHERE $__dateTimeFilter(event_date, event_time) AND user = 'api' AND type != 'QueryStart'\nGROUP BY time ORDER BY time" }]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "Errors per minute",
+      "interval": "1m",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "editorType": "sql", "format": 0, "queryType": "timeseries",
+        "rawSql": "SELECT $__timeInterval(event_time) AS time, countIf(type != 'QueryFinish') * 60 / $__interval_s AS errors\nFROM system.query_log\nWHERE $__dateTimeFilter(event_date, event_time) AND user = 'api' AND type != 'QueryStart'\nGROUP BY time ORDER BY time" }]
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Query duration",
+      "interval": "1m",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "editorType": "sql", "format": 0, "queryType": "timeseries",
+        "rawSql": "SELECT $__timeInterval(event_time) AS time, quantile(0.5)(query_duration_ms) AS p50, quantile(0.95)(query_duration_ms) AS p95, quantile(0.99)(query_duration_ms) AS p99\nFROM system.query_log\nWHERE $__dateTimeFilter(event_date, event_time) AND user = 'api' AND type = 'QueryFinish'\nGROUP BY time ORDER BY time" }]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Rows and bytes read",
+      "interval": "1m",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": [{ "matcher": { "id": "byName", "options": "bytes_read" },
+          "properties": [{ "id": "unit", "value": "bytes" }, { "id": "custom.axisPlacement", "value": "right" }] }]
+      },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "editorType": "sql", "format": 0, "queryType": "timeseries",
+        "rawSql": "SELECT $__timeInterval(event_time) AS time, sum(read_rows) AS rows_read, sum(read_bytes) AS bytes_read\nFROM system.query_log\nWHERE $__dateTimeFilter(event_date, event_time) AND user = 'api' AND type != 'QueryStart'\nGROUP BY time ORDER BY time" }]
+    },
+    {
+      "id": 5, "type": "table", "title": "Slowest queries (normalized)",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 16 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          { "matcher": { "id": "byRegexp", "options": ".*_ms" }, "properties": [{ "id": "unit", "value": "ms" }, { "id": "custom.width", "value": 90 }] },
+          { "matcher": { "id": "byRegexp", "options": "calls|avg_rows_read" }, "properties": [{ "id": "custom.width", "value": 120 }] }
+        ]
+      },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "editorType": "sql", "format": 1, "queryType": "table",
+        "rawSql": "SELECT any(normalizeQuery(query)) AS query, count() AS calls, round(quantile(0.5)(query_duration_ms)) AS p50_ms, round(quantile(0.95)(query_duration_ms)) AS p95_ms, max(query_duration_ms) AS max_ms, round(avg(read_rows)) AS avg_rows_read\nFROM system.query_log\nWHERE $__dateTimeFilter(event_date, event_time) AND user = 'api' AND type = 'QueryFinish'\nGROUP BY normalized_query_hash\nORDER BY p95_ms DESC, calls DESC\nLIMIT 10" }]
+    }
+  ]
+}

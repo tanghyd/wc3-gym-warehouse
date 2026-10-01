@@ -12,13 +12,13 @@ Everything runs in Docker. `.env.example` holds a working local setup, with MinI
 
 ```
 cp .env.example .env
-just up          # clickhouse, minio with the 3 parser goldens, the drain, the api, the page, the inspector
+just up          # clickhouse, minio with the 3 parser goldens, the drain, the api, the inspector, grafana
 just drain-once  # parse the goldens now instead of within the drain's minute
 just dbt build   # seed the mappings, load the parsed docs, build and test every model
 just ch          # a clickhouse-client shell
 ```
 
-The replay inspector is at http://localhost:3000 and the API at http://localhost:8000 (docs at http://localhost:8000/docs).
+The replay inspector is at http://localhost:3000, the API at http://localhost:8000 (docs at http://localhost:8000/docs) and Grafana at http://localhost:3001.
 
 | Recipe | Does |
 |---|---|
@@ -87,6 +87,18 @@ A Next.js app in the wc3-gym-frontend look, light and dark, at http://localhost:
 |---|---|
 | `just local::web-lock` | rewrites `web/pnpm-lock.yaml` after a `web/package.json` change, in a node container |
 | `just local::web-lint` | eslint, in the lint stage of the web image |
+
+## Observability (Grafana)
+
+Grafana is at http://localhost:3001, anonymous admin by default (the `GF_AUTH_*` variables in `compose.yaml` turn that off). It reads ClickHouse as the read-only `grafana` user (`infrastructure/docker/clickhouse/users.xml`). The datasource and three dashboards are provisioned from `infrastructure/docker/grafana/`:
+
+| Dashboard | Shows | Source |
+|---|---|---|
+| ClickHouse server | queries per second, running queries, memory, CPU, merges and active parts, inserted rows | `system.metric_log`, `system.asynchronous_metric_log` |
+| Query API | the `api` user's queries per minute, errors, p50/p95/p99 duration, rows and bytes read, the slowest normalized queries | `system.query_log` |
+| Warehouse data | replays loaded over time, rows, size and last rebuild per `w3g` table, dbt queries and errors per node | `w3g.raw_replays`, `system.parts`, `system.tables`, `system.query_log` |
+
+`just local::e2e --grep grafana` runs every panel query through Grafana and screenshots each dashboard to `web/e2e/shots/grafana-<name>.png`.
 
 ## Not here yet
 

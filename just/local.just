@@ -1,5 +1,5 @@
 # The local compose project: ClickHouse on 127.0.0.1:8123, MinIO with the goldens, the drain,
-# the API on http://localhost:8000 and the replay inspector on http://localhost:3000.
+# the API on http://localhost:8000, the replay inspector on http://localhost:3000 and Grafana on http://localhost:3001.
 set working-directory := '..'
 
 # build and start every long-running service
