@@ -70,3 +70,7 @@ export function describe(m: Mark, objects: Objects): [string, string] {
   if (m.event_type === "hero_skill") return [name, `${nameOf(objects, m.hero_code, "hero_trained")} skill at ${at}`];
   return [name, `Ordered at ${at}`];
 }
+
+/** The search steps whose orders a mark holds, such as [2], from hits keyed "event_type/code/time_ms". */
+export const stepsOf = (m: Mark, hits: Record<string, number[]> = {}) =>
+  [...new Set(m.times.flatMap((t) => hits[`${m.event_type}/${m.code}/${t}`] ?? []))].sort((a, b) => a - b);

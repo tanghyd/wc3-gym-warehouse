@@ -2,7 +2,6 @@
 import { type ReactNode, useId, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { Filters } from "@/lib/api";
-import { racePair } from "@/lib/races";
 import {
   encodeGroups,
   HALLS,
@@ -15,6 +14,7 @@ import {
   MAX_WITHIN,
   newStep,
   parseMss,
+  played,
   type Step,
   timeWords,
 } from "@/lib/steps";
@@ -67,8 +67,6 @@ function Glyph({ d, size = 18 }: { d: string; size?: number }) {
 }
 
 const mss = (s: number | null) => (s === null ? "" : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`);
-/** The races a side's values play, such as NE for NE and RN. */
-const played = (race: string[]) => [...new Set(race.map((v) => racePair(v)[0]).filter((r) => HALLS[r]))];
 
 /** A group with its links made sound: the first step and a step under "did not happen" follow nothing. */
 function sound(group: DraftStep[]) {

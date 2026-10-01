@@ -4,10 +4,11 @@ import { line } from "d3-shape";
 import { useEffect, useRef, useState } from "react";
 import type { Objects } from "@/lib/api";
 import { mss, ObjIcon, PlayerName, SeriesKey, seriesColor, shortName } from "@/lib/ui";
-import { describe, type Mark, type Tier } from "./orders";
+import { describe, type Mark, stepsOf, type Tier } from "./orders";
 
 export type Lane = { key: string; label: string; marks: Mark[] };
-export type Block = { player_id: number; name: string; race: string; apm_per_minute: number[]; lanes: Lane[]; tiers: Tier[] };
+/** A player's block; `hits` holds the search step numbers of the orders a search matched. */
+export type Block = { player_id: number; name: string; race: string; apm_per_minute: number[]; lanes: Lane[]; tiers: Tier[]; hits: Record<string, number[]> };
 
 const MIN_W = 760; // narrower than this, the chart scrolls in its own box
 const ML = 88; // the shared gutter: APM ticks and lane labels
@@ -136,15 +137,16 @@ export function TimelineChart({ blocks, durationMs, objects }: { blocks: Block[]
                   </svg>
                   {laid[i].marks.map((p, j) => {
                     const [name, detail] = describe(p.m, objects);
+                    const steps = stepsOf(p.m, b.hits);
                     const show = () => setHover({ ms: p.m.times[0], tip: { mark: p, top: tops[i] + HEAD } });
                     return (
                       <span
                         key={j}
                         data-mark
                         role="img"
-                        aria-label={`${name}. ${detail}`}
+                        aria-label={`${name}. ${detail}${steps.length ? `. Step ${steps.join(" and ")} of the search` : ""}`}
                         tabIndex={j === 0 ? 0 : -1}
-                        className="absolute block rounded-sm hover:outline-2 hover:outline-on-surface"
+                        className={`absolute block rounded-sm hover:outline-2 hover:outline-on-surface ${steps.length ? "step-hit" : ""}`}
                         style={{ left: p.x - ICON / 2, top: p.y, width: ICON, height: ICON }}
                         onFocus={show}
                         onBlur={() => setHover(null)}
@@ -152,6 +154,11 @@ export function TimelineChart({ blocks, durationMs, objects }: { blocks: Block[]
                         onPointerLeave={(e) => e.pointerType === "mouse" && setHover(null)}
                       >
                         <ObjIcon code={p.m.code} objects={objects} size={ICON} alt="" />
+                        {steps.length > 0 && (
+                          <span aria-hidden className="step-no">
+                            {steps.join(",")}
+                          </span>
+                        )}
                         {p.m.times.length > 1 && (
                           <span className="absolute right-0 bottom-0 rounded-tl-[3px] bg-banner/90 px-[3px] text-[10px] leading-3 font-bold text-on-banner">
                             ×{p.m.times.length}

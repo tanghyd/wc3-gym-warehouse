@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { type Filters, getObjects, type Objects, pickerValues, raceCounts, searchGames, type SidePlayer, stepGroups } from "@/lib/api";
-import { parseRaces, racePair, raceLabel } from "@/lib/races";
-import { apiStep, decodeGroups, HALLS, type Groups, type Step } from "@/lib/steps";
+import { parseRaces, raceLabel } from "@/lib/races";
+import { apiStep, decodeGroups, HALLS, type Groups, played, type Step, stepObject } from "@/lib/steps";
 import { mss, PlayerName, record } from "@/lib/ui";
 import { type DraftStep, Sides, type SideState } from "./Sides";
 import { SortSelect } from "./SortSelect";
@@ -16,8 +16,6 @@ const KEYS = {
 } as const;
 
 const fmt = (n: number) => n.toLocaleString("en-US");
-/** The races a side's values play, for its town halls: NE for NE and RN, none for any race. */
-const played = (race: string[]) => [...new Set(race.map((v) => racePair(v)[0]).filter((r) => HALLS[r]))];
 
 /** A player of a row: name and race icon, under it his heroes in pick order with their final levels. */
 function Who({ p, objects }: { p: SidePlayer; objects: Objects }) {
@@ -109,13 +107,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
 
   // the sides as the editor starts them, each step with its name and icon
   let key = 0;
-  const label = (s: Step, race: string[]) => {
-    const one = (c: string) => ({ name: names[c]?.name ?? c, icon: names[c]?.icon ?? null });
-    if (s.kind === "expand") return played(race).length === 1 ? one(HALLS[played(race)[0]]) : { name: "Any town hall", icon: null };
-    const g = s.codes[0]?.startsWith("@") ? groups[`${s.kind}${s.codes[0]}`] : null;
-    if (g) return { name: `Any from ${g.name}`, icon: g.icon };
-    return s.codes.length > 1 ? { ...one(s.codes[0]), name: `${one(s.codes[0]).name} or ${s.codes.length - 1} more` } : one(s.codes[0]);
-  };
+  const label = (s: Step, race: string[]) => stepObject(s, race, names, groups);
   const draft = (s: typeof player, outcomeWord: SideState["outcome"]): SideState => ({
     race: s.race,
     name: s.name,
@@ -133,6 +125,10 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const avg = (t: { games: number; duration_ms_total: number }) => (t.games ? mss(t.duration_ms_total / t.games) : "—");
   const first = (page - 1) * LIMIT;
   const set = Object.values(sp).some((v) => v);
+  // a game opened from a search with steps carries the search (q) and its Player (side), so its page marks the steps
+  const searchQs = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" && v && k !== "page" && k !== "sort" ? [[k, v]] : []))).toString();
+  const gameHref = (r: (typeof replays)[number]) =>
+    `/replays/${r.replay_id}` + (steps.length ? `?${new URLSearchParams({ q: searchQs, side: r.player.name })}` : "");
   const sortLink = (col: "map" | "duration") => {
     const next = col === "map" ? (sort === "map" ? "-map" : "map") : sort === "-duration" ? "duration" : "-duration";
     return href({ sort: next, page: null });
@@ -272,7 +268,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                       </td>
                       <td className="c-m">
                         {/* no prefetch: it runs generateMetadata, a full replay read per row */}
-                        <Link href={`/replays/${r.replay_id}`} prefetch={false}>
+                        <Link href={gameHref(r)} prefetch={false}>
                           {r.map || "Unknown map"}
                         </Link>
                       </td>

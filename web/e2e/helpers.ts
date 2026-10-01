@@ -31,7 +31,7 @@ export async function groupCodes(request: APIRequestContext, kind: string, sourc
 /** Each listed row as replay id, Player and Opponent: the API's rows read the same. */
 export const listed = (page: Page) =>
   page.locator("table.games tbody tr").evaluateAll((trs) =>
-    trs.map((tr) => [tr.querySelector('a[href^="/replays/"]')!.getAttribute("href")!.split("/").pop(), tr.querySelector(".c-p .font-name")!.textContent, tr.querySelector(".c-o .font-name")!.textContent].join(" ")),
+    trs.map((tr) => [tr.querySelector('a[href^="/replays/"]')!.getAttribute("href")!.split("?")[0].split("/").pop(), tr.querySelector(".c-p .font-name")!.textContent, tr.querySelector(".c-o .font-name")!.textContent].join(" ")),
   );
 export const rowsOf = (a: Answer) => a.replays.map((r) => [r.replay_id, r.player.name, r.opponent.name].join(" "));
 

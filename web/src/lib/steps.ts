@@ -1,4 +1,6 @@
 // Strategy steps: the step kinds, the URL codec of a side's steps, and the POST /search step.
+import type { Objects } from "./api";
+import { racePair } from "./races";
 
 /** A step kind: its word, the API kind it searches, and its picker (none for Expanded). */
 export const KINDS = {
@@ -126,3 +128,18 @@ export function timeWords(s: Pick<Step, "from" | "to">) {
 
 /** "1st hero" for a hero step with nth, else the kind's word. */
 export const kindWord = (s: Pick<Step, "kind" | "nth">) => (s.kind === "hero" && s.nth ? `${["1st", "2nd", "3rd"][s.nth - 1]} hero` : KINDS[s.kind].label);
+
+/** The races a side's values play, for its town halls: NE for NE and RN, none for any race. */
+export const played = (race: string[]) => [...new Set(race.map((v) => racePair(v)[0]).filter((r) => HALLS[r]))];
+
+/**
+ * A step's object as words and an icon: one object, "Archer or 2 more", "Any from Tavern" for an
+ * "@source" group, or the town hall of the side's race for Expanded.
+ */
+export function stepObject(s: Step, race: string[], names: Objects, groups: Record<string, { name: string; icon: string | null }>) {
+  const one = (c: string) => ({ name: names[c]?.name ?? c, icon: names[c]?.icon ?? null });
+  if (s.kind === "expand") return played(race).length === 1 ? one(HALLS[played(race)[0]]) : { name: "Any town hall", icon: null };
+  const g = s.codes[0]?.startsWith("@") ? groups[`${s.kind}${s.codes[0]}`] : null;
+  if (g) return { name: `Any from ${g.name}`, icon: g.icon };
+  return s.codes.length > 1 ? { ...one(s.codes[0]), name: `${one(s.codes[0]).name} or ${s.codes.length - 1} more` } : one(s.codes[0]);
+}

@@ -369,6 +369,16 @@
   .col-axis { grid-column: 1 / -1; text-align: center; font-size: 0.8125rem; color: var(--color-muted); }
   .stats.tiles { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
 
+  /* A search step's number on the orders it matched: ink on a surface ring, on the mark's corner. */
+  .step-no {
+    position: absolute; left: -6px; top: -6px; z-index: 1; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 9999px;
+    background: rgb(var(--v-theme-on-surface)); color: rgb(var(--v-theme-surface)); box-shadow: 0 0 0 2px rgb(var(--v-theme-surface));
+    font-size: 10px; font-weight: 700; line-height: 15px; text-align: center;
+  }
+  .step-no.static { position: static; flex-shrink: 0; box-shadow: none; }
+  .step-hit { outline: 2px solid rgb(var(--v-theme-on-surface)); outline-offset: 1px; }
+  .step-legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 12px 32px; padding: 14px 16px; border-bottom: 1px solid var(--color-border); }
+
   @media (max-width: 639px) {
     .filters > * { flex: 1 1 140px; }
     .filters > :last-child { flex: 1 1 100%; }

@@ -1,8 +1,8 @@
 "use client";
-import { useState, useSyncExternalStore } from "react";
+import { type ReactNode, useState, useSyncExternalStore } from "react";
 import type { GameEvent, Objects } from "@/lib/api";
 import { mss, ObjIcon, PlayerName, SeriesKey, SkillTrail } from "@/lib/ui";
-import { ALL_KINDS, describe, KINDS, merge, tiers, type Mark } from "./orders";
+import { ALL_KINDS, describe, KINDS, merge, stepsOf, tiers, type Mark } from "./orders";
 import { type Block, TimelineChart } from "./TimelineChart";
 
 type Player = { player_id: number; name: string; race: string; apm_per_minute: number[] };
@@ -37,7 +37,7 @@ function OrdersHead() {
   return <p className="pb-1.5 text-xs text-muted">Ordered</p>;
 }
 
-function Orders({ rows, objects, label }: { rows: Row[]; objects: Objects; label: string }) {
+function Orders({ rows, objects, label, hits }: { rows: Row[]; objects: Objects; label: string; hits?: Record<string, number[]> }) {
   return (
     <ol aria-label={label} className="py-1 text-sm">
       {rows.map((r, j) => (
@@ -46,6 +46,11 @@ function Orders({ rows, objects, label }: { rows: Row[]; objects: Objects; label
             <span className="w-11 shrink-0 text-muted">{mss(r.times[0])}</span>
             <ObjIcon code={r.code} objects={objects} size={24} alt="" />
             <span className="min-w-0">{describe(r, objects)[0]}</span>
+            {stepsOf(r, hits).map((n) => (
+              <span key={n} className="step-no static" title={`Step ${n} of the search`}>
+                {n}
+              </span>
+            ))}
             {r.tier && <span className="chip border">T{r.tier}</span>}
             {CHIPS[r.event_type] && <span className="chip border">{CHIPS[r.event_type]}</span>}
           </div>
@@ -57,8 +62,20 @@ function Orders({ rows, objects, label }: { rows: Row[]; objects: Objects; label
   );
 }
 
-/** APM and both builds on one game clock: a chart from md up, lists below; ?kinds= holds the kinds that are on. */
-export function GameTimeline({ players, events, objects, durationMs, kinds }: { players: Player[]; events: GameEvent[]; objects: Objects; durationMs: number; kinds?: string }) {
+/**
+ * APM and both builds on one game clock: a chart from md up, lists below; ?kinds= holds the kinds
+ * that are on. `hits` are the orders a search's steps matched, per player, and `legend` lists those steps.
+ */
+export function GameTimeline(props: {
+  players: Player[];
+  events: GameEvent[];
+  objects: Objects;
+  durationMs: number;
+  kinds?: string;
+  hits?: Record<number, Record<string, number[]>>;
+  legend?: ReactNode;
+}) {
+  const { players, events, objects, durationMs, kinds, hits = {} } = props;
   const [on, setOn] = useState(() => (kinds === undefined ? ALL_KINDS : kinds.split(",").filter((k) => ALL_KINDS.includes(k))));
   // null until the reader picks: CSS shows the chart from md up and the list below
   const [view, setView] = useState<"chart" | "list" | null>(null);
@@ -70,13 +87,17 @@ export function GameTimeline({ players, events, objects, durationMs, kinds }: { 
   const toggle = (key: string) => {
     const next = ALL_KINDS.filter((k) => (k === key ? !on.includes(k) : on.includes(k)));
     setOn(next);
-    window.history.replaceState(null, "", location.pathname + (next.length === ALL_KINDS.length ? "" : `?kinds=${next.join(",")}`));
+    const q = new URLSearchParams(location.search);
+    if (next.length === ALL_KINDS.length) q.delete("kinds");
+    else q.set("kinds", next.join(","));
+    // commas stay as they are, so ?kinds=units,items reads as typed
+    window.history.replaceState(null, "", location.pathname + (q.size ? `?${q.toString().replace(/%2C/g, ",")}` : ""));
   };
 
   const blocks: Block[] = players.map((p) => {
     const mine = events.filter((e) => e.player_id === p.player_id);
     const lanes = KINDS.filter((k) => on.includes(k.key)).map((k) => ({ key: k.key, label: k.label, marks: merge(mine.filter((e) => k.types.includes(e.event_type))) }));
-    return { ...p, lanes, tiers: tiers(mine) };
+    return { ...p, lanes, tiers: tiers(mine), hits: hits[p.player_id] ?? {} };
   });
   const lists = blocks.map((b) => rowsFor(b, events));
   const minutes = Math.max(0, ...players.map((p) => p.apm_per_minute.length));
@@ -105,6 +126,8 @@ export function GameTimeline({ players, events, objects, durationMs, kinds }: { 
           ))}
         </div>
       </div>
+
+      {props.legend}
 
       {(view ?? "chart") === "chart" && (
         <div className={`p-4 ${view ? "" : "hidden md:block"}`}>
@@ -165,7 +188,7 @@ export function GameTimeline({ players, events, objects, durationMs, kinds }: { 
                         </div>
                         <OrdersHead />
                       </div>
-                      <Orders rows={lists[i]} objects={objects} label={`Orders of ${b.name}`} />
+                      <Orders rows={lists[i]} objects={objects} label={`Orders of ${b.name}`} hits={b.hits} />
                     </div>
                   ))}
                 </div>
@@ -188,7 +211,7 @@ export function GameTimeline({ players, events, objects, durationMs, kinds }: { 
                   </div>
                   <div role="tabpanel" className="px-4 pt-3 pb-1">
                     <OrdersHead />
-                    {blocks[tab] && <Orders rows={lists[tab]} objects={objects} label={`Orders of ${blocks[tab].name}`} />}
+                    {blocks[tab] && <Orders rows={lists[tab]} objects={objects} label={`Orders of ${blocks[tab].name}`} hits={blocks[tab].hits} />}
                   </div>
                 </div>
               </>
