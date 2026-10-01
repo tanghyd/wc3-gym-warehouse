@@ -184,10 +184,12 @@ models:
         description: The raw replay's object key in the bucket, such as preview/replays/goldens/w3c-20260501062910.w3g, written into the parsed document by the drain.
       - name: winning_team_id
         description: >-
-          The team opposite the first player to quit: the first player leave in the parser's
-          leaves (observers skipped), or the saver (saverPlayerId) when no player leave is
-          recorded, because a FLO player-saved w3c- file drops the saver's own leave. -1 unless
-          the game has exactly two teams. The parser's own winningTeamId is not read.
+          From the parser's leaves (observers skipped). A player leave marked victory (result
+          09000000) names the winning team, because the winner can leave before the loser's
+          leave is logged. Otherwise the team opposite the first player to quit won: the first
+          player leave, or the saver (saverPlayerId) when no player leave is recorded, because
+          a FLO player-saved w3c- file drops the saver's own leave. -1 unless the game has
+          exactly two teams. The parser's own winningTeamId is not read.
       - name: winner_names
         description: The names of the players on the winning team, sorted and joined by commas, or '' when winning_team_id is -1.
       - name: random_seed

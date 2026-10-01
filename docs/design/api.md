@@ -104,7 +104,7 @@ The search body has no top-level `race`, `opponent_race` or `player`; each slot 
 | `map` | string | `""` when the file name gives none |
 | `matchup` | string | e.g. `"NvO"` |
 | `duration_ms` | integer | Game length |
-| `winning_team_id` | integer | `replays.winning_team_id`, the team opposite the first player to quit: the first player leave recorded or, with none, the saver, because a FLO player-saved w3c- file drops the saver's own leave. `-1` unless the game has exactly two teams. |
+| `winning_team_id` | integer | `replays.winning_team_id`: the team of a player leave marked victory (result 09), else the team opposite the first player to quit: the first player leave recorded or, with none, the saver, because a FLO player-saved w3c- file drops the saver's own leave. `-1` unless the game has exactly two teams. |
 | `gnl` | object or null | `{"series_id": int, "game_no": int}`. Null when `gnl_series_id = 0` (tables.sql:33-36). The UI shows it as text. |
 | `download_url` | string or null | `DOWNLOAD_BASE_URL` + `replays.source_key` when both are non-empty, else null. The UI then shows "No file". |
 | `focus_player_id` | integer or null | The player the result column reports. `/search`: the player `groups[0]` bound to; null with no groups; the lower `player_id` when both fit. `/openers/replays`: the opener's owner (3.6). |

@@ -7,16 +7,24 @@ WITH
     JSONExtractArrayRaw(r.doc, 'players') AS players,
     arrayMap(p -> JSONExtractUInt(p, 'id'), players) AS player_ids,
     arrayMap(p -> toInt8(JSONExtractInt(p, 'teamid')), players) AS team_ids,
+    JSONExtractArrayRaw(r.doc, 'leaves') AS leaves,
+    -- A player's leave the game marked victory (result 09). The winner can leave the
+    -- victory screen before the loser's leave is logged, so this outranks quit order.
+    arrayFirst(l -> JSONExtractString(l, 'result') = '09000000'
+                    AND has(player_ids, JSONExtractUInt(l, 'playerId')), leaves) AS victory_leave,
     -- Who quit, in order: each leave's player, then the saver. A FLO player-saved file
     -- stops at the saver's own leave and drops it, so with no player leave recorded the
     -- saver quit first.
-    arrayPushBack(arrayMap(l -> JSONExtractUInt(l, 'playerId'), JSONExtractArrayRaw(r.doc, 'leaves')),
+    arrayPushBack(arrayMap(l -> JSONExtractUInt(l, 'playerId'), leaves),
                   JSONExtractUInt(r.doc, 'saverPlayerId')) AS quitters,
     -- The first player to quit lost, observers skipped. 0 when no quitter is a player.
     arrayFirstIndex(id -> has(player_ids, id), quitters) AS first_quit,
-    -- The other team won. -1 unless the game has exactly two teams and a loser.
-    if(first_quit > 0 AND length(arrayDistinct(team_ids)) = 2,
-       arrayFirst(t -> t != team_ids[indexOf(player_ids, quitters[first_quit])], team_ids), -1) AS winner
+    -- The victory leave's team won, else the team that did not quit first. -1 unless the
+    -- game has exactly two teams and one of those names a side.
+    multiIf(length(arrayDistinct(team_ids)) != 2, -1,
+            victory_leave != '', team_ids[indexOf(player_ids, JSONExtractUInt(victory_leave, 'playerId'))],
+            first_quit > 0, arrayFirst(t -> t != team_ids[indexOf(player_ids, quitters[first_quit])], team_ids),
+            -1) AS winner
 SELECT
     r.replay_id                                                          AS replay_id,
     -- The map segment of a w3c filename, then "_v1.3" and camelCase into spaces.
