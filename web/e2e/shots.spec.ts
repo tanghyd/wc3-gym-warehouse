@@ -4,6 +4,10 @@ import { expect, test } from "@playwright/test";
 // Full-page screenshots for a look in both themes, written to shots/ (gitignored).
 const PAGES = [
   ["search", "/"],
+  // a Night Elf build against an Orc one: timing on two steps, a hero, an outcome
+  ["search-build", `/?race=NE&result=won&steps=${encodeURIComponent("eate@-120,eaom~20,Edem")}&opponent_race=OC&opp_steps=ofor`],
+  // the Night Elf tree, open two levels down
+  ["openers", "/openers?race=NE&open=eate&open=eate.eaom"],
   // Concealed Hill, 15:37, NE v OC: the story 4 golden
   ["replay", "/replays/dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8"],
   // Shallow Grave, 31 minutes, NE v OC: the longest human game
@@ -41,6 +45,15 @@ for (const width of [1280, 390]) {
 
           expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(BACKGROUND[theme]);
           if (width === 390) expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+
+          // the object picker open on Player 2's next step
+          if (name === "search-build") {
+            const p2 = page.getByRole("region", { name: "Player 2" });
+            await p2.getByRole("button", { name: "Add step" }).click();
+            await p2.getByRole("button", { name: "Timing for step 1" }).click();
+            await p2.screenshot({ path: shot("-picker") });
+            if (width === 390) expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+          }
 
           // the timeline's other view
           if (name.startsWith("replay")) {

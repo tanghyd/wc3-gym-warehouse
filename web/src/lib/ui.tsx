@@ -1,4 +1,5 @@
-// Marks and formats shared by the server pages and the client charts.
+// Marks, fields and formats shared by the server pages and the client components.
+import type { ComponentProps, ReactNode } from "react";
 import type { GameEvent, Objects } from "./api";
 
 /** GNL race id -> name, race-icons/ file and matchup letter. */
@@ -21,6 +22,37 @@ export function matchup(players: { race: string; team_id: number }[]) {
 export const mss = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 
 export const shortName = (name: string) => name.split("#")[0];
+
+/** A record as "wins – losses", with its percent from ten decided games up; an em dash with none. */
+export function record(wins: number, losses: number) {
+  const n = wins + losses;
+  if (!n) return "—";
+  return `${wins} – ${losses}` + (n >= 10 ? ` (${Math.round((100 * wins) / n)}%)` : "");
+}
+
+/** A filter field: its label above the control. */
+export function Field({ label, children, className = "" }: { label: string; children: ReactNode; className?: string }) {
+  return (
+    <label className={`flex min-w-36 flex-1 flex-col gap-1 text-sm ${className}`}>
+      <span className="text-muted">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+/** The five races; "Any" first unless the race is required. */
+export function RaceSelect({ any = true, ...props }: ComponentProps<"select"> & { any?: boolean }) {
+  return (
+    <select className="field" {...props}>
+      {any && <option value="">Any</option>}
+      {Object.entries(RACES).map(([id, [label]]) => (
+        <option key={id} value={id}>
+          {label}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 /** The line colour of the i-th player: series-1 for the lower player_id. */
 export const seriesColor = (i: number) => `rgb(var(--v-theme-series-${i + 1}))`;

@@ -116,11 +116,36 @@
   }
   .btn-gold:hover { color: oklch(22% 0.04 60); filter: brightness(1.05); }
 
+  /* A quiet button: a hairline edge and no fill. */
+  .btn-line { border: 1px solid var(--color-border); font-weight: 400; color: inherit; }
+  .btn-line:hover { background: rgba(var(--v-theme-on-surface), 0.06); }
+
+  /* A 32 px icon button; gold-tinted when what it opens is set. */
+  .icon-btn {
+    display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 0.35rem;
+    color: var(--color-muted); cursor: pointer;
+  }
+  .icon-btn:hover:not(:disabled) { background: rgba(var(--v-theme-on-surface), 0.06); color: rgb(var(--v-theme-on-surface)); }
+  .icon-btn:disabled { opacity: 0.35; cursor: default; }
+  .icon-btn[data-on] { background: rgba(var(--v-theme-primary), 0.2); color: rgb(var(--v-theme-primary-text)); }
+
+  /* One choice of a radio group drawn as joined buttons; flat gold when chosen. */
+  .seg {
+    position: relative; display: inline-flex; align-items: center; height: 34px; padding: 0 14px;
+    font-size: 0.875rem; cursor: pointer;
+  }
+  .seg + .seg { border-left: 1px solid var(--color-border); }
+  .seg:first-child { border-radius: 0.35rem 0 0 0.35rem; }
+  .seg:last-child { border-radius: 0 0.35rem 0.35rem 0; }
+  .seg:has(:checked) { background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary)); font-weight: 700; }
+  .seg:has(:focus-visible) { z-index: 1; outline: 2px solid rgb(var(--v-theme-on-surface)); outline-offset: 2px; }
+
   .field {
     height: 38px; min-width: 0; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 0.35rem;
     background: rgb(var(--v-theme-surface)); color: inherit;
   }
   .field:focus-visible { outline-offset: 0; }
+  .field:disabled { background: rgb(var(--v-theme-surface-light)); color: var(--color-muted); cursor: not-allowed; }
 
   /* A data table: hairline rows, a quiet hover, numbers right-aligned by the cell. */
   .table { width: 100%; text-align: left; }

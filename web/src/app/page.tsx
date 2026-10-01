@@ -1,89 +1,117 @@
 import Link from "next/link";
-import { pickerValues, searchReplays } from "@/lib/api";
-import { matchup, mss, PlayerName, RACES, Result } from "@/lib/ui";
+import { type Filters, pickerValues, searchReplays, stepObjects } from "@/lib/api";
+import { decodeSteps, KINDS } from "@/lib/steps";
+import { Field, matchup, mss, ObjIcon, PlayerName, Result } from "@/lib/ui";
+import { PlayerSlot } from "./PlayerSlot";
 
-const FIELDS = ["race", "opponent_race", "map", "player"] as const;
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex min-w-36 flex-1 flex-col gap-1 text-sm">
-      <span className="text-muted">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function RaceSelect({ name, value }: { name: string; value: string }) {
-  return (
-    <select name={name} defaultValue={value} className="field">
-      <option value="">Any</option>
-      {Object.entries(RACES).map(([id, [label]]) => (
-        <option key={id} value={id}>
-          {label}
-        </option>
-      ))}
-    </select>
-  );
-}
+const OPENERS = ["opener_1", "opener_2", "opener_3", "opener_4", "opener_5", "opener_6"];
+const RESULTS: Record<string, string> = { won: "win", lost: "loss" };
 
 export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
   const value = (k: string) => (typeof sp[k] === "string" ? sp[k] : "");
-  // Filters apply to the focus player's row: race is his, opponent race the other side's.
-  const filters: Record<string, string[] | { gte?: number; lte?: number }> = Object.fromEntries(
-    FIELDS.filter((k) => value(k)).map((k) => [k, [value(k)]]),
-  );
+  const [objects, maps, players] = await Promise.all([stepObjects(), pickerValues("map"), pickerValues("player")]);
+  const byCode = Object.fromEntries(objects.map((o) => [o.code, o]));
+  // A step's code gives its kind; a code that is no step object drops out.
+  const steps = (k: string) => decodeSteps(value(k)).filter((s) => byCode[s.code]);
+  const apiSteps = (k: string) =>
+    steps(k).map((s) => ({
+      type: KINDS[byCode[s.code].kind][1],
+      code: s.code,
+      within_prev_s: s.within,
+      from_min: s.from === null ? null : s.from / 60,
+      to_min: s.to === null ? null : s.to / 60,
+    }));
+  // The opener prefix a row of /openers links here with: opener_1 to opener_k, no gap.
+  const prefix = OPENERS.map(value);
+  prefix.splice(prefix.indexOf("") < 0 ? 6 : prefix.indexOf(""));
+
+  // Player 1 is the focus: the row whose result the table reports. Map, length and opener ride on him.
+  const filters: Filters = {};
+  for (const k of ["race", "opponent_race", "map", "player"]) if (value(k)) filters[k] = [value(k)];
+  prefix.forEach((c, i) => (filters[OPENERS[i]] = [c]));
+  if (value("opp_player")) filters.opponent = [value("opp_player")];
+  if (RESULTS[value("result")]) filters.result = [RESULTS[value("result")]];
   // ?min= and ?max= are the game length in minutes, both ends included; the filter is on exact ms
   const [min, max] = [value("min"), value("max")].map((v) => (v && Number.isFinite(Number(v)) ? Number(v) * 60000 : undefined));
   if (min !== undefined || max !== undefined) filters.duration_ms = { gte: min, lte: max };
-  const [replays, maps, players] = await Promise.all([searchReplays(filters), pickerValues("map"), pickerValues("player")]);
+  // Player 2 is another player of the game: the focus's opponent, so each side names the other.
+  const p2: Filters = {};
+  for (const [k, from] of [["race", "opponent_race"], ["opponent_race", "race"], ["player", "opp_player"], ["opponent", "player"]])
+    if (value(from)) p2[k] = [value(from)];
+  if (RESULTS[value("opp_result")]) p2.result = [RESULTS[value("opp_result")]];
+  const p2Steps = apiSteps("opp_steps");
+  const others = p2.result || p2Steps.length ? [{ filters: p2, steps: p2Steps }] : [];
+  const p1Steps = apiSteps("steps");
+
+  const { replays, sql, params } = await searchReplays({ filters, steps: p1Steps, others });
+  // with no condition on a player there is no focus, and players stay in slot order
+  const focused = Object.keys(filters).some((k) => k !== "map" && k !== "duration_ms") || p1Steps.length > 0 || others.length > 0;
+  const set = Object.values(sp).some((v) => v);
+  const withoutOpener = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" && v && !OPENERS.includes(k) ? [[k, v]] : [])));
 
   return (
     <main className="wrap py-6">
       <h1>Replays</h1>
 
-      <form className="card mt-4 flex flex-wrap items-end gap-3 p-4">
-        <Field label="Race">
-          <RaceSelect name="race" value={value("race")} />
-        </Field>
-        <Field label="Opponent race">
-          <RaceSelect name="opponent_race" value={value("opponent_race")} />
-        </Field>
-        <Field label="Map">
-          <select name="map" defaultValue={value("map")} className="field">
-            <option value="">Any</option>
-            {maps.map((m) => (
-              <option key={m}>{m}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Player">
-          <input name="player" list="players" defaultValue={value("player")} className="field" autoComplete="off" />
-          <datalist id="players">
-            {players.map((p) => (
-              <option key={p} value={p} />
-            ))}
-          </datalist>
-        </Field>
-        <div role="group" aria-labelledby="minutes" className="flex min-w-36 flex-1 flex-col gap-1 text-sm">
-          <span id="minutes" className="text-muted">
-            Minutes
-          </span>
-          <div className="flex items-center gap-2">
-            <input name="min" type="number" min={0} step="any" inputMode="decimal" placeholder="from" aria-label="Minutes from" defaultValue={value("min")} className="field w-full" />
-            <span aria-hidden className="text-muted">
-              –
+      {/* keyed by the query, so a link or Back redraws the fields from the URL */}
+      <form key={JSON.stringify(sp)} className="mt-4 flex flex-col gap-4">
+        <div className="card flex flex-wrap items-end gap-3 p-4">
+          <Field label="Map">
+            <select name="map" defaultValue={value("map")} className="field">
+              <option value="">Any</option>
+              {maps.map((m) => (
+                <option key={m}>{m}</option>
+              ))}
+            </select>
+          </Field>
+          <div role="group" aria-labelledby="minutes" className="flex min-w-36 flex-1 flex-col gap-1 text-sm">
+            <span id="minutes" className="text-muted">
+              Minutes
             </span>
-            <input name="max" type="number" min={0} step="any" inputMode="decimal" placeholder="to" aria-label="Minutes to" defaultValue={value("max")} className="field w-full" />
+            <div className="flex items-center gap-2">
+              <input name="min" type="number" min={0} step="any" inputMode="decimal" placeholder="from" aria-label="Minutes from" defaultValue={value("min")} className="field w-full" />
+              <span aria-hidden className="text-muted">
+                –
+              </span>
+              <input name="max" type="number" min={0} step="any" inputMode="decimal" placeholder="to" aria-label="Minutes to" defaultValue={value("max")} className="field w-full" />
+            </div>
           </div>
+          {prefix.length > 0 && (
+            <div role="group" aria-labelledby="opener" className="flex flex-col gap-1 text-sm">
+              <span id="opener" className="text-muted">
+                Opener
+              </span>
+              <div className="flex h-[38px] items-center gap-1">
+                {prefix.map((c, i) => (
+                  <span key={i}>
+                    <input type="hidden" name={OPENERS[i]} value={c} />
+                    <ObjIcon code={c} objects={byCode} size={28} alt={byCode[c]?.name ?? c} />
+                  </span>
+                ))}
+                <Link href={`/?${withoutOpener}`} className="ml-2">
+                  Remove
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <PlayerSlot n={1} race={value("race")} name={value("player")} outcome={value("result")} steps={steps("steps")} objects={objects} />
+          <PlayerSlot n={2} race={value("opponent_race")} name={value("opp_player")} outcome={value("opp_result")} steps={steps("opp_steps")} objects={objects} />
+        </div>
+        <div className="flex items-center justify-end gap-4">
+          {set && <Link href="/">Clear</Link>}
           <button type="submit" className="btn btn-gold">
             Search
           </button>
-          {Object.keys(filters).length > 0 && <Link href="/">Clear</Link>}
         </div>
       </form>
+      <datalist id="players">
+        {players.map((p) => (
+          <option key={p} value={p} />
+        ))}
+      </datalist>
 
       <section className="card mt-4">
         <div className="bar">
@@ -91,7 +119,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
           <span className="chip bg-primary text-on-primary">{replays.length}</span>
         </div>
         {replays.length === 0 ? (
-          <p className="p-8 text-center text-muted">No replay matches. Widen the filters.</p>
+          <p className="p-8 text-center text-muted">No replay matches. {p1Steps.length || p2Steps.length ? "Drop a step or widen the filters." : "Widen the filters."}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="table">
@@ -101,12 +129,16 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                   <th>Map</th>
                   <th className="hidden sm:table-cell">Matchup</th>
                   <th>Players</th>
+                  {focused && <th className="hidden sm:table-cell">Player 1</th>}
                   <th className="hidden text-right sm:table-cell">Length</th>
                 </tr>
               </thead>
               <tbody>
                 {replays.map((r) => {
-                  const players = [...r.players].sort((a, b) => a.player_id - b.player_id);
+                  // the focus player first, then the rest by slot
+                  const rank = (p: { player_id: number }) => (focused && p.player_id === r.focus_player_id ? -1 : p.player_id);
+                  const players = [...r.players].sort((a, b) => rank(a) - rank(b));
+                  const focus = r.players.find((p) => p.player_id === r.focus_player_id);
                   return (
                     <tr key={r.replay_id} className="align-top">
                       <td className="hidden whitespace-nowrap sm:table-cell">{r.gnl ? `S${r.gnl.series_id} G${r.gnl.game_no}` : ""}</td>
@@ -129,6 +161,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                           ))}
                         </ul>
                       </td>
+                      {focused && <td className="hidden sm:table-cell">{focus && focus.won !== null && <Result won={focus.won} />}</td>}
                       <td className="hidden text-right sm:table-cell">{mss(r.duration_ms)}</td>
                     </tr>
                   );
@@ -137,6 +170,12 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
             </table>
           </div>
         )}
+        <details className="border-t">
+          <summary className="cursor-pointer px-4 py-3 text-sm text-muted">Show SQL</summary>
+          <pre className="overflow-x-auto px-4 pb-4 text-xs leading-relaxed">
+            {sql + Object.entries(params).map(([k, v]) => `\n-- ${k} = ${v}`).join("")}
+          </pre>
+        </details>
       </section>
     </main>
   );

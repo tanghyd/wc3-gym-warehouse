@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cache } from "react";
+import { KINDS, type StepObject } from "./steps";
 
 const API_URL = process.env.API_URL ?? "http://api:8000";
 
@@ -31,27 +32,50 @@ async function api<T>(path: string, body?: object): Promise<T | null> {
 // cache(): the page and its metadata share one read per request.
 export const getReplay = cache((id: string) => api<Replay>(`/replays/${encodeURIComponent(id)}`));
 
-export async function searchReplays(filters: Record<string, string[] | { gte?: number; lte?: number }>) {
-  return (await api<{ replays: ReplayRow[] }>("/search", { filters }))!.replays;
+/** A dimension's allowed values, or a numeric range. */
+export type Filters = Record<string, string[] | { gte?: number; lte?: number }>;
+export type ApiStep = { type: string; code: string; within_prev_s: number | null; from_min: number | null; to_min: number | null };
+
+/** POST /search: the focus player's filters and steps, then other players of the same game. */
+export async function searchReplays(body: { filters: Filters; steps?: ApiStep[]; others?: { filters: Filters; steps: ApiStep[] }[] }) {
+  return (await api<{ replays: ReplayRow[]; sql: string; params: Record<string, string> }>("/search", body))!;
+}
+
+/** The rows of POST /query. */
+export async function query<T>(body: { model?: string; dimensions?: string[]; measures?: string[]; filters?: Filters; order_by?: string[]; limit?: number }) {
+  return (await api<{ rows: T[] }>("/query", body))!.rows;
 }
 
 /** Every value of one player_games dimension, for a picker. */
 export async function pickerValues(dimension: "map" | "player") {
-  const res = await api<{ rows: Record<string, string>[] }>("/query", {
-    dimensions: [dimension],
-    measures: ["games"],
-    order_by: [dimension],
-    limit: 10000,
-  });
-  return res!.rows.map((r) => r[dimension]);
+  const rows = await query<Record<string, string>>({ dimensions: [dimension], measures: ["games"], order_by: [dimension], limit: 10000 });
+  return rows.map((r) => r[dimension]);
 }
 
 let iconFiles: Record<string, string> | undefined;
 
+/** An object's command-card icon from public/icons.json, or null. */
+function iconOf(code: string) {
+  iconFiles ??= JSON.parse(readFileSync(join(process.cwd(), "public/icons.json"), "utf8")) as Record<string, string>;
+  return iconFiles[code] ? `/icons/${iconFiles[code]}` : null;
+}
+
+/** Every object a build-order step can name, by name. */
+export async function stepObjects(): Promise<StepObject[]> {
+  const rows = await query<Omit<StepObject, "icon">>({
+    model: "mappings",
+    dimensions: ["code", "name", "kind", "hero"],
+    filters: { kind: Object.keys(KINDS) },
+    order_by: ["name", "code"],
+    limit: 10000,
+  });
+  return rows.filter((r) => r.name).map((r) => ({ ...r, icon: iconOf(r.code) }));
+}
+
 /** Names from the mappings model in one read, icons from public/icons.json. */
 export async function getObjects(codes: string[]): Promise<Objects> {
   if (!codes.length) return {};
-  const res = await api<{ rows: { code: string; name: string; kind: string }[] }>("/query", {
+  const res = await query<{ code: string; name: string; kind: string }>({
     model: "mappings",
     dimensions: ["code", "name", "kind"],
     filters: { code: codes },
@@ -60,11 +84,7 @@ export async function getObjects(codes: string[]): Promise<Objects> {
   });
   const names = new Map<string, string>();
   // A melee row wins; a custom-map row (kind "unknown", such as ewsp "Glowworm") only fills a gap.
-  const rows = [...res!.rows].sort((a, b) => Number(a.kind === "unknown") - Number(b.kind === "unknown"));
+  const rows = [...res].sort((a, b) => Number(a.kind === "unknown") - Number(b.kind === "unknown"));
   for (const r of rows) if (!names.has(r.code)) names.set(r.code, r.name);
-  iconFiles ??= JSON.parse(readFileSync(join(process.cwd(), "public/icons.json"), "utf8")) as Record<string, string>;
-  const icons = iconFiles;
-  return Object.fromEntries(
-    codes.map((c) => [c, { name: names.get(c) || undefined, icon: icons[c] ? `/icons/${icons[c]}` : null }]),
-  );
+  return Object.fromEntries(codes.map((c) => [c, { name: names.get(c) || undefined, icon: iconOf(c) }]));
 }

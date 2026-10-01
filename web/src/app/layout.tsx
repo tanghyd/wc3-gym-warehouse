@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cardo, Cinzel, Lato } from "next/font/google";
 import Link from "next/link";
+import { Nav } from "./Nav";
 import { paletteStyle, THEME_SCRIPT } from "./palette";
 import { ThemeSwitch } from "./ThemeSwitch";
 import "./globals.css";
@@ -24,10 +25,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-dvh">
         <header className="border-b bg-surface">
-          <div className="wrap flex min-h-14 items-center gap-4">
+          <div className="wrap flex min-h-14 flex-wrap items-center gap-x-8">
             <Link href="/" className="truncate font-title text-lg font-bold text-on-surface hover:no-underline">
               GNL Replays
             </Link>
+            <Nav />
             <ThemeSwitch />
           </div>
         </header>
