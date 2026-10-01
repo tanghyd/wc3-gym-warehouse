@@ -24,6 +24,8 @@
   --color-on-draw: rgb(var(--v-theme-on-draw));
   --color-series-1: rgb(var(--v-theme-series-1));
   --color-series-2: rgb(var(--v-theme-series-2));
+  --color-amount: rgb(var(--v-theme-amount));
+  --color-amount-track: rgb(var(--v-theme-amount-track));
   /* second-level text: ink at medium emphasis */
   --color-muted: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
   --color-border: rgba(var(--v-border-color), var(--v-border-opacity));
@@ -304,6 +306,69 @@
   .pager > span:first-child { margin-right: 8px; }
   .pager .btn { height: 32px; padding: 0 12px; color: rgb(var(--v-theme-on-surface)); }
 
+  /* A quiet button on a banner: the banner's ink over a 40% edge. */
+  .btn-line.on-bar { height: 32px; padding: 0 12px; font-size: 0.875rem; color: rgb(var(--v-theme-on-banner)); border-color: rgba(var(--v-theme-on-banner), 0.4); }
+  .btn-line.on-bar:hover { background: rgba(var(--v-theme-on-banner), 0.1); }
+
+  /* Explore's query card: a label, then a row of chips. A shown measure is a gold chip. */
+  .q-card { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+  .q-row { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 8px 12px; }
+  .q-label { font-size: 0.875rem; color: var(--color-muted); }
+  .q-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .q-chip {
+    display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px; border-radius: 9999px;
+    border: 1px solid var(--color-border); font-size: 0.9375rem; white-space: nowrap; cursor: pointer;
+  }
+  .q-toggle:hover { background: rgba(var(--v-theme-on-surface), 0.06); }
+  .q-toggle[aria-pressed="true"] {
+    background: rgb(var(--v-theme-primary)); border-color: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary)); font-weight: 700;
+  }
+  .q-set { gap: 2px; padding: 0 4px 0 12px; background: rgb(var(--v-theme-surface-light)); cursor: default; max-width: 100%; }
+  .q-open { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .q-x { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 9999px; color: var(--color-muted); cursor: pointer; }
+  .q-x:hover { background: rgba(var(--v-theme-on-surface), 0.1); color: rgb(var(--v-theme-on-surface)); }
+  .q-add { color: rgb(var(--v-theme-primary-text)); }
+  .q-add:hover { background: rgba(var(--v-theme-on-surface), 0.06); }
+  .q-dashed { border-style: dashed; }
+  .q-pop { min-width: 14rem; }
+  .q-list { max-height: 18rem; overflow-y: auto; }
+
+  /* The heat map: cells in three gold bins and a zero cell, 2 px of surface between them. */
+  .heat-wrap { overflow: visible; }
+  .heat { display: grid; gap: 2px; align-items: stretch; border-radius: 0.35rem; }
+  .heat:focus-visible { outline-offset: 4px; }
+  .heat-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; padding-bottom: 4px; font-size: 0.8125rem; line-height: 1.2; text-align: center; color: var(--color-muted); }
+  .heat-row { display: flex; align-items: center; min-width: 0; min-height: 36px; padding-right: 8px; font-size: 0.9375rem; }
+  .heat-cell { position: relative; display: grid; place-items: center; min-height: 36px; border-radius: 2px; font-size: 0.875rem; font-weight: 700; }
+  .heat-cell.on { outline: 2px solid rgb(var(--v-theme-on-surface)); outline-offset: 1px; z-index: 2; }
+  .heat-sum { display: grid; align-items: center; justify-items: center; font-size: 0.875rem; color: var(--color-muted); }
+  .heat-total { font-weight: 700; color: rgb(var(--v-theme-on-surface)); }
+  .bin-0 { background: rgb(var(--v-theme-surface-light)); color: rgba(var(--v-theme-on-surface), 0.45); font-weight: 400; }
+  .bin-1 { background: rgb(var(--v-theme-bin-1)); color: rgb(var(--v-theme-on-bin-1)); }
+  .bin-2 { background: rgb(var(--v-theme-bin-2)); color: rgb(var(--v-theme-on-bin-2)); }
+  .bin-3 { background: rgb(var(--v-theme-bin-3)); color: rgb(var(--v-theme-on-bin-3)); }
+  .heat-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 14px; font-size: 0.8125rem; color: var(--color-muted); }
+  .heat-legend .font-bold { color: rgb(var(--v-theme-on-surface)); }
+  .heat-legend .sw { display: inline-block; width: 14px; height: 14px; margin-right: 6px; border-radius: 2px; vertical-align: -2px; }
+  .heat-legend .sw.bin-0 { box-shadow: inset 0 0 0 1px var(--color-border); }
+
+  /* Bars of one gold step, 20 px thick, the value at the tip; columns for an ordered dimension. */
+  .bars { display: flex; flex-direction: column; gap: 2px; border-radius: 0.35rem; }
+  .bars .mark { position: relative; display: grid; grid-template-columns: minmax(0, 30%) minmax(0, 1fr); align-items: center; gap: 12px; min-height: 30px; }
+  .bar-label { min-width: 0; font-size: 0.9375rem; }
+  .bar-track { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .bar-fill { height: 20px; min-width: 2px; border-radius: 0 4px 4px 0; background: var(--color-amount); }
+  .tip-value { font-size: 0.875rem; white-space: nowrap; }
+  .mark.on .bar-fill, .mark.on .col-fill { outline: 2px solid rgb(var(--v-theme-on-surface)); outline-offset: 1px; }
+  .cols { display: grid; gap: 2px; align-items: end; border-radius: 0.35rem; }
+  .cols .mark { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+  .col-track { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; width: 100%; height: 200px; }
+  .col-fill { width: 100%; max-width: 24px; min-height: 1px; border-radius: 4px 4px 0 0; background: var(--color-amount); }
+  .cap { margin-bottom: 2px; font-size: 0.75rem; white-space: nowrap; }
+  .col-label { padding-top: 4px; font-size: 0.75rem; color: var(--color-muted); }
+  .col-axis { grid-column: 1 / -1; text-align: center; font-size: 0.8125rem; color: var(--color-muted); }
+  .stats.tiles { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+
   @media (max-width: 639px) {
     .filters > * { flex: 1 1 140px; }
     .filters > :last-child { flex: 1 1 100%; }
@@ -347,6 +412,14 @@
     .games .c-l { grid-area: l; font-size: 0.875rem; color: var(--color-muted); }
     .games .heroes { display: none; }
     .pager { padding: 12px; }
+
+    .q-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    .heat-row { font-size: 0.8125rem; min-height: 32px; padding-right: 4px; }
+    .heat-cell { min-height: 32px; font-size: 0.8125rem; }
+    .bars .mark { grid-template-columns: minmax(0, 40%) minmax(0, 1fr); gap: 8px; }
+    .bar-label { font-size: 0.875rem; }
+    .x-table th, .x-table td { padding-left: 8px; padding-right: 8px; }
+    .stats.tiles .stat:nth-child(3) { grid-column: auto; border-top: 0; }
   }
 }
 

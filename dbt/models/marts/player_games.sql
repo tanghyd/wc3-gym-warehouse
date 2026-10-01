@@ -4,7 +4,8 @@
 -- race and opponent_race are played races (replay_players), random and
 -- opponent_random say who picked Random, and matchup is built from the played races.
 -- heroes lists the player's heroes in pick order (the first skill point), so
--- first_hero is heroes[1]. opener_1..opener_6 are the first six non-supply buildings
+-- first_hero to third_hero are heroes[1] to heroes[3], and minutes_5 is the
+-- game length in 5-minute bins. opener_1..opener_6 are the first six non-supply buildings
 -- in order, back-to-back repeats dropped, '' past the end, so the opener tree is a
 -- GROUP BY over them.
 {{ config(order_by='(race, opponent_race, map, replay_id, player_id)') }}
@@ -47,12 +48,15 @@ SELECT
     r.added_at                                        AS added_at,
     r.duration_ms                                     AS duration_ms,
     round(r.duration_ms / 60000, 1)                   AS minutes,
+    toUInt16(intDiv(r.duration_ms, 300000) * 5)       AS minutes_5,
     toLowCardinality(multiIf(r.winning_team_id < 0, 'unknown',
             r.winning_team_id = rp.team_id, 'win', 'loss')) AS result,
     rp.apm                                            AS apm,
     arrayMap(t -> t.2, hs.h)                          AS heroes,
     arrayMap(t -> t.3, hs.h)                          AS hero_levels,
     toLowCardinality(heroes[1])                       AS first_hero,
+    toLowCardinality(heroes[2])                       AS second_hero,
+    toLowCardinality(heroes[3])                       AS third_hero,
     o.opener                                          AS opener,
     toLowCardinality(o.opener[1]) AS opener_1, toLowCardinality(o.opener[2]) AS opener_2,
     toLowCardinality(o.opener[3]) AS opener_3, toLowCardinality(o.opener[4]) AS opener_4,

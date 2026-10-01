@@ -73,14 +73,19 @@ def catalog() -> dict[str, Model]:
     types: dict[str, dict[str, str]] = {}
     for row in run("SELECT table, name, type FROM system.columns WHERE database = 'w3g'"):
         types.setdefault(f"w3g.{row['table']}", {})[row["name"]] = row["type"]
-    models = {
-        name: Model(
+    models = {}
+    for name, (table, sem) in semantic.items():
+        # a measure is its SQL, or a map with sql, label, type, parts and note
+        info = {m: v if isinstance(v, dict) else {"sql": v} for m, v in sem["measures"].items()}
+        models[name] = Model(
             table=table,
             dimensions={d: types.get(table, {}).get(d, "String") for d in sem["dimensions"]},
-            measures=sem["measures"],
+            measures={m: v["sql"] for m, v in info.items() if "sql" in v},
+            labels=sem.get("labels", {}) | {m: v["label"] for m, v in info.items() if "label" in v},
+            types={m: v["type"] for m, v in info.items() if "type" in v},
+            parts={m: v["parts"] for m, v in info.items() if "parts" in v},
+            notes={m: v["note"] for m, v in info.items() if "note" in v},
         )
-        for name, (table, sem) in semantic.items()
-    }
     _catalog = (mtime, models)
     return models
 
@@ -99,7 +104,10 @@ def health() -> dict[str, Any]:
 @app.get("/catalog")
 def get_catalog() -> dict[str, Any]:
     return {
-        name: {"dimensions": m.dimensions, "measures": list(m.measures), "steps": m.takes_steps}
+        name: {
+            "dimensions": m.dimensions, "measures": list(m.measures), "steps": m.takes_steps,
+            "labels": m.labels, "types": m.types, "parts": m.parts, "notes": m.notes,
+        }
         for name, m in catalog().items()
     }
 

@@ -1,0 +1,98 @@
+{
+  "route": "/query",
+  "request": {
+    "dimensions": [
+      "first_hero",
+      "second_hero",
+      "minutes_5"
+    ],
+    "measures": [
+      "games",
+      "wins",
+      "losses",
+      "minutes_total",
+      "apm_total"
+    ],
+    "order_by": [
+      "first_hero",
+      "second_hero"
+    ],
+    "filters": {
+      "replay_id": [
+        "0ddbb4abacfb6b62d88223ac6bb3902edc0bdc3a2eac55e29ffe367405cffa60",
+        "92336fe5a392d0043442e75ad4a5097086d6451a35b3d68d99c3093e65b8d8f6",
+        "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8"
+      ],
+      "duration_ms": {
+        "gte": 120000
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "rows": [
+        {
+          "first_hero": "Edem",
+          "second_hero": "Ekee",
+          "minutes_5": 15,
+          "games": 1,
+          "wins": 1,
+          "losses": 0,
+          "minutes_total": 15.620316666666668,
+          "apm_total": 140
+        },
+        {
+          "first_hero": "Edem",
+          "second_hero": "Ekee",
+          "minutes_5": 5,
+          "games": 1,
+          "wins": 1,
+          "losses": 0,
+          "minutes_total": 6.7316666666666665,
+          "apm_total": 307
+        },
+        {
+          "first_hero": "Edem",
+          "second_hero": "Nngs",
+          "minutes_5": 5,
+          "games": 1,
+          "wins": 1,
+          "losses": 0,
+          "minutes_total": 6.766666666666667,
+          "apm_total": 346
+        },
+        {
+          "first_hero": "Hmkg",
+          "second_hero": "",
+          "minutes_5": 5,
+          "games": 1,
+          "wins": 0,
+          "losses": 1,
+          "minutes_total": 6.766666666666667,
+          "apm_total": 227
+        },
+        {
+          "first_hero": "Obla",
+          "second_hero": "Oshd",
+          "minutes_5": 5,
+          "games": 1,
+          "wins": 0,
+          "losses": 1,
+          "minutes_total": 6.7316666666666665,
+          "apm_total": 373
+        },
+        {
+          "first_hero": "Ofar",
+          "second_hero": "Oshd",
+          "minutes_5": 15,
+          "games": 1,
+          "wins": 0,
+          "losses": 1,
+          "minutes_total": 15.620316666666668,
+          "apm_total": 89
+        }
+      ]
+    }
+  }
+}

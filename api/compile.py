@@ -52,6 +52,12 @@ class Model(BaseModel):
     table: str
     dimensions: dict[str, str]  # name -> ClickHouse type
     measures: dict[str, str]  # name -> aggregate expression
+    # What a page shows: a label per offered dimension and measure, and per measure its type
+    # (count, distinct, record, average), the summed measures it is made of, and a note.
+    labels: dict[str, str] = {}
+    types: dict[str, str] = {}
+    parts: dict[str, list[str]] = {}
+    notes: dict[str, str] = {}
 
     @property
     def takes_steps(self) -> bool:
@@ -253,6 +259,8 @@ def compile_query(req: QueryRequest, model: Model) -> tuple[str, dict[str, str]]
         if d not in model.dimensions:
             raise BadRequest(f"unknown dimension {d!r}")
     for m in req.measures:
+        if m in model.parts and m not in model.measures:
+            raise BadRequest(f"{m} has no SQL of its own: ask for {' and '.join(model.parts[m])}")
         if m not in model.measures:
             raise BadRequest(f"unknown measure {m!r}")
     params = Params()

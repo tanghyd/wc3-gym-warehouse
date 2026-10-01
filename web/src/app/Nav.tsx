@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 const PAGES = [
   ["/", "Replays"],
   ["/openers", "Openers"],
+  ["/explore", "Explore"],
 ] as const;
 
 /** The app bar's pages; a replay belongs to Replays. A gold underline marks the current one. */

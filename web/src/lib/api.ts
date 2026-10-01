@@ -2,7 +2,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cache } from "react";
-import { raceValue } from "./races";
+import { BINS, type Catalog, RACE_DIMS, type ValueLabel } from "./explore";
+import { RACES, raceValue } from "./races";
 import { apiStep, KINDS, type Kind } from "./steps";
 
 const API_URL = process.env.API_URL ?? "http://api:8000";
@@ -135,4 +136,30 @@ export async function stepGroups(keys: { kind: Kind; source: string }[]): Promis
       return [`${kind}@${source}`, { codes: mine.map((r) => r.code), name: mine[0]?.source_name ?? source, icon: iconOf(source) ?? iconOf(mine[0]?.code ?? "") }];
     }),
   );
+}
+
+/** GET /catalog's player_games: the dimensions and measures Explore offers, with labels and types. */
+export const getCatalog = cache(async () => (await api<Record<string, Catalog>>("/catalog"))!.player_games);
+
+/** POST /query's rows and the SQL it ran. */
+export async function queryWithSql<T>(body: { dimensions?: string[]; measures?: string[]; filters?: Filters; limit?: number }) {
+  return (await api<{ rows: T[]; sql: string; params: Record<string, string> }>("/query", body))!;
+}
+
+// The words of a result value.
+const RESULTS: Record<string, string> = { win: "Won", loss: "Lost", unknown: "No result" };
+
+/** How each value of each dimension shows: an object's name and icon, a race, a result, a 5-minute bin. */
+export async function valueLabels(values: Record<string, string[]>): Promise<Record<string, Record<string, ValueLabel>>> {
+  const coded = (d: string) => /_hero$|^opener_/.test(d);
+  const objects = await getObjects([...new Set(Object.entries(values).flatMap(([d, vs]) => (coded(d) ? vs.filter(Boolean) : [])))]);
+  const one = (d: string, v: string): ValueLabel => {
+    if (d in RACE_DIMS) return { label: RACES[v]?.[0] ?? v, race: v };
+    if (d === "result") return { label: RESULTS[v] ?? v };
+    if (d === BINS) return { label: `${v}–${Number(v) + 5}` };
+    if (!v) return { label: d.endsWith("_hero") ? "No hero" : d.startsWith("opener_") ? "No building" : "None" };
+    if (coded(d)) return { label: objects[v]?.name ?? v, icon: objects[v]?.icon ?? null };
+    return { label: v };
+  };
+  return Object.fromEntries(Object.entries(values).map(([d, vs]) => [d, Object.fromEntries(vs.map((v) => [v, one(d, v)]))]));
 }

@@ -1,6 +1,6 @@
 # `meta.semantic` is the query API's catalog (api/app.py reads it from
 # target/manifest.json): `dimensions` are the columns a caller may group or filter
-# on, `measures` are named aggregate expressions. A model whose dimensions include
+# on, `measures` are named aggregate expressions, and `labels` name what a page shows. A model whose dimensions include
 # replay_id and player_id also takes a build-order `steps` filter.
 # Shared column descriptions are doc blocks in models/docs.md.
 models:
@@ -14,19 +14,49 @@ models:
       meta:
         semantic:
           dimensions: [replay_id, player_id, player, race, random, opponent, opponent_race,
-                       opponent_random, matchup, map, patch, added_at, duration_ms, minutes, result,
-                       apm, first_hero, opener_1, opener_2, opener_3, opener_4, opener_5, opener_6]
+                       opponent_random, matchup, map, patch, added_at, duration_ms, minutes, minutes_5,
+                       result, apm, first_hero, second_hero, third_hero,
+                       opener_1, opener_2, opener_3, opener_4, opener_5, opener_6]
+          # The names a page shows, for the dimensions and measures the explorer offers.
+          labels:
+            race: Race
+            opponent_race: Opponent race
+            matchup: Matchup
+            map: Map
+            patch: Patch
+            player: Player
+            opponent: Opponent
+            result: Result
+            first_hero: First hero
+            second_hero: Second hero
+            third_hero: Third hero
+            opener_1: First building
+            opener_2: Second building
+            opener_3: Third building
+            opener_4: Fourth building
+            opener_5: Fifth building
+            opener_6: Sixth building
+            minutes_5: Minutes
+          # A measure is its SQL, or a map with its SQL, label and type. A type says how a page
+          # reads it: count (adds up across rows), distinct (does not add up), record or average.
+          # parts names the summed measures a record or an average is made of, so a page can
+          # combine rows and still print it exactly. A record has no SQL of its own.
           measures:
-            games: count()
+            games:
+              sql: count()
+              label: Games
+              type: count
+              note: "One per player: a mirror game can count twice"
             wins: countIf(result = 'win')
             losses: countIf(result = 'loss')
+            record: {label: Record, type: record, parts: [wins, losses]}
             win_rate: round(countIf(result = 'win') / nullIf(countIf(result != 'unknown'), 0), 3)
-            avg_minutes: round(avg(duration_ms) / 60000, 1)
-            # Sums, so a caller can combine groups and still average exactly.
-            minutes_total: sum(duration_ms) / 60000
-            avg_apm: round(avg(apm))
-            replays: uniqExact(replay_id)
-            players: uniqExact(player)
+            avg_minutes: {sql: "round(avg(duration_ms) / 60000, 1)", label: Avg length, type: average, parts: [minutes_total, games]}
+            avg_apm: {sql: "round(avg(apm))", label: Avg APM, type: average, parts: [apm_total, games]}
+            players: {sql: "uniqExact(player)", label: Players, type: distinct}
+            replays: {sql: "uniqExact(replay_id)", label: Replays, type: distinct}
+            minutes_total: {sql: "sum(duration_ms) / 60000", label: Total minutes, type: count}
+            apm_total: sum(apm)
     data_tests:
       - unique:
           name: player_games_one_row_per_player
@@ -85,6 +115,8 @@ models:
         description: "{{ doc('duration_ms') }}"
       - name: minutes
         description: Game length in minutes, rounded to one decimal.
+      - name: minutes_5
+        description: Game length in 5-minute bins, as the bin's first minute, so 0 is under 5 minutes and 5 is 5 to under 10.
       - name: result
         description: win or loss for this player against replays.winning_team_id, or unknown when the replay names no winner.
         data_tests:
@@ -100,6 +132,10 @@ models:
         description: The level of each hero in heroes at the end of the game, in the same order.
       - name: first_hero
         description: Object code of the player's first hero, heroes[1], or '' when the player spent no skill point.
+      - name: second_hero
+        description: Object code of the player's second hero, heroes[2], or '' when the player had fewer heroes.
+      - name: third_hero
+        description: Object code of the player's third hero, heroes[3], or '' when the player had fewer heroes.
       - name: opener
         description: >-
           The first six non-supply buildings the player ordered, by time then seq, with

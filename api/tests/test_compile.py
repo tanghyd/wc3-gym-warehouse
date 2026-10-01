@@ -156,3 +156,9 @@ def test_search_counts_the_scope_and_matches_any_group() -> None:
 def test_step_links_that_mean_nothing_are_refused(steps: list[dict[str, object]]) -> None:
     with pytest.raises(BadRequest):
         compile_search(SearchRequest(player={"groups": [{"steps": steps}]}), PG)
+
+
+def test_a_measure_with_parts_and_no_sql_names_its_parts() -> None:
+    model = PG.model_copy(update={"parts": {"record": ["wins", "losses"]}})
+    with pytest.raises(BadRequest, match="ask for wins and losses"):
+        compile_query(QueryRequest(measures=["record"]), model)

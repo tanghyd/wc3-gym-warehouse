@@ -55,7 +55,7 @@ replays/<folder>/<file>.w3g  ─drain─▶ parsed/v5/dt=<date>/<id>.json ─dbt
 | `raw_replays` | one parsed document per replay |
 | `replays`, `replay_players` | replay header with readable map name, patch, result and `added_at`, and `duplicate_of` for a second file of one game; player per replay with the played race and `random` |
 | `replay_events` | every order and hero skill per player in time order, with the played race; build-order steps match here |
-| `player_games` | one row per player per 1v1 game, a game saved twice counted once: played races and `random` flags of both players, map, patch, `added_at`, result, heroes in pick order with their levels, `opener_1`..`opener_6` |
+| `player_games` | one row per player per 1v1 game, a game saved twice counted once: played races and `random` flags of both players, map, patch, `added_at`, result, heroes in pick order with their levels and the first three as `first_hero`..`third_hero`, the length in 5-minute bins (`minutes_5`), `opener_1`..`opener_6` |
 | `player_order_events` | every order a player gave; a building placement keeps its map `x` and `y` |
 | `mappings` | object codes and names: the melee seed plus the custom-map seed |
 | `patches` (seed) | the game patch of each build number, kept by hand: 6117 is 2.0, 7000 is 3.0 |
@@ -92,11 +92,11 @@ The winner comes from the parser's `leaves` (observers skipped). A player leave 
 
 ## The query API (`api/`)
 
-The catalog lives on the dbt models. `meta.semantic` in `dbt/models/marts/marts.yml` lists a model's dimensions (columns a caller may group or filter on) and measures (named aggregates). Adding a measure is a YAML edit and a `just dbt build`; the API picks up the new manifest on its next request.
+The catalog lives on the dbt models. `meta.semantic` in `dbt/models/marts/marts.yml` lists a model's dimensions (columns a caller may group or filter on) and measures (named aggregates), and the labels a page shows. A measure can carry a label, a type (`count` adds up across rows, `distinct` does not, `record`, `average`) and the summed `parts` it is made of, so a page that folds rows into "Other" still prints a record or an average exactly. A record has no SQL of its own: a page reads its parts, `wins` and `losses`. Adding a measure is a YAML edit and a `just dbt build`; the API picks up the new manifest on its next request.
 
 | Route | Answers |
 |---|---|
-| `GET /catalog` | every semantic model, its dimensions with types, its measures |
+| `GET /catalog` | every semantic model: its dimensions with types, its measures, and the labels, types, parts and notes of what a page shows |
 | `POST /query` | measures grouped by dimensions, under filters and an optional build order |
 | `POST /objects` | a step picker's groups for a kind (building, unit, hired, upgrade, hero, skill, item) and a side's race values, each object with the player-games in scope that ordered it |
 | `POST /search` | one page of the Player side's player-games, with the Player's figures (`summary`) and the same over the scope (`scope`) |
@@ -130,7 +130,7 @@ A filter is a list of values or a `{gte, lte}` range. A step names an event type
 
 ## The replay inspector (`web/`)
 
-A Next.js app in the wc3-gym-frontend look, light and dark, at http://localhost:3000. `/` searches strategies (`POST /search`): the Player and the Opponent each take a race from the race menu (with a Random submenu and an "Include Random" switch), a battle tag and steps, picked from cascading pickers (`POST /objects`) and grouped into alternatives; the Player also takes an outcome, and Swap trades the sides. Map, patch and length scope the games. The Games card lists one player-game a row, 25 a page, under three figures: games, the Player's record and the average length, each against its scope. `/openers` is the opener tree of one race, a level per building, most played or best win rate first; a row counts games won or lost, one per player, and links to its games on `/` as an "Opened with" condition (`POST /query` on `player_games.opener_N`). The URL holds every filter, step and open row, so a link rebuilds the page. `/replays/<id>` shows one game: the players, their heroes and skills, APM per minute, both build orders and the chat (`GET /replays/{id}`, plus one `POST /query` on `mappings` for the names). Server components read the API at `API_URL` (`http://api:8000` in compose), so the browser never calls it. The object and race icons live in `web/public/`.
+A Next.js app in the wc3-gym-frontend look, light and dark, at http://localhost:3000. `/` searches strategies (`POST /search`): the Player and the Opponent each take a race from the race menu (with a Random submenu and an "Include Random" switch), a battle tag and steps, picked from cascading pickers (`POST /objects`) and grouped into alternatives; the Player also takes an outcome, and Swap trades the sides. Map, patch and length scope the games. The Games card lists one player-game a row, 25 a page, under three figures: games, the Player's record and the average length, each against its scope. `/openers` is the opener tree of one race, a level per building, most played or best win rate first; a row counts games won or lost, one per player, and links to its games on `/` as an "Opened with" condition (`POST /query` on `player_games.opener_N`). `/explore` counts anything by anything: the measures to show, up to two dimensions for the chart (rows and a column) and filters, read from `POST /query` on each change. The chart follows the measure types: tiles with no dimension, bars of a count by one dimension (columns for the 5-minute bins), a heat map of a count by two, and no chart for a record or an average alone or for three dimensions; the table under it lists every row. It starts at games of 2 minutes or more. The URL holds every filter, step and open row, so a link rebuilds the page. `/replays/<id>` shows one game: the players, their heroes and skills, APM per minute, both build orders and the chat (`GET /replays/{id}`, plus one `POST /query` on `mappings` for the names). Server components read the API at `API_URL` (`http://api:8000` in compose), so the browser never calls it. The object and race icons live in `web/public/`.
 
 | Recipe | Does |
 |---|---|

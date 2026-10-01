@@ -16,7 +16,11 @@
         "measures": [
           "objects"
         ],
-        "steps": false
+        "steps": false,
+        "labels": {},
+        "types": {},
+        "parts": {},
+        "notes": {}
       },
       "objects": {
         "dimensions": {
@@ -30,7 +34,11 @@
         "measures": [
           "objects"
         ],
-        "steps": false
+        "steps": false,
+        "labels": {},
+        "types": {},
+        "parts": {},
+        "notes": {}
       },
       "player_games": {
         "dimensions": {
@@ -48,9 +56,12 @@
           "added_at": "DateTime('UTC')",
           "duration_ms": "UInt32",
           "minutes": "Float64",
+          "minutes_5": "UInt16",
           "result": "LowCardinality(String)",
           "apm": "UInt32",
           "first_hero": "LowCardinality(String)",
+          "second_hero": "LowCardinality(String)",
+          "third_hero": "LowCardinality(String)",
           "opener_1": "LowCardinality(String)",
           "opener_2": "LowCardinality(String)",
           "opener_3": "LowCardinality(String)",
@@ -64,12 +75,66 @@
           "losses",
           "win_rate",
           "avg_minutes",
-          "minutes_total",
           "avg_apm",
+          "players",
           "replays",
-          "players"
+          "minutes_total",
+          "apm_total"
         ],
-        "steps": true
+        "steps": true,
+        "labels": {
+          "race": "Race",
+          "opponent_race": "Opponent race",
+          "matchup": "Matchup",
+          "map": "Map",
+          "patch": "Patch",
+          "player": "Player",
+          "opponent": "Opponent",
+          "result": "Result",
+          "first_hero": "First hero",
+          "second_hero": "Second hero",
+          "third_hero": "Third hero",
+          "opener_1": "First building",
+          "opener_2": "Second building",
+          "opener_3": "Third building",
+          "opener_4": "Fourth building",
+          "opener_5": "Fifth building",
+          "opener_6": "Sixth building",
+          "minutes_5": "Minutes",
+          "games": "Games",
+          "record": "Record",
+          "avg_minutes": "Avg length",
+          "avg_apm": "Avg APM",
+          "players": "Players",
+          "replays": "Replays",
+          "minutes_total": "Total minutes"
+        },
+        "types": {
+          "games": "count",
+          "record": "record",
+          "avg_minutes": "average",
+          "avg_apm": "average",
+          "players": "distinct",
+          "replays": "distinct",
+          "minutes_total": "count"
+        },
+        "parts": {
+          "record": [
+            "wins",
+            "losses"
+          ],
+          "avg_minutes": [
+            "minutes_total",
+            "games"
+          ],
+          "avg_apm": [
+            "apm_total",
+            "games"
+          ]
+        },
+        "notes": {
+          "games": "One per player: a mirror game can count twice"
+        }
       }
     }
   }

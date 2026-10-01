@@ -21,6 +21,10 @@ const PAGES = [
   // Fading Autumn 1.3, 31 minutes, HU v UD: a hero with no code
   ["replay-autumn", "/replays/02f31fadbf6319d381151aa63f1e99a3d828c51056b0161b2cfecbbaa338f4ce"],
   ["missing", "/replays/nope"],
+  // the mockup's view: first hero by opponent race for Night Elf, a heat map
+  ["explore", "/explore?rows=first_hero&cols=opponent_race&race=NE"],
+  // games by map, bars
+  ["explore-bars", "/explore?show=games,record&rows=map"],
 ] as const;
 // The `background` token, light and dark.
 const BACKGROUND = { light: "rgb(232, 233, 227)", dark: "rgb(8, 5, 3)" };

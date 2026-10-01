@@ -1,0 +1,14 @@
+{
+  "route": "/query",
+  "request": {
+    "measures": [
+      "record"
+    ]
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "detail": "record has no SQL of its own: ask for wins and losses"
+    }
+  }
+}
