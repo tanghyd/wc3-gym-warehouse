@@ -8,3 +8,8 @@ macros:
       - name: expr
         type: string
         description: A SQL expression that yields the parser's race letter, such as JSONExtractString(p, 'race').
+
+  - name: clickhouse__current_timestamp
+    description: >-
+      Overrides the ClickHouse adapter's current time with now64(3), a DateTime64. dbt
+      2.0.6 reads now(), a DateTime, back as UInt32 and fails source freshness on it.

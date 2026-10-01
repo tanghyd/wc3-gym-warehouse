@@ -83,23 +83,23 @@ models:
       - name: apm
         description: The player's actions per minute over the time they were in the game, from the parser.
       - name: first_hero
-        description: Object code of the player's first hero, the first to get a skill point; '' when the player spent none.
+        description: Object code of the player's first hero, the first to get a skill point, or '' when the player spent none.
       - name: opener
         description: >-
           The first six non-supply buildings the player ordered, by time then seq, with
           back-to-back repeats of one building dropped. {{ doc('order_is_a_command') }}
       - name: opener_1
-        description: The first building in opener; '' when the player ordered no non-supply building.
+        description: The first building in opener, or '' when the player ordered no non-supply building.
       - name: opener_2
-        description: The second building in opener; '' past its end.
+        description: The second building in opener, or '' past its end.
       - name: opener_3
-        description: The third building in opener; '' past its end.
+        description: The third building in opener, or '' past its end.
       - name: opener_4
-        description: The fourth building in opener; '' past its end.
+        description: The fourth building in opener, or '' past its end.
       - name: opener_5
-        description: The fifth building in opener; '' past its end.
+        description: The fifth building in opener, or '' past its end.
       - name: opener_6
-        description: The sixth building in opener; '' past its end.
+        description: The sixth building in opener, or '' past its end.
       - name: gnl_series_id
         description: "{{ doc('gnl_series_id') }}"
       - name: gnl_game_no
@@ -138,13 +138,13 @@ models:
               arguments:
                 values: [building, unit, item, upgrade, hero, hero_skill, unknown]
       - name: race
-        description: The object's race in the parser's tables (human, orc, night_elf, undead, neutral); '' when it has none or the code is custom.
+        description: The object's race in the parser's tables (human, orc, night_elf, undead, neutral), or '' when it has none or the code is custom.
       - name: hero
-        description: For a hero_skill, the name of the hero that learns it; '' otherwise.
+        description: For a hero_skill, the name of the hero that learns it, or '' otherwise.
       - name: is_supply_building
-        description: 1 for a building the parser flags as supply (Farm, Moon Well, Ziggurat; not Orc Burrow), else 0. player_games' openers skip these.
+        description: 1 for a building the parser flags as supply (Farm, Moon Well and Ziggurat, not Orc Burrow), else 0. player_games' openers skip these.
       - name: category
-        description: For a custom-map code, its group (ui-menu, builder, tower, upgrade, item, other); '' for a melee code.
+        description: For a custom-map code, its group (ui-menu, builder, tower, upgrade, item, other), or '' for a melee code.
 
   - name: replays
     description: One row per replay, the header and the lobby settings, with a readable map name.
@@ -169,7 +169,7 @@ models:
       - name: creator
         description: The host that created the game, such as a battle tag or FLO.
       - name: type
-        description: The team sizes, sorted and joined by on, such as 1on1 or 4on4; a game with one team gives a single number.
+        description: The team sizes, sorted and joined by on, such as 1on1 or 4on4. A game with one team gives a single number.
       - name: matchup
         description: "{{ doc('matchup') }}"
       - name: duration_ms
@@ -183,7 +183,7 @@ models:
       - name: parse_time_ms
         description: How long the parser took on this replay, in milliseconds.
       - name: winning_team_id
-        description: The winning team's id, which the parser sets for 1on1 games only; -1 when it could not tell or the game is not 1on1.
+        description: The winning team's id, which the parser sets for 1on1 games only. -1 when it could not tell or the game is not 1on1.
       - name: random_seed
         description: The game's random seed from the replay header.
       - name: start_spots
@@ -258,13 +258,13 @@ models:
       - name: subject_code
         description: The object code of the order, the ability for hero_skill, or the hero for hero_trained.
       - name: subject_name
-        description: The display name of subject_code from mappings; the code itself when mappings has no name for it.
+        description: The display name of subject_code from mappings, or the code itself when mappings has no name for it.
       - name: detail
-        description: For hero_skill, the name of the hero that learned the skill; '' otherwise.
+        description: For hero_skill, the name of the hero that learned the skill, or '' otherwise.
       - name: seq
         description: >-
           {{ doc('seq') }} For an order, its position within the player's list of that
-          kind; for hero_skill, within the hero's skill list; 0 for hero_trained.
+          kind. For hero_skill, within the hero's skill list. 0 for hero_trained.
 
   - name: replay_players
     description: One row per player per replay, with the player's slot, team, race, APM and action counts. Observers are not players and never appear.
@@ -295,7 +295,7 @@ models:
       - name: color
         description: "The player's color as a hex code, such as #ff0303 for red."
       - name: team_id
-        description: The player's team id from the lobby, from 0; -1 when the parser gave none.
+        description: The player's team id from the lobby, from 0. -1 when the parser gave none.
       - name: race
         description: "{{ doc('race') }}"
         data_tests:
@@ -304,7 +304,7 @@ models:
               arguments:
                 values: [HU, OC, NE, UD, RANDOM]
       - name: race_detected
-        description: The race letter (H, O, N, U) the parser read from the player's first race-specific order; '' when none was seen. Shows a random player's actual race.
+        description: The race letter (H, O, N, U) the parser read from the player's first race-specific order, or '' when none was seen. Shows a random player's actual race.
       - name: apm
         description: Actions per minute over the time the player was in the game, from the parser.
       - name: actions_rightclick
@@ -330,7 +330,7 @@ models:
       - name: actions_esc
         description: Count of Escape key presses.
       - name: apm_timed
-        description: Actions per game minute, one element per minute; the last, partial minute is scaled to a full minute, or dropped when under 30 s.
+        description: Actions per game minute, one element per minute. The last, partial minute is scaled to a full minute, or dropped when under 30 s.
 
   - name: player_order_events
     description: >-
@@ -396,7 +396,7 @@ models:
               arguments:
                 values: [ability, retraining]
       - name: ability_id
-        description: The object code of the skill learned; '' for retraining.
+        description: The object code of the skill learned, or '' for retraining.
       - name: time_ms
         description: "{{ doc('time_ms') }}"
       - name: seq
@@ -467,7 +467,7 @@ models:
           - not_null:
               description: Every message names its replay.
       - name: player_id
-        description: The sender's slot id; an observer can send chat, so it need not be in replay_players.
+        description: The sender's slot id. An observer can send chat, so it need not be in replay_players.
       - name: player_name
         description: The sender's battle tag.
       - name: mode

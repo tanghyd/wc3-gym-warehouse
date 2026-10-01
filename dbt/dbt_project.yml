@@ -21,7 +21,8 @@ models:
     # ponytail: marts rebuild in full every run (an atomic swap, readers never see
     # half a table). Switch a mart to incremental on replay_id when a build takes minutes.
     +materialized: table
-    # The YAML descriptions become table and column comments in ClickHouse.
+    # The YAML descriptions become table and column comments in ClickHouse. No
+    # semicolons in a description: dbt 2.0.6 splits the comment DDL on them.
     +persist_docs: {relation: true, columns: true}
 
 seeds:

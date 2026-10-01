@@ -62,11 +62,11 @@ The opener tree is a `GROUP BY` over `player_games.opener_N`, so the refreshable
 
 ### dbt docs and tests
 
-- Every model, seed and column has a description in YAML; shared terms (replay_id, race, matchup, order kinds) are doc blocks in `dbt/models/docs.md`. `+persist_docs` in `dbt_project.yml` writes them into ClickHouse as table and column comments, so `system.tables.comment` and `system.columns.comment` carry them.
-- Tests: `unique` and `not_null` on each table's key, with composite keys as an expression such as `replay_id || ':' || toString(player_id)`; `relationships` from `replay_players`, `player_games` and `replay_events` to `replays`; `accepted_values` on race, result, order kind and event type; singular tests in `dbt/tests/` (two `player_games` rows per 1v1, no event after the game's end, no gap in the openers); unit tests in `dbt/models/marts/unit_tests.yml` for the opener derivation and the `gnl_race` macro.
+- Every model, seed and column has a description in YAML. Shared terms (replay_id, race, matchup, order kinds) are doc blocks in `dbt/models/docs.md`. `+persist_docs` in `dbt_project.yml` writes them into ClickHouse as table and column comments, so `system.tables.comment` and `system.columns.comment` carry them. A description must not contain a semicolon: dbt 2.0.6 splits the comment DDL on it.
+- Tests: `unique` and `not_null` on each table's key, with composite keys as an expression such as `replay_id || ':' || toString(player_id)`. `relationships` from `replay_players`, `player_games` and `replay_events` to `replays`. `accepted_values` on race, result, order kind and event type. Singular tests in `dbt/tests/`: two `player_games` rows per 1v1, no event after the game's end (a warning), no gap in the openers. Unit tests in `dbt/models/marts/unit_tests.yml` for the opener derivation and the `gnl_race` macro. dbt 2.0.6 compares only their String columns.
 - The source `bucket.parsed_docs` has freshness on the S3 `_time` virtual column: `just dbt source freshness`.
 - Exposures in `dbt/models/exposures.yml` name the three readers: the replay inspector, the query API and Grafana.
-- dbt's docs site has no column-level lineage: dbt v2 builds it from static analysis, which is off for ClickHouse.
+- dbt's docs site has no column-level lineage: dbt v2 builds it from static analysis, which is off for ClickHouse. It also lists the dbt and ClickHouse adapter macros, which dbt 2.0.6 cannot hide.
 
 ## The query API (`api/`)
 

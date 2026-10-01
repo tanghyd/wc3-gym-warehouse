@@ -23,11 +23,11 @@ seeds:
               arguments:
                 values: [building, unit, item, upgrade, hero, hero_skill]
       - name: race
-        description: The object's race (human, orc, night_elf, undead, neutral); '' when the parser's table gives none.
+        description: The object's race (human, orc, night_elf, undead, neutral), or '' when the parser's table gives none.
       - name: hero
-        description: For a hero_skill, the name of the hero that learns it; '' otherwise.
+        description: For a hero_skill, the name of the hero that learns it, or '' otherwise.
       - name: is_supply_building
-        description: 1 for a building the parser flags as supply (Farm, Moon Well, Ziggurat; not Orc Burrow), else 0.
+        description: 1 for a building the parser flags as supply (Farm, Moon Well and Ziggurat, not Orc Burrow), else 0.
 
   - name: mappings_custom
     description: Custom-map rawcodes with a display name and a category (ui-menu, builder, tower, upgrade, item, other) from the map's own object data. Kept by hand.

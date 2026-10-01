@@ -28,7 +28,7 @@ exposures:
     description: >-
       The FastAPI service in api/. /query and /catalog serve the semantic models in
       marts.yml (player_games, mappings) with build-order steps matched on
-      replay_events; /search and the replay routes read the replay tables. It queries
+      replay_events. /search and the replay routes read the replay tables. It queries
       as the read-only api user and reads column types from system.columns.
     owner:
       name: Daniel
@@ -50,7 +50,7 @@ exposures:
     url: http://127.0.0.1:3001
     description: >-
       Three provisioned dashboards (infrastructure/docker/grafana). Warehouse data
-      counts replays loaded over time from raw_replays; the rest read ClickHouse's
+      counts replays loaded over time from raw_replays. The rest read ClickHouse's
       system tables (query_log, metric_log, asynchronous_metric_log, parts), which dbt
       does not model. Reads as the read-only grafana user.
     owner:

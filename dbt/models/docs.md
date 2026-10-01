@@ -1,4 +1,5 @@
-{# Shared column descriptions. A YAML description references one as doc('name'). #}
+{# Shared column descriptions. A YAML description references one as doc('name').
+   No semicolons in any description: dbt 2.0.6 splits the persist_docs DDL on them. #}
 
 {% docs replay_id %}
 The replay's id: a hex SHA-256 the parser computes from the game's random seed, the players' names and the game name, so two recordings of one game share it.
@@ -25,11 +26,11 @@ Position of the row in its parser list, from 1: the order in which the parser wr
 {% enddocs %}
 
 {% docs gnl_series_id %}
-The GNL series this replay was reported on, from the bucket key replays/<series id>/game<n>.w3g; 0 for a replay from any other source.
+The GNL series this replay was reported on, from the bucket key replays/<series id>/game<n>.w3g. 0 for a replay from any other source.
 {% enddocs %}
 
 {% docs gnl_game_no %}
-The game number within the GNL series (game<n> in the bucket key); 0 outside GNL.
+The game number within the GNL series (game<n> in the bucket key). 0 outside GNL.
 {% enddocs %}
 
 {% docs map %}
@@ -41,7 +42,7 @@ Game length in milliseconds, from the replay header.
 {% enddocs %}
 
 {% docs object_code %}
-A four-character WC3 object code (rawcode), such as hbar for Barracks; mappings gives its name.
+A four-character WC3 object code (rawcode), such as hbar for Barracks. mappings gives its name.
 {% enddocs %}
 
 {% docs order_kind %}
