@@ -9,6 +9,9 @@
 //! Volatile-field policy (stated once, here): `parseTime` — wall-clock parse
 //! duration, the only non-content field — is stripped from both sides.
 //!
+//! Numbers compare by value: the goldens recipe writes them through Node, which
+//! prints the f32 4000.0 of a building position as 4000.
+//!
 //! Blessing a deliberate parser change = regenerate the goldens with
 //! `just local::goldens` (the drain image's `parse`, written as sorted-key JSON
 //! with indent 1) and review the git diff — that diff IS the parser-change review.
@@ -21,6 +24,16 @@ use std::path::Path;
 fn strip_volatile(doc: &mut Value) {
     if let Some(obj) = doc.as_object_mut() {
         obj.remove("parseTime");
+    }
+}
+
+/// Every number as an f64, so 4000 and 4000.0 compare equal.
+fn numbers_as_f64(v: &mut Value) {
+    match v {
+        Value::Number(n) => *v = Value::from(n.as_f64().unwrap()),
+        Value::Array(items) => items.iter_mut().for_each(numbers_as_f64),
+        Value::Object(fields) => fields.values_mut().for_each(numbers_as_f64),
+        _ => {}
     }
 }
 
@@ -61,6 +74,8 @@ fn fixtures_match_goldens() {
                 .unwrap();
         strip_volatile(&mut actual);
         strip_volatile(&mut expected);
+        numbers_as_f64(&mut actual);
+        numbers_as_f64(&mut expected);
 
         // Per-key compare so a drift names its field instead of dumping two docs.
         let (a, e) = (actual.as_object().unwrap(), expected.as_object().unwrap());

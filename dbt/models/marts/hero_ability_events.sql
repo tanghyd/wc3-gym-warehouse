@@ -11,9 +11,7 @@ SELECT
     toLowCardinality(JSONExtractString(ev, 'type'))   AS event_type,
     toLowCardinality(trim(BOTH '"' FROM JSONExtractRaw(ev, 'value'))) AS ability_id,
     toUInt32(JSONExtractUInt(ev, 'time'))             AS time_ms,
-    toUInt32(ev_idx)                                  AS seq,
-    {{ race_code("JSONExtractString(p, 'race')") }} AS race,
-    toLowCardinality(JSONExtractString(r.doc, 'matchup')) AS matchup
+    toUInt32(ev_idx)                                  AS seq
 FROM {{ ref('raw_replays') }} AS r
 ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p
 ARRAY JOIN

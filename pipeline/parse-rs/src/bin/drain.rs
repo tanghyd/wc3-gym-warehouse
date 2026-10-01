@@ -15,7 +15,9 @@
 //! breadcrumb, the ETag has changed or the breadcrumb has another version.
 //!
 //! Every `.w3g` under `replays/` is drained the same way. The drain writes the raw
-//! object key into the parsed document as `source_key`.
+//! object key into the parsed document as `source_key`, and the time the bucket last
+//! wrote that object (the listing's LastModified) as `source_last_modified`. A replay
+//! header holds no date, so this is the time the replay was added.
 //!
 //! Two run modes: default loops every WORKER_POLL_MS as a SINGLE instance (two
 //! instances race on the same keys); `--once` drains the bucket once and exits.
@@ -28,6 +30,7 @@ use std::time::Duration;
 use aws_sdk_s3::config::{BehaviorVersion, Credentials, Region};
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::Client;
+use aws_smithy_types::date_time::Format;
 use futures::stream::{self, StreamExt};
 use w3warehouse_parse::PARSE_VERSION;
 
@@ -152,24 +155,24 @@ async fn drain_once(client: &Client, cfg: &Cfg) -> usize {
         }
     };
     let raw_prefix = cfg.raw();
-    let todo: Vec<(String, String)> = raw
+    let todo: Vec<Listed> = raw
         .into_iter()
-        .filter(|(key, etag)| {
-            if !is_replay(&raw_prefix, key) {
-                log(&format!("skipping {key}: not a .w3g under {raw_prefix}"));
+        .filter(|o| {
+            if !is_replay(&raw_prefix, &o.key) {
+                log(&format!("skipping {}: not a .w3g under {raw_prefix}", o.key));
                 return false;
             }
-            !done.get(key).is_some_and(|crumb| up_to_date(crumb, etag))
+            !done.get(&o.key).is_some_and(|crumb| up_to_date(crumb, &o.etag))
         })
         .collect();
 
     let outcomes = stream::iter(todo)
-        .map(|(key, etag)| async move {
-            match process_one(client, cfg, &key, &etag).await {
+        .map(|o| async move {
+            match process_one(client, cfg, &o).await {
                 Ok(()) => true,
                 Err(e) => {
                     // Transient (network/S3): no breadcrumb written, retry next pass.
-                    log(&format!("error on {key}, will retry: {e}"));
+                    log(&format!("error on {}, will retry: {e}", o.key));
                     false
                 }
             }
@@ -180,18 +183,20 @@ async fn drain_once(client: &Client, cfg: &Cfg) -> usize {
     outcomes.into_iter().filter(|ok| *ok).count()
 }
 
-/// The doc the drain writes: w3grs's JSON plus `source_key` and `parse_version`,
-/// so ClickHouse reads them out of the same s3() load as every other field.
-/// raw_replays keeps the document with the highest `parse_version` per replay.
-fn landed_doc(json: &str, raw_key: &str) -> Result<serde_json::Value, String> {
+/// The doc the drain writes: w3grs's JSON plus `source_key`, `source_last_modified`
+/// and `parse_version`, so ClickHouse reads them out of the same s3() load as every
+/// other field. raw_replays keeps the document with the highest `parse_version` per replay.
+fn landed_doc(json: &str, raw: &Listed) -> Result<serde_json::Value, String> {
     let mut doc: serde_json::Value = serde_json::from_str(json).map_err(|e| e.to_string())?;
     let fields = doc.as_object_mut().ok_or("parsed doc is not a JSON object")?;
-    fields.insert("source_key".to_string(), raw_key.into());
+    fields.insert("source_key".to_string(), raw.key.as_str().into());
+    fields.insert("source_last_modified".to_string(), raw.modified.as_str().into());
     fields.insert("parse_version".to_string(), PARSE_VERSION.into());
     Ok(doc)
 }
 
-async fn process_one(client: &Client, cfg: &Cfg, raw_key: &str, etag: &str) -> Result<(), String> {
+async fn process_one(client: &Client, cfg: &Cfg, raw: &Listed) -> Result<(), String> {
+    let (raw_key, etag) = (raw.key.as_str(), raw.etag.as_str());
     let bucket = &cfg.bucket;
     let status_key = status_key(cfg, raw_key);
     let bytes = get_object(client, bucket, raw_key).await?;
@@ -211,7 +216,7 @@ async fn process_one(client: &Client, cfg: &Cfg, raw_key: &str, etag: &str) -> R
         return Err("parsed doc has no id".to_string());
     }
 
-    let doc = landed_doc(&parsed.json, raw_key)?;
+    let doc = landed_doc(&parsed.json, raw)?;
 
     // Land the parsed doc content-addressed by replay id under the parser-version
     // prefix (PARSE_VERSION in lib.rs) so a parser change re-derives incrementally.
@@ -250,7 +255,7 @@ async fn read_breadcrumbs(
 ) -> Result<HashMap<String, serde_json::Value>, String> {
     let keys = list_prefix(client, &cfg.bucket, &cfg.status()).await?;
     let bodies = stream::iter(keys)
-        .map(|(key, _)| async move { get_object(client, &cfg.bucket, &key).await })
+        .map(|o| async move { get_object(client, &cfg.bucket, &o.key).await })
         .buffer_unordered(cfg.concurrency)
         .collect::<Vec<_>>()
         .await;
@@ -264,12 +269,17 @@ async fn read_breadcrumbs(
     Ok(map)
 }
 
-/// Every key under a prefix with its ETag, quotes stripped.
-async fn list_prefix(
-    client: &Client,
-    bucket: &str,
-    prefix: &str,
-) -> Result<Vec<(String, String)>, String> {
+/// One object of a bucket listing.
+struct Listed {
+    key: String,
+    /// The ETag, quotes stripped.
+    etag: String,
+    /// When the bucket last wrote the object, RFC 3339 in UTC, or "" when the listing gives none.
+    modified: String,
+}
+
+/// Every object under a prefix.
+async fn list_prefix(client: &Client, bucket: &str, prefix: &str) -> Result<Vec<Listed>, String> {
     let mut keys = Vec::new();
     let mut token: Option<String> = None;
     loop {
@@ -280,8 +290,14 @@ async fn list_prefix(
         let resp = req.send().await.map_err(|e| e.to_string())?;
         for obj in resp.contents() {
             if let Some(k) = obj.key() {
-                let etag = obj.e_tag().unwrap_or_default().trim_matches('"').to_string();
-                keys.push((k.to_string(), etag));
+                keys.push(Listed {
+                    key: k.to_string(),
+                    etag: obj.e_tag().unwrap_or_default().trim_matches('"').to_string(),
+                    modified: obj
+                        .last_modified()
+                        .and_then(|t| t.fmt(Format::DateTime).ok())
+                        .unwrap_or_default(),
+                });
             }
         }
         if resp.is_truncated() == Some(true) {
@@ -387,13 +403,18 @@ mod tests {
     }
 
     #[test]
-    fn the_landed_doc_carries_the_raw_key_and_the_parser_version() {
-        let key = "preview/replays/local/w3c-1.w3g";
-        let doc = landed_doc(r#"{"id":"r1"}"#, key).unwrap();
+    fn the_landed_doc_carries_the_raw_key_its_time_and_the_parser_version() {
+        let raw = Listed {
+            key: "preview/replays/local/w3c-1.w3g".into(),
+            etag: "e1".into(),
+            modified: "2026-10-01T08:30:00Z".into(),
+        };
+        let doc = landed_doc(r#"{"id":"r1"}"#, &raw).unwrap();
         assert_eq!(doc["id"], "r1");
-        assert_eq!(doc["source_key"], key);
+        assert_eq!(doc["source_key"], raw.key);
+        assert_eq!(doc["source_last_modified"], "2026-10-01T08:30:00Z");
         assert_eq!(doc["parse_version"], PARSE_VERSION);
-        assert!(landed_doc("[]", "k").is_err());
+        assert!(landed_doc("[]", &raw).is_err());
     }
 
     #[test]

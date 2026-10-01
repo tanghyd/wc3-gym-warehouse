@@ -10,7 +10,15 @@ The player's id in the replay, unique within a replay: 1 and up for a human play
 {% enddocs %}
 
 {% docs race %}
-Race code: HU, OC, NE, UD or RANDOM, from the parser's race letter (H, O, N, U, R) by the race_code macro. The race the player picked in the lobby, so a random player stays RANDOM.
+Played race code: HU, OC, NE, UD or RANDOM, by the race_code macro from the parser's race letters. A player who picked a race played it. A player who picked Random played the race the parser detected, else the race of his first building or unit order code (h o e u). RANDOM only for a random player with neither. The random column says who picked Random.
+{% enddocs %}
+
+{% docs random %}
+1 when the player picked Random in the lobby, else 0. Night Elf with random 0 is a picked Night Elf, with random 1 a Random player who rolled Night Elf.
+{% enddocs %}
+
+{% docs added_at %}
+When the replay was added: the time the bucket last wrote its raw file (the listing's LastModified, UTC), which the drain writes into the parsed document as source_last_modified. A replay header holds no date. 1970-01-01 for a document without it.
 {% enddocs %}
 
 {% docs matchup %}

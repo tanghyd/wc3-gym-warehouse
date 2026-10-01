@@ -6,16 +6,16 @@
 models:
   - name: player_games
     description: >-
-      One row per player per 1v1 game (type 1on1): who played whom, on which map and patch,
-      the result, the first hero and the first six buildings. A game that arrived as two
-      files counts once, so a replay with a duplicate_of has no rows. The query API's main
-      semantic model.
+      One row per player per 1v1 game (type 1on1): who played whom with which played race,
+      on which map and patch, the result, the heroes in pick order and the first six
+      buildings. A game that arrived as two files counts once, so a replay with a
+      duplicate_of has no rows. The query API's main semantic model.
     config:
       meta:
         semantic:
-          dimensions: [replay_id, player_id, player, race, opponent, opponent_race, matchup, map,
-                       patch, duration_ms, minutes, result, apm, first_hero, opener_1, opener_2,
-                       opener_3, opener_4, opener_5, opener_6]
+          dimensions: [replay_id, player_id, player, race, random, opponent, opponent_race,
+                       opponent_random, matchup, map, patch, added_at, duration_ms, minutes, result,
+                       apm, first_hero, opener_1, opener_2, opener_3, opener_4, opener_5, opener_6]
           measures:
             games: count()
             wins: countIf(result = 'win')
@@ -58,21 +58,29 @@ models:
               description: Race is a race code.
               arguments:
                 values: [HU, OC, NE, UD, RANDOM]
+      - name: random
+        description: "{{ doc('random') }}"
+      - name: opponent_id
+        description: The opponent's player_id in the replay, the player on the other team.
       - name: opponent
-        description: The opponent's battle tag, the player on the other team.
+        description: The opponent's battle tag.
       - name: opponent_race
-        description: The opponent's race code (HU, OC, NE, UD, RANDOM).
+        description: The opponent's played race code (HU, OC, NE, UD, RANDOM), as race.
         data_tests:
           - accepted_values:
               description: Opponent race is a race code.
               arguments:
                 values: [HU, OC, NE, UD, RANDOM]
+      - name: opponent_random
+        description: 1 when the opponent picked Random in the lobby, else 0.
       - name: matchup
-        description: "{{ doc('matchup') }}"
+        description: The two played race letters (H, O, N, U, R for no played race), sorted and joined by v, such as NvO.
       - name: map
         description: "{{ doc('map') }}"
       - name: patch
         description: "{{ doc('patch') }}"
+      - name: added_at
+        description: "{{ doc('added_at') }}"
       - name: duration_ms
         description: "{{ doc('duration_ms') }}"
       - name: minutes
@@ -86,8 +94,12 @@ models:
                 values: [win, loss, unknown]
       - name: apm
         description: The player's actions per minute over the time they were in the game, from the parser.
+      - name: heroes
+        description: The object codes of the player's heroes in pick order (the order of their first skill point), [] when the player spent none.
+      - name: hero_levels
+        description: The level of each hero in heroes at the end of the game, in the same order.
       - name: first_hero
-        description: Object code of the player's first hero, the first to get a skill point, or '' when the player spent none.
+        description: Object code of the player's first hero, heroes[1], or '' when the player spent no skill point.
       - name: opener
         description: >-
           The first six non-supply buildings the player ordered, by time then seq, with
@@ -182,6 +194,8 @@ models:
         description: How long the parser took on this replay, in milliseconds.
       - name: source_key
         description: The raw replay's object key in the bucket, such as preview/replays/goldens/w3c-20260501062910.w3g, written into the parsed document by the drain.
+      - name: added_at
+        description: "{{ doc('added_at') }}"
       - name: winning_team_id
         description: >-
           From the parser's leaves (observers skipped). A player leave marked victory (result
@@ -250,8 +264,6 @@ models:
               description: Race is a race code.
               arguments:
                 values: [HU, OC, NE, UD, RANDOM]
-      - name: matchup
-        description: "{{ doc('matchup') }}"
       - name: replay_id
         description: "{{ doc('replay_id') }}"
         data_tests:
@@ -321,8 +333,10 @@ models:
               description: Race is a race code.
               arguments:
                 values: [HU, OC, NE, UD, RANDOM]
+      - name: random
+        description: "{{ doc('random') }}"
       - name: race_detected
-        description: The race letter (H, O, N, U) the parser read from the player's first race-specific order, or '' when none was seen. Shows a random player's actual race.
+        description: The race letter (H, O, N, U) the parser read from the player's first train or research order, or '' when none was seen. The parser reads no race from a building placement.
       - name: apm
         description: Actions per minute over the time the player was in the game, from the parser.
       - name: actions_rightclick
@@ -381,10 +395,10 @@ models:
         description: "{{ doc('time_ms') }}"
       - name: seq
         description: "{{ doc('seq') }} Numbered within one (replay, player, kind)."
-      - name: race
-        description: "{{ doc('race') }}"
-      - name: matchup
-        description: "{{ doc('matchup') }}"
+      - name: x
+        description: The map x of a building placement order, the point the player targeted. NULL for every other order, a hall upgrade among them.
+      - name: y
+        description: The map y of a building placement order. NULL for every other order.
       - name: is_repeat
         description: 1 on a tier hall, research or hero order under 1000 ms after the same player's previous order of that code, else 0. The replay page leaves these out.
 
@@ -421,10 +435,6 @@ models:
         description: "{{ doc('time_ms') }}"
       - name: seq
         description: "{{ doc('seq') }} Numbered within the hero's skill list."
-      - name: race
-        description: "{{ doc('race') }}"
-      - name: matchup
-        description: "{{ doc('matchup') }}"
 
   - name: player_heroes
     description: One row per hero a player spent a skill point on, with its level at the end of the game.

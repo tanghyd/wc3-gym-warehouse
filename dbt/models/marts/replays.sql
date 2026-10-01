@@ -52,6 +52,8 @@ SELECT
     JSONExtractBool(r.doc, 'expansion')                                  AS expansion,
     toUInt32(JSONExtractUInt(r.doc, 'parseTime'))                        AS parse_time_ms,
     JSONExtractString(r.doc, 'source_key')                               AS source_key,
+    -- when the bucket last wrote the raw file; a replay header holds no date
+    parseDateTimeBestEffortOrZero(JSONExtractString(r.doc, 'source_last_modified'), 'UTC') AS added_at,
     winner                                                               AS winning_team_id,
     arrayStringConcat(arraySort(arrayFilter((n, t) -> t = winner,
         arrayMap(p -> JSONExtractString(p, 'name'), players), team_ids)), ',') AS winner_names,

@@ -2,6 +2,7 @@
 -- and the parser's `unknown` bucket (rawcodes in no melee table, such as hero
 -- training and custom-map objects). Orders are commands, so a repeat click is a
 -- second row. `seq` numbers the orders within one (replay, player, kind).
+-- x and y are the map point of a building placement, NULL on every other order.
 -- is_repeat is 1 on a tier hall, research (R...) or hero order under 1000 ms after
 -- the player's previous order of the same code (docs/design/api.md "Repeat flag").
 {{ config(order_by='(replay_id, player_id, time_ms, kind, object_code, seq)') }}
@@ -14,8 +15,8 @@ WITH orders AS (
         toLowCardinality(JSONExtractString(o, 'id'))  AS object_code,
         toUInt32(JSONExtractUInt(o, 'ms'))            AS time_ms,
         toUInt32(o_idx)                               AS seq,
-        {{ race_code("JSONExtractString(p, 'race')") }} AS race,
-        toLowCardinality(JSONExtractString(r.doc, 'matchup')) AS matchup
+        JSONExtract(o, 'x', 'Nullable(Float32)')      AS x,
+        JSONExtract(o, 'y', 'Nullable(Float32)')      AS y
     FROM {{ ref('raw_replays') }} AS r
     ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p
     -- (kind, the player key that holds its orders)

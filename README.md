@@ -36,12 +36,12 @@ The replay inspector is at http://localhost:3000, the API at http://localhost:80
 
 ```
 R2 or MinIO                        ClickHouse (dbt builds w3g.*)                  API            page
-replays/<folder>/<file>.w3g  ─drain─▶ parsed/v4/dt=<date>/<id>.json ─dbt─▶ raw_replays ─▶ marts ─▶ /query  ─▶ web :3000
+replays/<folder>/<file>.w3g  ─drain─▶ parsed/v5/dt=<date>/<id>.json ─dbt─▶ raw_replays ─▶ marts ─▶ /query  ─▶ web :3000
                                                                                               /search
 ```
 
 1. Raw replays sit under `<env>/replays/`, where `<env>` (production, preview or development) is set as `W3WAREHOUSE_S3_PREFIX`. Every `.w3g` under `replays/` is drained the same way. Locally, `minio-setup` puts the 3 goldens under `replays/goldens/` with their own file names, and `just local::upload-replays` adds a folder, such as `replays/w3warehouse-ladder/`.
-2. The drain (`pipeline/parse-rs`, w3grs) parses each new or changed file and writes the parsed document under `parsed/v4/`, with the raw object key as `source_key`. It never moves or deletes a raw file.
+2. The drain (`pipeline/parse-rs`, w3grs) parses each new or changed file and writes the parsed document under `parsed/v5/`, with the raw object key as `source_key` and the time the bucket last wrote that file as `source_last_modified`. It never moves or deletes a raw file.
 3. `just dbt build`:
    - `raw_replays` is an incremental model. It reads the dbt source `bucket.parsed_docs`, an S3 table over the `parsed_docs` named collection (`infrastructure/docker/clickhouse/named-collections.xml`) that dbt's `on-run-start` hook creates, and appends each document whose replay it does not hold at the same or a newer parse version. It reads both from the file path (`parsed/v<N>/…/<replay_id>.json`), so it skips a loaded document before ClickHouse fetches it. The URL and the keys come from the server's environment, so no secret lands in SQL. See [Loading the same replay twice](#loading-the-same-replay-twice).
    - The staging views flatten orders and hero skills.
@@ -53,14 +53,19 @@ replays/<folder>/<file>.w3g  ─drain─▶ parsed/v4/dt=<date>/<id>.json ─dbt
 | Model | Grain |
 |---|---|
 | `raw_replays` | one parsed document per replay |
-| `replays`, `replay_players` | replay header with readable map name, patch and result, and `duplicate_of` for a second file of one game; player per replay |
-| `replay_events` | every order and hero skill per player in time order; build-order steps match here |
-| `player_games` | one row per player per 1v1 game, a game saved twice counted once: opponent, map, patch, result, first hero, `opener_1`..`opener_6` |
+| `replays`, `replay_players` | replay header with readable map name, patch, result and `added_at`, and `duplicate_of` for a second file of one game; player per replay with the played race and `random` |
+| `replay_events` | every order and hero skill per player in time order, with the played race; build-order steps match here |
+| `player_games` | one row per player per 1v1 game, a game saved twice counted once: played races and `random` flags of both players, map, patch, `added_at`, result, heroes in pick order with their levels, `opener_1`..`opener_6` |
+| `player_order_events` | every order a player gave; a building placement keeps its map `x` and `y` |
 | `mappings` | object codes and names: the melee seed plus the custom-map seed |
 | `patches` (seed) | the game patch of each build number, kept by hand: 6117 is 2.0, 7000 is 3.0 |
 | `player_heroes`, `player_group_hotkeys`, `chat`, `resource_transfers` | as named |
 
 The opener tree is a `GROUP BY` over `player_games.opener_N`, so the refreshable rollup and its 10-minute staleness are gone.
+
+Races: `race` is the played race. A player who picked a race played it (measured: every such player whose race the parser detected played that race). A player who picked Random played the race the parser detected, else the race letter of his first building or unit order code: the parser reads a race only from a train or research order, so a random player who only placed buildings has none. A random player with neither order keeps `RANDOM`: 9 of 3,492 player-games, all in games he left without an order. `random` is 1 when the player picked Random, so Night Elf with `random` 1 is a Random player who rolled Night Elf. `matchup` is built from the played races.
+
+A replay header holds no date. `added_at` is the time the bucket last wrote the raw file, so it orders replays by when they were added, not when they were played.
 
 The winner comes from the parser's `leaves` (observers skipped). A player leave marked victory (result `09000000`) names the winning team, because the winner can leave the victory screen before the loser's leave is logged. Otherwise the team opposite the first player to quit won: the first player leave, or the saver (`saverPlayerId`) when no player leave is recorded, because a FLO player-saved w3c- file drops the saver's own leave. `winning_team_id` is -1 unless the game has exactly two teams. One game can arrive as two files: they share `game_key` (random seed and sorted names), `duplicate_of` points the others at one copy (a recorded winner first, then the lowest id), and only `player_games` leaves duplicates out. The per-replay tables keep every file, because the replay page opens any file by id and build-order steps always join `player_games`.
 

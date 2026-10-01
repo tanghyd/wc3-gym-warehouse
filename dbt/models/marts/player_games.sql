@@ -1,8 +1,12 @@
--- One row per player per 1v1 game: who, against whom, where, the result, and what
--- they opened with. The query API's main semantic model (see the YAML).
+-- One row per player per 1v1 game: who, against whom, where, the result, the heroes
+-- and what they opened with. The query API's main semantic model (see the YAML).
 --
--- opener_1..opener_6 are the first six non-supply buildings in order, back-to-back
--- repeats dropped, '' past the end, so the opener tree is a GROUP BY over them.
+-- race and opponent_race are played races (replay_players), random and
+-- opponent_random say who picked Random, and matchup is built from the played races.
+-- heroes lists the player's heroes in pick order (the first skill point), so
+-- first_hero is heroes[1]. opener_1..opener_6 are the first six non-supply buildings
+-- in order, back-to-back repeats dropped, '' past the end, so the opener tree is a
+-- GROUP BY over them.
 {{ config(order_by='(race, opponent_race, map, replay_id, player_id)') }}
 
 WITH
@@ -20,10 +24,10 @@ openers AS (
     WHERE e.event_type = 'building' AND m.is_supply_building = 0
     GROUP BY e.replay_id, e.player_id
 ),
-first_heroes AS (
-    SELECT replay_id, player_id, argMin(subject_code, time_ms) AS first_hero
-    FROM {{ ref('replay_events') }}
-    WHERE event_type = 'hero_trained'
+hero_lists AS (
+    SELECT replay_id, player_id, arraySort(groupArray((hero_slot, hero_id, final_level))) AS h
+    FROM {{ ref('player_heroes') }}
+    WHERE hero_id != ''
     GROUP BY replay_id, player_id
 )
 SELECT
@@ -31,17 +35,24 @@ SELECT
     rp.player_id                                      AS player_id,
     rp.name                                           AS player,
     rp.race                                           AS race,
+    rp.random                                         AS random,
+    opp.player_id                                     AS opponent_id,
     opp.name                                          AS opponent,
     opp.race                                          AS opponent_race,
-    r.matchup                                        AS matchup,
+    opp.random                                        AS opponent_random,
+    toLowCardinality(arrayStringConcat(arraySort(arrayMap(
+        x -> transform(x, ['HU', 'OC', 'NE', 'UD'], ['H', 'O', 'N', 'U'], 'R'), [rp.race, opp.race])), 'v')) AS matchup,
     r.map                                             AS map,
     r.patch                                           AS patch,
+    r.added_at                                        AS added_at,
     r.duration_ms                                     AS duration_ms,
     round(r.duration_ms / 60000, 1)                   AS minutes,
     toLowCardinality(multiIf(r.winning_team_id < 0, 'unknown',
             r.winning_team_id = rp.team_id, 'win', 'loss')) AS result,
     rp.apm                                            AS apm,
-    toLowCardinality(fh.first_hero)                   AS first_hero,
+    arrayMap(t -> t.2, hs.h)                          AS heroes,
+    arrayMap(t -> t.3, hs.h)                          AS hero_levels,
+    toLowCardinality(heroes[1])                       AS first_hero,
     o.opener                                          AS opener,
     toLowCardinality(o.opener[1]) AS opener_1, toLowCardinality(o.opener[2]) AS opener_2,
     toLowCardinality(o.opener[3]) AS opener_3, toLowCardinality(o.opener[4]) AS opener_4,
@@ -52,6 +63,6 @@ INNER JOIN {{ ref('replays') }} AS r ON r.replay_id = rp.replay_id
 INNER JOIN {{ ref('replay_players') }} AS opp
     ON opp.replay_id = rp.replay_id AND opp.team_id != rp.team_id
 LEFT JOIN openers AS o ON o.replay_id = rp.replay_id AND o.player_id = rp.player_id
-LEFT JOIN first_heroes AS fh ON fh.replay_id = rp.replay_id AND fh.player_id = rp.player_id
+LEFT JOIN hero_lists AS hs ON hs.replay_id = rp.replay_id AND hs.player_id = rp.player_id
 -- A game that arrived as two files counts once, through the copy replays picks.
 WHERE r.type = '1on1' AND r.duplicate_of = ''
