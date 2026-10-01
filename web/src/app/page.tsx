@@ -87,7 +87,8 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                 <tr key={r.replay_id} className="border-t align-top">
                   <td className="hidden whitespace-nowrap sm:table-cell">{r.gnl ? `S${r.gnl.series_id} G${r.gnl.game_no}` : ""}</td>
                   <td>
-                    <Link href={`/replays/${r.replay_id}`} className="font-medium">
+                    {/* no prefetch: it runs generateMetadata, a full replay read per row */}
+                    <Link href={`/replays/${r.replay_id}`} prefetch={false} className="font-medium">
                       {r.map || "Unknown map"}
                     </Link>
                   </td>

@@ -568,7 +568,7 @@ Hero rows come from `player_heroes`. APM rows come from `replay_players.apm`: 89
 | `version` | string | `replays.version` |
 | `players[]` | array | Sorted by `player_id`. `player_id`, `name`, `race`, `team_id`, `won` as in 2.5. |
 | `players[].apm` | integer | Whole-game APM |
-| `players[].apm_per_minute` | array of int | `replay_players.apm_timed`, one value per game minute (inferred (X): 7 values for 6.7 min, 16 for 15.6 min) |
+| `players[].apm_per_minute` | array of int | `replay_players.apm_timed`, one value per game minute (inferred (X): 7 values for 6.7 min, 16 for 15.6 min). The last, partial minute is scaled to a full minute, or dropped when it is under 30 s |
 | `players[].heroes[]` | array | `{slot, code, final_level}` from `player_heroes`, sorted by `slot` |
 | `events[]` | array | The order timeline, sorted by `time_ms`, `player_id`, `seq`. Rows with `is_repeat = 1` are hidden. |
 | `events[].player_id`, `.time_ms` | integer | |

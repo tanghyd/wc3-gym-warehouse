@@ -93,8 +93,8 @@ function Plot({ players, durationMs }: { players: Series[]; durationMs: number }
   const maxMin = durationMs / 60000;
   const x = scaleLinear([0, maxMin], [ml, width - mr]);
   const y = scaleLinear([0, Math.max(1, ...players.flatMap((p) => p.apm_per_minute))], [T + H, T]).nice(4);
-  // minute k spans k:00 to k+1:00; its point sits at the middle, the last one at the game end at most
-  const at = (k: number) => x(Math.min(k + 0.5, maxMin));
+  // minute k spans k:00 to k+1:00, the last one to the game end; its point sits at the middle
+  const at = (k: number) => x((k + Math.min(k + 1, maxMin)) / 2);
   const series = players.map((p, i) => {
     const pts = p.apm_per_minute.map((v, k) => [at(k), y(v)] as [number, number]);
     return { p, i, d: line()(pts) ?? "", end: pts[pts.length - 1] };
