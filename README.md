@@ -67,6 +67,7 @@ The opener tree is a `GROUP BY` over `player_games.opener_N`, so the refreshable
 - The source `bucket.parsed_docs` has freshness on the S3 `_time` virtual column: `just dbt source freshness`.
 - Exposures in `dbt/models/exposures.yml` name the three readers: the replay inspector, the query API and Grafana.
 - dbt's docs site has no column-level lineage: dbt v2 builds it from static analysis, which is off for ClickHouse. It also lists the dbt and ClickHouse adapter macros, which dbt 2.0.6 cannot hide.
+- A parser change bumps `PARSE_VERSION` in `pipeline/parse-rs/src/lib.rs`, so the drain writes a new `parsed/v<N>/` prefix. `raw_replays` keeps one document per replay, so an incremental run skips the re-parsed ones: set `W3WAREHOUSE_PARSED_URL` to the new prefix, `just up` (ClickHouse reads it at start), then `just dbt build --full-refresh`.
 
 ## The query API (`api/`)
 

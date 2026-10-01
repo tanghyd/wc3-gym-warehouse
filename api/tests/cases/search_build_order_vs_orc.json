@@ -4,6 +4,11 @@
     "filters": {
       "race": [
         "NE"
+      ],
+      "gnl_series_id": [
+        9001,
+        9002,
+        9003
       ]
     },
     "steps": [

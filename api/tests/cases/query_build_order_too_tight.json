@@ -14,7 +14,14 @@
         "code": "eaom",
         "within_prev_s": 1
       }
-    ]
+    ],
+    "filters": {
+      "gnl_series_id": [
+        9001,
+        9002,
+        9003
+      ]
+    }
   },
   "response": {
     "status": 200,

@@ -4,6 +4,11 @@
     "filters": {
       "player": [
         "a'b\\c"
+      ],
+      "gnl_series_id": [
+        9001,
+        9002,
+        9003
       ]
     }
   },

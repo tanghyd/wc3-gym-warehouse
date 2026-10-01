@@ -139,12 +139,14 @@ def sequence_pattern(steps: list[Step]) -> str:
     return pattern
 
 
-def sequence_sql(steps: list[Step], params: Params) -> str:
+def sequence_sql(steps: list[Step], params: Params, races: list[str | int | float] | None = None) -> str:
     """(replay_id, player_id) pairs whose events contain the steps in order."""
     types = array(dict.fromkeys(s.type for s in steps))
     codes = array(dict.fromkeys(s.code for s in steps))
-    # Narrow the scan to the objects the steps name before grouping.
-    where = [
+    # Narrow the scan to the objects the steps name before grouping. Race leads
+    # replay_events' sort key, so a race filter joins the index condition too.
+    where = [f"has({params.add('Array(String)', array(races))}, race)"] if races else []
+    where += [
         f"has({params.add('Array(String)', types)}, event_type)",
         f"has({params.add('Array(String)', codes)}, subject_code)",
     ]
@@ -162,7 +164,8 @@ def _row_conditions(model: Model, filters: Filters, steps: list[Step], params: P
     if steps:
         if not model.takes_steps:
             raise BadRequest(f"model {model.table} has no replay_id and player_id to match steps on")
-        conds.append(f"(replay_id, player_id) IN ({sequence_sql(steps, params)})")
+        races = filters.get("race")
+        conds.append(f"(replay_id, player_id) IN ({sequence_sql(steps, params, races if isinstance(races, list) else None)})")
     return conds
 
 

@@ -10,7 +10,12 @@
     "filters": {
       "minutes": {
         "gte": 10
-      }
+      },
+      "gnl_series_id": [
+        9001,
+        9002,
+        9003
+      ]
     },
     "order_by": [
       "map"

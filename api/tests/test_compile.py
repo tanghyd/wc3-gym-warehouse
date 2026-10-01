@@ -41,6 +41,12 @@ def test_query_groups_filters_and_matches_steps() -> None:
                       "p4": "['eaom','edob']", "p5": "building", "p6": "eaom", "p7": "building", "p8": "edob"}
 
 
+def test_a_race_filter_also_narrows_the_event_scan() -> None:
+    sql, params = compile_query(QueryRequest(measures=["games"], filters={"race": ["NE"]}, steps=[step("eaom")]), PG)
+    assert "FROM w3g.replay_events WHERE has({p1:Array(String)}, race) AND has(" in sql
+    assert params["p0"] == params["p1"] == "['NE']"
+
+
 def test_one_step_is_a_plain_condition() -> None:
     sql, _ = compile_query(QueryRequest(measures=["games"], steps=[step("hbar", from_min=2)]), PG)
     assert "sequenceMatch" not in sql and "time_ms >= 120000" in sql
