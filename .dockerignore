@@ -5,3 +5,5 @@ db/
 infrastructure/
 .github/
 *.md
+web/node_modules/
+web/.next/

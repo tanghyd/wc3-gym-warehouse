@@ -105,6 +105,18 @@ services:
     restart: unless-stopped
     depends_on: [api]
 
+  # The replay inspector (web/). It reads the API over the compose network. Loopback only.
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.web
+    environment:
+      API_URL: http://api:8000
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+    depends_on: [api]
+
   # A local stand-in for the R2 bucket.
   minio:
     image: minio/minio

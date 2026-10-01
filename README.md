@@ -12,13 +12,13 @@ Everything runs in Docker. `.env.example` holds a working local setup, with MinI
 
 ```
 cp .env.example .env
-just up          # clickhouse, minio with the 3 parser goldens, the drain, the api, the page
+just up          # clickhouse, minio with the 3 parser goldens, the drain, the api, the page, the inspector
 just drain-once  # parse the goldens now instead of within the drain's minute
 just dbt build   # seed the mappings, load the parsed docs, build and test every model
 just ch          # a clickhouse-client shell
 ```
 
-The search page is at http://localhost:8080 and the API at http://localhost:8080/api/docs.
+The search page is at http://localhost:8080, the API at http://localhost:8080/api/docs and the replay inspector at http://localhost:3000.
 
 | Recipe | Does |
 |---|---|
@@ -79,8 +79,19 @@ A filter is a list of values or a `{gte, lte}` range. A step names an event type
 
 `api/tests/cases/*.json` are request and response pairs against the 3 goldens. They are plain JSON so a later Rust port of the API can run the same cases.
 
+## The replay inspector (`web/`)
+
+A Next.js app in the wc3-gym-frontend look, light and dark, at http://localhost:3000. `/` lists the replays under race, opponent race, map and player filters (`POST /search`). `/replays/<id>` shows one game: the players, their heroes and skills, APM per minute, both build orders and the chat (`GET /replays/{id}`, plus one `POST /query` on `mappings` for the names). Server components read the API at `API_URL` (`http://api:8000` in compose), so the browser never calls it. The image copies the icons from `frontend/` at build time.
+
+| Recipe | Does |
+|---|---|
+| `just local::web-lock` | rewrites `web/pnpm-lock.yaml` after a `web/package.json` change, in a node container |
+| `just local::web-lint` | eslint, in the lint stage of the web image |
+| `just local::web-shot <path> <file> [width] [theme]` | a full-page screenshot of one page, light or dark, from Playwright on the compose network |
+
 ## Not here yet
 
+- The swimlane chart of the build orders (`docs/design/frontend.md` 12.3). The inspector shows the list view.
 - Creep routes. A replay holds commands, and a creep death alone cannot say whether the player cleared the camp or an enemy stole it. That waits for stat-events maps.
 - Stat-events. A future parser output adds a section to the parsed document, and dbt gets a staging model for it.
 - The `is_repeat` order flag and `replays.source_key` (design S3, S5).

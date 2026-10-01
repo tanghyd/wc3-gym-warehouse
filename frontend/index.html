@@ -291,6 +291,9 @@
             </div>
             <v-data-table v-else :headers="headers" :items="rows" :items-per-page="25"
                           density="comfortable" item-value="replay_id">
+              <template v-slot:item.map="{ item }">
+                <a :href="inspectorUrl(item.replay_id)">{{ item.map }}</a>
+              </template>
               <template v-slot:item.players="{ item }">
                 <span class="d-inline-flex align-center flex-wrap ga-2">
                   <template v-for="(p, i) in item.players" :key="i">
@@ -403,6 +406,9 @@
             </div>
             <v-data-table v-else :headers="headers" :items="openerDialogRows"
                           :items-per-page="25" density="comfortable" item-value="replay_id">
+              <template v-slot:item.map="{ item }">
+                <a :href="inspectorUrl(item.replay_id)">{{ item.map }}</a>
+              </template>
               <template v-slot:item.players="{ item }">
                 <span class="d-inline-flex align-center flex-wrap ga-2">
                   <template v-for="(p, i) in item.players" :key="i">
@@ -714,6 +720,9 @@ createApp({
       };
     }
 
+    // The replay inspector (web/) on port 3000 of the same host.
+    const inspectorUrl = id => location.protocol + '//' + location.hostname + ':3000/replays/' + id;
+
     // One replay as the table shows it. `focusId` is the player whose result the
     // Player 1 column reports; leave it out and that column stays blank.
     function describeReplay(d, focusId) {
@@ -914,7 +923,7 @@ createApp({
       winRate, winRateColor, medianMinutes, run, addSlot, removeSlot, addStep, removeStep,
       copySql, COLOR_WIN, COLOR_LOSS, WR_FLOOR,
       mainTab, op, sortItems, openerHeaders, openerRows, openerError, loadOpeners,
-      onOpenerRow, winrateColor, showOpenerReplays, nameFor, iconFor, playerNames,
+      onOpenerRow, winrateColor, showOpenerReplays, nameFor, iconFor, playerNames, inspectorUrl,
       openerDialog, openerDialogLoading, openerDialogRows,
     };
   },

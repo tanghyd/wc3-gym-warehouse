@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+/* Every palette token is a Tailwind colour (bg-surface, text-win, bg-series-1). palette.ts writes
+   the --v-theme-* values for light and dark. */
+@theme inline {
+  --color-surface: rgb(var(--v-theme-surface));
+  --color-surface-light: rgb(var(--v-theme-surface-light));
+  --color-surface-variant: rgb(var(--v-theme-surface-variant));
+  --color-on-surface-variant: rgb(var(--v-theme-on-surface-variant));
+  --color-on-surface: rgb(var(--v-theme-on-surface));
+  --color-primary: rgb(var(--v-theme-primary));
+  --color-band: rgb(var(--v-theme-band));
+  --color-on-band: rgb(var(--v-theme-on-band));
+  --color-band-muted: rgb(var(--v-theme-band-muted));
+  --color-win: rgb(var(--v-theme-win));
+  --color-series-1: rgb(var(--v-theme-series-1));
+  --color-series-2: rgb(var(--v-theme-series-2));
+  /* second-level text: ink at medium emphasis */
+  --color-muted: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  --color-border: rgba(var(--v-border-color), var(--v-border-opacity));
+
+  --font-sans: var(--font-body), "Alegreya Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-heading: var(--font-display), Alegreya, Georgia, serif;
+}
+
+@layer base {
+  /* A border with no colour draws the theme hairline, not the text colour. */
+  *, ::before, ::after { border-color: var(--color-border); }
+
+  /* Numbers use lining, equal-width digits, so figures line up in a column. */
+  html, body {
+    background-color: rgb(var(--v-theme-background));
+    color: rgb(var(--v-theme-on-background));
+    font-family: var(--font-sans);
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  h1, h2, h3 { font-family: var(--font-heading); font-weight: 700; line-height: 1.2; }
+  h1 { font-weight: 800; font-size: 2.125rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.125rem; }
+  @media (max-width: 959px) {
+    h1 { font-size: 1.6rem; }
+    h2 { font-size: 1.3rem; }
+  }
+
+  a { color: rgb(var(--v-theme-primary-text)); }
+  a:hover { color: rgb(var(--v-theme-primary)); }
+  :focus-visible { outline: 2px solid rgb(var(--v-theme-primary)); outline-offset: 2px; }
+}
+
+@layer components {
+  .wrap { max-width: 1200px; margin-inline: auto; padding-inline: 16px; }
+  @media (min-width: 640px) { .wrap { padding-inline: 24px; } }
+
+  .card { min-width: 0; background: rgb(var(--v-theme-surface)); border: 1px solid var(--color-border); border-radius: 0.25rem; }
+
+  /* A card title bar is bronze. */
+  .bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+    min-height: 52px; padding: 8px 16px; border-radius: 0.25rem 0.25rem 0 0;
+    background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary));
+  }
+  .bar h2 { font-size: 1.375rem; }
+  .bar :focus-visible { outline-color: rgb(var(--v-theme-on-primary)); }
+
+  /* A chip on the title bar: outlined when off, filled when on. */
+  .toggle {
+    display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 12px;
+    border: 1px solid rgba(var(--v-theme-on-primary), 0.5); border-radius: 9999px;
+    font-size: 0.875rem; color: rgb(var(--v-theme-on-primary)); cursor: pointer;
+  }
+  .toggle[aria-pressed="true"] {
+    background: rgb(var(--v-theme-on-primary)); border-color: rgb(var(--v-theme-on-primary));
+    color: rgb(var(--v-theme-primary-text));
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 18px;
+    border-radius: 0.25rem; background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary));
+    font-weight: 500; text-decoration: none; cursor: pointer;
+  }
+  .btn:hover { background: rgb(var(--v-theme-primary-darken-1)); color: rgb(var(--v-theme-on-primary)); }
+
+  .field {
+    height: 40px; padding: 0 8px; border: 1px solid var(--color-border); border-radius: 0.25rem;
+    background: rgb(var(--v-theme-surface)); color: inherit;
+  }
+}
