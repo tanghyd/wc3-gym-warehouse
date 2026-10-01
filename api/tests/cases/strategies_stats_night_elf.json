@@ -1,0 +1,116 @@
+{
+  "route": "/strategies/stats",
+  "request": {
+    "race": [
+      "NE",
+      "RN"
+    ],
+    "filters": {
+      "replay_id": [
+        "0ddbb4abacfb6b62d88223ac6bb3902edc0bdc3a2eac55e29ffe367405cffa60",
+        "92336fe5a392d0043442e75ad4a5097086d6451a35b3d68d99c3093e65b8d8f6",
+        "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8"
+      ],
+      "duration_ms": {
+        "gte": 120000
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "scope": {
+        "games": 3,
+        "wins": 3,
+        "losses": 0,
+        "duration_ms_total": 1747119
+      },
+      "strategies": [
+        {
+          "id": "ne-dh",
+          "games": 3,
+          "wins": 3,
+          "losses": 0,
+          "duration_ms_total": 1747119
+        },
+        {
+          "id": "ne-kotg",
+          "games": 0,
+          "wins": 0,
+          "losses": 0,
+          "duration_ms_total": 0
+        },
+        {
+          "id": "ne-potm",
+          "games": 0,
+          "wins": 0,
+          "losses": 0,
+          "duration_ms_total": 0
+        },
+        {
+          "id": "ne-warden",
+          "games": 0,
+          "wins": 0,
+          "losses": 0,
+          "duration_ms_total": 0
+        },
+        {
+          "id": "ne-expand",
+          "games": 1,
+          "wins": 1,
+          "losses": 0,
+          "duration_ms_total": 406000
+        },
+        {
+          "id": "demon-hunter-fast-tech-bears",
+          "games": 1,
+          "wins": 1,
+          "losses": 0,
+          "duration_ms_total": 937219
+        },
+        {
+          "id": "firelord-fast-expo",
+          "games": 0,
+          "wins": 0,
+          "losses": 0,
+          "duration_ms_total": 0
+        },
+        {
+          "id": "1-aow-fast-hunts-tech",
+          "games": 0,
+          "wins": 0,
+          "losses": 0,
+          "duration_ms_total": 0
+        },
+        {
+          "id": "naga-archer-talon-push",
+          "games": 0,
+          "wins": 0,
+          "losses": 0,
+          "duration_ms_total": 0
+        },
+        {
+          "id": "tavern-hero-first",
+          "games": 0,
+          "wins": 0,
+          "losses": 0,
+          "duration_ms_total": 0
+        },
+        {
+          "id": "24-food-proxy-expo",
+          "games": 0,
+          "wins": 0,
+          "losses": 0,
+          "duration_ms_total": 0
+        },
+        {
+          "id": "mass-talons-vs-orc",
+          "games": 0,
+          "wins": 0,
+          "losses": 0,
+          "duration_ms_total": 0
+        }
+      ]
+    }
+  }
+}

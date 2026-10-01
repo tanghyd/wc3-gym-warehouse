@@ -2,18 +2,27 @@
 
 import pytest
 
+import re
+from pathlib import Path
+
+import yaml
+
 from compile import (
     BadRequest,
     Model,
     ObjectsRequest,
+    Preset,
     QueryRequest,
     SearchRequest,
+    StrategiesRequest,
     Step,
+    check_presets,
     compile_objects,
     compile_query,
     SearchStep,
     chain_pattern,
     compile_search,
+    compile_strategies,
     race_pair,
     sequence_pattern,
 )
@@ -162,3 +171,39 @@ def test_a_measure_with_parts_and_no_sql_names_its_parts() -> None:
     model = PG.model_copy(update={"parts": {"record": ["wins", "losses"]}})
     with pytest.raises(BadRequest, match="ask for wins and losses"):
         compile_query(QueryRequest(measures=["record"]), model)
+
+
+PRESETS = check_presets([Preset(**p) for p in yaml.safe_load((Path(__file__).parent.parent / "strategies.yaml").read_text())])
+
+
+def test_the_presets_file_holds_the_three_sources() -> None:
+    sources = [p.source for p in PRESETS.values()]
+    assert (sources.count("w3warehouse"), sources.count("gym-replays"), sources.count("wc3-gnl-website")) == (24, 1, 32)
+    # a variant holds its parent's steps, then its own
+    late = PRESETS["ud-cl-necro-mw-late"]
+    assert late.parent_id == "ud-cl-necro-mw" and len(PRESETS[late.parent_id].steps) == 3
+
+
+def test_strategy_stats_count_each_preset_of_the_race_in_one_statement() -> None:
+    req = StrategiesRequest(race=["UD", "RU"], opponent_race=["NE"], filters={"minutes": {"gte": 2}})
+    sql, ids, params = compile_strategies(req, PRESETS, PG)
+    assert ids == [i for i, p in PRESETS.items() if p.race == "UD"]
+    assert sql.count("countIf(s") == 3 * len(ids) and sql.count("sumIf(duration_ms, s") == len(ids)
+    assert "FROM w3g.player_games WHERE minutes >= {p0:Float64} AND has({p1:Array(Tuple(String, UInt8))}, (race, random))" in sql
+    assert params["p1"] == "[('UD',0),('UD',1)]" and params["p2"] == "[('NE',0)]"
+    # the late expo: the Crypt Lord first of its parent, an expansion 8:00 to 15:00 and none by 8:00
+    inner = sql.split("FROM (SELECT ", 1)[1]
+    late = re.split(rf"\) AS s{ids.index('ud-cl-necro-mw-late')}\b", inner)[0].rsplit(") AS s", 1)[-1]
+    assert "heroes[1]" in late and "time_ms >= 480000 AND time_ms <= 900000" in late and "NOT (" in late
+
+
+@pytest.mark.parametrize("race", [["R"], ["HU", "OC"]])
+def test_strategy_stats_take_one_race(race: list[str]) -> None:
+    with pytest.raises(BadRequest):
+        compile_strategies(StrategiesRequest(race=race), PRESETS, PG)
+
+
+def test_a_preset_with_an_unknown_parent_is_refused() -> None:
+    p = Preset(id="x", name="X", race="HU", parent_id="nope", source="test", steps=[SearchStep(kind="hero", codes=["Hamg"])])
+    with pytest.raises(BadRequest):
+        check_presets([p])

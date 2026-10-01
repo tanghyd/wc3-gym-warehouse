@@ -173,13 +173,27 @@ export function RaceMenu(props: { label: string; value: string[]; onChange: (v: 
   );
 }
 
-/** A race control inside a GET form: the menu plus a hidden field with its value, such as race=NE,RN. */
-export function RaceField(props: { label: string; name: string; value: string[]; counts: Record<string, number>; any?: boolean }) {
+/** A race control inside a GET form: the menu plus a hidden field with its value, such as race=NE,RN. With `submit`, a change sends the form. */
+export function RaceField(props: { label: string; name: string; value: string[]; counts: Record<string, number>; any?: boolean; submit?: boolean }) {
   const [value, setValue] = useState(props.value);
+  const input = useRef<HTMLInputElement>(null);
+  const changed = useRef(false);
+  useEffect(() => {
+    if (changed.current) input.current?.form?.requestSubmit();
+  }, [value]);
   return (
     <>
-      <RaceMenu label={props.label} value={value} onChange={setValue} counts={props.counts} any={props.any} />
-      <input type="hidden" name={value.length ? props.name : undefined} value={value.join(",")} />
+      <RaceMenu
+        label={props.label}
+        value={value}
+        onChange={(v) => {
+          changed.current = !!props.submit;
+          setValue(v);
+        }}
+        counts={props.counts}
+        any={props.any}
+      />
+      <input ref={input} type="hidden" name={value.length ? props.name : undefined} value={value.join(",")} />
     </>
   );
 }

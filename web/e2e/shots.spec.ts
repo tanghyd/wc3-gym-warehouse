@@ -8,10 +8,13 @@ const PAGES = [
   ["search-build", `/?race=NE&steps=${encodeURIComponent("hero:Edem#1,trained:earc*5@-360")}&opponent_race=OC&opp_steps=${encodeURIComponent("hero:Obla#1")}`],
   // two alternatives, a then step within 1:30, one base by 8:00, and an Openers path on a Random Undead
   ["search-groups", `/?race=UD,RU&steps=${encodeURIComponent("hero:Udea#1,~90trained:ugho*6|hero:Ulic#1,!expand@-480")}&opened=usep.uaod&result=won`],
+  // Named strategies of Human, and of Undead with the Crypt Lord variants open
+  ["strategies", "/strategies"],
+  ["strategies-undead", "/strategies?race=UD&open=ud-cl-necro-mw"],
   // the Night Elf tree, open down to the sixth building
-  ["openers", "/openers?race=NE&open=eate&open=eate.eaom&open=eate.eaom.eden&open=eate.eaom.eden.etoa&open=eate.eaom.eden.etoa.edob"],
+  ["openers", "/strategies/openers?race=NE&open=eate&open=eate.eaom&open=eate.eaom.eden&open=eate.eaom.eden.etoa&open=eate.eaom.eden.etoa.edob"],
   // the Undead tree by best win rate, open down to a Slaughterhouse sixth
-  ["openers-undead", "/openers?race=UD&sort=winrate&open=usep&open=usep.uaod&open=usep.uaod.ugrv&open=usep.uaod.ugrv.utom&open=usep.uaod.ugrv.utom.unp1"],
+  ["openers-undead", "/strategies/openers?race=UD&sort=winrate&open=usep&open=usep.uaod&open=usep.uaod.ugrv&open=usep.uaod.ugrv.utom&open=usep.uaod.ugrv.utom.unp1"],
   // Concealed Hill, 15:37, NE v OC: the story 4 golden
   ["replay", "/replays/dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8"],
   // Springtime 1.4, 49 minutes, HU v UD: the longest game

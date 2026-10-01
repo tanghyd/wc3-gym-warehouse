@@ -500,3 +500,68 @@ ORDER BY time_ms, player_id, seq""",
     "chat": """SELECT time_ms, player_id, mode, message FROM w3g.chat
 WHERE replay_id = {id:String} AND mode = 'All' ORDER BY time_ms, seq""",
 }
+
+
+class Preset(BaseModel):
+    """A named side of the search, from api/strategies.yaml. A variant holds its parent's steps, then its own."""
+
+    id: Annotated[str, Field(pattern=r"^[a-z0-9-]{1,80}$")]
+    name: str
+    race: Literal["HU", "OC", "NE", "UD"]
+    parent_id: str | None = None
+    source: str
+    vs_races: list[Literal["HU", "OC", "NE", "UD"]] = []
+    steps: Annotated[list[SearchStep], Field(min_length=1, max_length=8)]
+
+
+def preset_steps(p: Preset, presets: dict[str, Preset]) -> list[SearchStep]:
+    """A preset's whole group: its parent's steps, then its own."""
+    return [*(presets[p.parent_id].steps if p.parent_id else []), *p.steps]
+
+
+def check_presets(presets: list[Preset]) -> dict[str, Preset]:
+    """The presets by id, after the checks a search makes: unique ids, a parent of the same race
+    with no parent of its own, and every whole group a valid one."""
+    by_id: dict[str, Preset] = {}
+    for p in presets:
+        if p.id in by_id:
+            raise BadRequest(f"preset {p.id} is listed twice")
+        by_id[p.id] = p
+    for p in presets:
+        parent = by_id.get(p.parent_id) if p.parent_id else None
+        if p.parent_id and (parent is None or parent.race != p.race or parent.parent_id):
+            raise BadRequest(f"preset {p.id}: parent {p.parent_id} is not a top preset of race {p.race}")
+        chains(Group(steps=preset_steps(p, by_id)))
+    return by_id
+
+
+class StrategiesRequest(BaseModel):
+    # The Player's race values: one race, or a race with its Random value. Its presets are counted.
+    race: Annotated[Races, Field(min_length=1)]
+    opponent_race: Races = []
+    filters: Filters = {}
+
+
+def compile_strategies(req: StrategiesRequest, presets: dict[str, Preset], model: Model) -> tuple[str, list[str], dict[str, str]]:
+    """One statement over the race's player-games in scope: games, wins, losses and length, for the
+    scope and for each preset of the race. A preset's condition is its whole group, as a Player
+    side of POST /search reads it, so its games are the search's summary.games."""
+    races = sorted({race_pair(v)[0] for v in req.race})
+    if len(races) != 1 or races[0] not in RANDOM_OF:
+        raise BadRequest("race takes one race: HU, OC, NE or UD, alone or with its Random value")
+    params = Params()
+    scope = replay_filters(model, req.filters, params)
+    scope += race_condition(req.race, params)
+    scope += race_condition(req.opponent_race, params, "opponent_race", "opponent_random")
+    ids = [i for i, p in presets.items() if p.race == races[0]]
+    conds = [f"({_group_condition(Group(steps=preset_steps(presets[i], presets)), races, params)}) AS s{n}" for n, i in enumerate(ids)]
+    figures = ["count() AS games", "countIf(result = 'win') AS wins", "countIf(result = 'loss') AS losses", "sum(duration_ms) AS duration_ms_total"]
+    for n in range(len(ids)):
+        figures += [
+            f"countIf(s{n}) AS s{n}_games", f"countIf(s{n} AND result = 'win') AS s{n}_wins",
+            f"countIf(s{n} AND result = 'loss') AS s{n}_losses", f"sumIf(duration_ms, s{n}) AS s{n}_duration_ms_total",
+        ]
+    inner = ", ".join(["result", "duration_ms", *conds])
+    rows = ",\n    ".join(figures)
+    sql = f"SELECT\n    {rows}\nFROM (SELECT {inner} FROM {PLAYER_GAMES} WHERE {' AND '.join(scope)})"
+    return sql, ids, params.values

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { cache } from "react";
 import { BINS, type Catalog, RACE_DIMS, type ValueLabel } from "./explore";
 import { RACES, raceValue } from "./races";
+import type { Preset, Stats } from "./strategies";
 import { apiStep, KINDS, type Kind } from "./steps";
 
 const API_URL = process.env.API_URL ?? "http://api:8000";
@@ -162,4 +163,12 @@ export async function valueLabels(values: Record<string, string[]>): Promise<Rec
     return { label: v };
   };
   return Object.fromEntries(Object.entries(values).map(([d, vs]) => [d, Object.fromEntries(vs.map((v) => [v, one(d, v)]))]));
+}
+
+/** GET /strategies: every preset, each with its own steps. */
+export const getPresets = cache(async () => (await api<{ strategies: Preset[] }>("/strategies"))!.strategies);
+
+/** POST /strategies/stats: the scope's figures and each preset's of the race, and the SQL. */
+export async function strategyStats(body: { race: string[]; opponent_race: string[]; filters: Filters }) {
+  return (await api<{ scope: Stats; strategies: (Stats & { id: string })[]; sql: string; params: Record<string, string> }>("/strategies/stats", body))!;
 }

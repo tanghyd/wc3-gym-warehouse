@@ -1,19 +1,21 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
 // The race control: the four races, a Random submenu of the four Random races, the counts from
-// POST /query, and the "Include Random" switch, here on /openers.
+// POST /query, and the "Include Random" switch, here on the Openers tab of Strategies, which counts
+// games of 2 minutes or more.
 const API = process.env.API_URL ?? "http://api:8000";
 const RACE = { HU: "Human", OC: "Orc", NE: "Night Elf", UD: "Undead" } as const;
 const RANDOM = { HU: "Random Human", OC: "Random Orc", NE: "Random Night Elf", UD: "Random Undead" } as const;
+const MIN2 = { duration_ms: { gte: 120000 } };
 
 /** Player-games per (race, random) pair, as "NE:0" -> games. */
 async function counts(request: APIRequestContext) {
-  const res = await request.post(`${API}/query`, { data: { dimensions: ["race", "random"], measures: ["games"], limit: 100 } });
+  const res = await request.post(`${API}/query`, { data: { dimensions: ["race", "random"], measures: ["games"], filters: MIN2, limit: 100 } });
   return Object.fromEntries((await res.json()).rows.map((r: { race: string; random: number; games: number }) => [`${r.race}:${r.random}`, r.games]));
 }
 
 async function decided(request: APIRequestContext, filters: Record<string, (string | number)[]>) {
-  const res = await request.post(`${API}/query`, { data: { measures: ["games"], filters: { ...filters, result: ["win", "loss"] } } });
+  const res = await request.post(`${API}/query`, { data: { measures: ["games"], filters: { ...filters, ...MIN2, result: ["win", "loss"] } } });
   return (await res.json()).rows[0].games as number;
 }
 
@@ -22,7 +24,7 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 test.describe("race control", () => {
   test("the menu lists the four races and a Random submenu with their player-games", async ({ page, request }) => {
     const n = await counts(request);
-    await page.goto("/openers?race=NE");
+    await page.goto("/strategies/openers?race=NE");
     await page.getByRole("button", { name: "Opponent race: Any race" }).click();
     const menu = page.getByRole("menu", { name: "Opponent race" });
     // picked races in the fixed order, then Random; Any race counts every player-game
@@ -45,15 +47,15 @@ test.describe("race control", () => {
   });
 
   test("Random Night Elf means a Random player who rolled Night Elf", async ({ page, request }) => {
-    await page.goto("/openers?race=NE");
+    await page.goto("/strategies/openers?race=NE");
     await page.getByRole("button", { name: "Race: Night Elf" }).click();
     await page.getByRole("menuitem", { name: /^Random/ }).click();
     await page.getByRole("menuitemradio", { name: /^Random Night Elf/ }).click();
+    // the tab reads it at once
+    await expect(page).toHaveURL(/[?&]race=RN(&|$)/);
     await expect(page.getByRole("button", { name: "Race: Random Night Elf" })).toBeVisible();
     // a Random race takes no Random switch
     await expect(page.getByRole("checkbox", { name: /^Include Random/ })).toHaveCount(0);
-    await page.getByRole("button", { name: "Show openers" }).click();
-    await expect(page).toHaveURL(/[?&]race=RN(&|$)/);
     await expect(page.getByRole("heading", { level: 2 })).toHaveText("Random Night Elf");
     await expect(page.locator(".bar .chip")).toHaveText(`${await decided(request, { race: ["NE"], random: [1] })} games won or lost`);
   });
@@ -61,12 +63,11 @@ test.describe("race control", () => {
   test("Night Elf means picked Night Elf, and the switch adds the Random Night Elf games", async ({ page, request }) => {
     const [picked, both] = await Promise.all([decided(request, { race: ["NE"], random: [0] }), decided(request, { race: ["NE"] })]);
     expect(both).toBeGreaterThan(picked);
-    await page.goto("/openers?race=NE");
+    await page.goto("/strategies/openers?race=NE");
     await expect(page.locator(".bar .chip")).toHaveText(`${picked} games won or lost`);
     const toggle = page.getByRole("checkbox", { name: "Include Random Night Elf" });
     await expect(toggle).not.toBeChecked();
     await toggle.check();
-    await page.getByRole("button", { name: "Show openers" }).click();
     await expect(page).toHaveURL(/[?&]race=NE%2CRN(&|$)/);
     await expect(page.getByRole("checkbox", { name: "Include Random Night Elf" })).toBeChecked();
     await expect(page.getByRole("heading", { level: 2 })).toHaveText("Night Elf or Random Night Elf");
@@ -74,7 +75,7 @@ test.describe("race control", () => {
   });
 
   test("the keyboard walks the menu and opens the Random submenu", async ({ page }) => {
-    await page.goto("/openers?race=NE");
+    await page.goto("/strategies/openers?race=NE");
     const button = page.getByRole("button", { name: "Opponent race: Any race" });
     await button.focus();
     await page.keyboard.press("Enter");
@@ -86,16 +87,21 @@ test.describe("race control", () => {
     await expect(page.getByRole("menuitemradio", { name: /^Random Human/ })).toBeFocused();
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Enter");
-    await expect(page.getByRole("button", { name: "Opponent race: Random Orc" })).toBeFocused();
-    await expect(page.getByRole("menu")).toHaveCount(0);
+    // the pick reloads the tab with it; Escape closes the menu and leaves focus on its button
+    await expect(page).toHaveURL(/[?&]opponent_race=RO(&|$)/);
+    const again = page.getByRole("button", { name: "Opponent race: Random Orc" });
+    await again.focus();
     await page.keyboard.press("Enter");
+    // a Random value opens with its submenu open
+    await expect(page.getByRole("menu", { name: "Opponent race" })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(again).toBeFocused();
   });
 
   test("on a phone the Random submenu opens under its row, inside the screen", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/openers?race=NE");
+    await page.goto("/strategies/openers?race=NE");
     await page.getByRole("button", { name: "Opponent race: Any race" }).click();
     await page.getByRole("menuitem", { name: /^Random/ }).click();
     const [row, sub] = await Promise.all([

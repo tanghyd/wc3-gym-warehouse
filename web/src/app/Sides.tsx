@@ -27,6 +27,8 @@ export type DraftStep = Step & { key: number; name: string; icon: string | null 
 export type Opened = { code: string; name: string; icon: string | null };
 /** One side as the page reads it from the URL. */
 export type SideState = { race: string[]; name: string; outcome: "" | "won" | "lost"; groups: DraftStep[][]; opened: Opened[] };
+/** A strategy preset a side can load: its whole group as steps with their names and icons. */
+export type LoadPreset = { id: string; name: string; race: string; depth: number; steps: (Step & { name: string; icon: string | null })[] };
 type Who = "player" | "opponent";
 type Halls = Record<string, { name: string; icon: string | null }>;
 
@@ -87,10 +89,10 @@ function chainOrders(group: DraftStep[], i: number) {
 
 /**
  * The two sides of a search, Player and Opponent: race, battle tag, the Player's outcome, the
- * openers from /openers, and steps in groups of which any may hold. Swap trades the sides and
+ * openers from the Openers tab of Strategies, and steps in groups of which any may hold. Swap trades the sides and
  * searches again. Each side writes its fields to the page's GET form.
  */
-export function Sides(props: { player: SideState; opponent: SideState; counts: Record<string, number>; scope: Filters; halls: Halls; nextKey: number }) {
+export function Sides(props: { player: SideState; opponent: SideState; counts: Record<string, number>; scope: Filters; halls: Halls; nextKey: number; presets: LoadPreset[] }) {
   const [sides, setSides] = useState({ player: props.player, opponent: props.opponent });
   const root = useRef<HTMLElement>(null);
   const keys = useRef(props.nextKey);
@@ -103,7 +105,7 @@ export function Sides(props: { player: SideState; opponent: SideState; counts: R
 
   return (
     <section ref={root} aria-label="Sides" className="card versus overflow-visible">
-      <Side who="player" side={sides.player} set={set("player")} counts={props.counts} scope={props.scope} halls={props.halls} nextKey={() => keys.current++} />
+      <Side who="player" side={sides.player} set={set("player")} counts={props.counts} scope={props.scope} halls={props.halls} presets={props.presets} nextKey={() => keys.current++} />
       <div className="swap">
         <button type="button" className="swap-btn" aria-label="Swap sides" title="Swap sides" onClick={swap}>
           <span className="h">
@@ -114,12 +116,21 @@ export function Sides(props: { player: SideState; opponent: SideState; counts: R
           </span>
         </button>
       </div>
-      <Side who="opponent" side={sides.opponent} set={set("opponent")} counts={props.counts} scope={props.scope} halls={props.halls} nextKey={() => keys.current++} />
+      <Side who="opponent" side={sides.opponent} set={set("opponent")} counts={props.counts} scope={props.scope} halls={props.halls} presets={props.presets} nextKey={() => keys.current++} />
     </section>
   );
 }
 
-function Side(props: { who: Who; side: SideState; set: (patch: Partial<SideState>) => void; counts: Record<string, number>; scope: Filters; halls: Halls; nextKey: () => number }) {
+function Side(props: {
+  who: Who;
+  side: SideState;
+  set: (patch: Partial<SideState>) => void;
+  counts: Record<string, number>;
+  scope: Filters;
+  halls: Halls;
+  presets: LoadPreset[];
+  nextKey: () => number;
+}) {
   const { who, side, set } = props;
   const id = useId();
   const k = KEYS[who];
@@ -127,9 +138,17 @@ function Side(props: { who: Who; side: SideState; set: (patch: Partial<SideState
   const [editing, setEditing] = useState<{ key: number; before: DraftStep } | null>(null);
   const [picking, setPicking] = useState<number | null>(null);
   const [adding, setAdding] = useState<number | null>(null); // the group whose kind menu is open
+  const [loading, setLoading] = useState(false); // the Load a strategy menu is open
   const groups = side.groups.length ? side.groups : [[]];
   const races = played(side.race);
   const steps = encodeGroups(side.groups);
+  // the presets of the side's race, or every preset when it has none; loading one replaces the steps
+  const loadable = races.length ? props.presets.filter((p) => races.includes(p.race)) : props.presets;
+  const load = (p: LoadPreset) => {
+    set({ groups: [p.steps.map((st) => ({ ...st, key: props.nextKey() }))], ...(!side.race.length && { race: [p.race] }) });
+    setLoading(false);
+    focus(`${id}-add`);
+  };
 
   const setGroups = (gs: DraftStep[][]) => set({ groups: gs.map(sound) });
   const change = (key: number, patch: Partial<DraftStep>) => setGroups(groups.map((g) => g.map((s) => (s.key === key ? { ...s, ...patch } : s))));
@@ -218,9 +237,26 @@ function Side(props: { who: Who; side: SideState; set: (patch: Partial<SideState
           </div>
         )}
         <div className="flex flex-col gap-1">
-          <span id={`${id}-steps`} className="text-sm text-muted">
-            Steps
-          </span>
+          <div className="relative flex min-h-5 items-center justify-between gap-3 text-sm">
+            <span id={`${id}-steps`} className="text-muted">
+              Steps
+            </span>
+            <button type="button" className="text-primary-text" aria-haspopup="menu" aria-expanded={loading} onClick={() => setLoading(!loading)}>
+              Load a strategy
+            </button>
+            {loading && (
+              <ul role="menu" aria-label="Strategies" className="pop race-menu q-list right-0 left-auto" onKeyDown={(e) => e.key === "Escape" && setLoading(false)}>
+                {loadable.map((p, i) => (
+                  <li key={p.id} role="none">
+                    <button type="button" role="menuitem" className="opt" autoFocus={i === 0} style={{ paddingLeft: 8 + p.depth * 16 }} onClick={() => load(p)}>
+                      {!races.length && !p.depth && <RaceIcon race={p.race} size="18px" />}
+                      {p.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           {groups.map((group, gi) => {
             const alone = groups.length === 1;
             return (

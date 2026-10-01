@@ -11,6 +11,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+import yaml
 from fastapi import FastAPI, HTTPException
 
 from compile import (
@@ -19,11 +20,15 @@ from compile import (
     BadRequest,
     Model,
     ObjectsRequest,
+    Preset,
     QueryRequest,
     SearchRequest,
+    StrategiesRequest,
+    check_presets,
     compile_objects,
     compile_query,
     compile_search,
+    compile_strategies,
     race_value,
     tuples,
 )
@@ -32,6 +37,8 @@ CH_URL = os.environ.get("CLICKHOUSE_URL", "http://clickhouse:8123")
 CH_USER = os.environ.get("CLICKHOUSE_USER", "api")
 CH_PASSWORD = os.environ.get("CLICKHOUSE_API_PASSWORD", "")
 MANIFEST = Path(os.environ.get("DBT_MANIFEST", "/target/manifest.json"))
+# The strategy presets, checked once at start: a bad file stops the API.
+PRESETS = check_presets([Preset(**p) for p in yaml.safe_load((Path(__file__).parent / "strategies.yaml").read_text())])
 
 app = FastAPI(title="wc3-gym-warehouse")
 
@@ -202,4 +209,29 @@ def replay(replay_id: str) -> dict[str, Any]:
         "players": players,
         "events": run(REPLAY_SQL["events"], p),
         "chat": run(REPLAY_SQL["chat"], p),
+    }
+
+
+@app.get("/strategies")
+def strategies() -> dict[str, Any]:
+    """The presets of api/strategies.yaml, each with its own steps; a variant also holds its parent's."""
+    keys = {"id", "name", "race", "parent_id", "source", "vs_races"}
+    return {"strategies": [p.model_dump(include=keys) | {"steps": [s.model_dump(exclude_defaults=True) for s in p.steps]} for p in PRESETS.values()]}
+
+
+@app.post("/strategies/stats")
+def strategy_stats(req: StrategiesRequest) -> dict[str, Any]:
+    """Games, wins, losses and summed length of the race's player-games in scope, and of each of
+    its presets, in one statement."""
+    try:
+        sql, ids, params = compile_strategies(req, PRESETS, model("player_games"))
+    except BadRequest as e:
+        raise HTTPException(400, str(e)) from e
+    s = run(sql, params)[0]
+    figures = ("games", "wins", "losses", "duration_ms_total")
+    return {
+        "scope": {k: s[k] for k in figures},
+        "strategies": [{"id": i} | {k: s[f"s{n}_{k}"] for k in figures} for n, i in enumerate(ids)],
+        "sql": sql,
+        "params": params,
     }

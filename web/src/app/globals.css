@@ -369,6 +369,22 @@
   .col-axis { grid-column: 1 / -1; text-align: center; font-size: 0.8125rem; color: var(--color-muted); }
   .stats.tiles { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
 
+  /* The tabs of a page: links on a hairline, a gold underline on the current one. */
+  .tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--color-border); }
+  .tabs a { display: flex; align-items: center; height: 44px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: rgb(var(--v-theme-on-surface)); }
+  .tabs a:hover { text-decoration: none; border-bottom-color: var(--color-border); }
+  .tabs a[aria-current="page"] { border-bottom-color: rgb(var(--v-theme-primary)); font-weight: 700; }
+
+  /* Named strategies: a variant sits indented on the bright surface; the rule reads under the name. */
+  .named { --indent: 24px; }
+  .named td { vertical-align: middle; }
+  .named tr.variant { background: rgb(var(--v-theme-surface-bright)); }
+  .named .rule { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 0.875rem; color: var(--color-muted); }
+  .named .c-go { width: 1%; white-space: nowrap; font-size: 0.875rem; }
+  /* A share of a whole: a 72 px gold fill on its lighter track. */
+  .meter { display: inline-block; width: 72px; height: 6px; margin-right: 12px; vertical-align: middle; border-radius: 9999px; background: var(--color-amount-track); overflow: hidden; }
+  .meter > span { display: block; height: 100%; border-radius: 9999px; background: var(--color-amount); }
+
   /* A search step's number on the orders it matched: ink on a surface ring, on the mark's corner. */
   .step-no {
     position: absolute; left: -6px; top: -6px; z-index: 1; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 9999px;
@@ -430,6 +446,12 @@
     .bar-label { font-size: 0.875rem; }
     .x-table th, .x-table td { padding-left: 8px; padding-right: 8px; }
     .stats.tiles .stat:nth-child(3) { grid-column: auto; border-top: 0; }
+
+    .named { --indent: 10px; }
+    .named th, .named td { padding-left: 8px; padding-right: 8px; }
+    .named .c-len, .named .c-go, .named .meter { display: none; }
+    /* a long word of a rule breaks, so the figures keep their columns */
+    .named .rule { overflow-wrap: anywhere; }
   }
 }
 

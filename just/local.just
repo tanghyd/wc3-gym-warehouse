@@ -110,6 +110,10 @@ api-test *args:
 api-cases-update:
     docker compose run --rm --build -v "$PWD/api:/api" -e UPDATE_CASES=1 api uv run --frozen pytest tests/test_cases.py
 
+# rewrite api/uv.lock from api/pyproject.toml, in the API image as you
+api-lock:
+    docker compose run --rm --no-deps --user "$(id -u):$(id -g)" -e UV_CACHE_DIR=/tmp/uv -v "$PWD/api:/api" api uv lock
+
 # rewrite web/pnpm-lock.yaml from web/package.json, in a node container as you
 web-lock:
     docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \

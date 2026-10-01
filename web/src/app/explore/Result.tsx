@@ -1,5 +1,5 @@
 "use client";
-import { type KeyboardEvent, type ReactNode, useState, useSyncExternalStore } from "react";
+import { Fragment, type KeyboardEvent, type ReactNode, useState, useSyncExternalStore } from "react";
 import { type Catalog, dimsOf, measureText, measureValue, ordered, RACE_DIMS, RACE_ORDER, type Row, type ValueLabel, type View } from "@/lib/explore";
 import { RaceIcon, Tile } from "@/lib/ui";
 import { usePending } from "./Query";
@@ -358,10 +358,10 @@ export function Result(props: { view: View; cat: Catalog; rows: Row[]; labels: L
                           {measureText(cat, m, r)
                             .split(/ (?=\()/)
                             .map((part, k) => (
-                              <span key={k} className="whitespace-nowrap">
+                              <Fragment key={k}>
                                 {k > 0 && " "}
-                                {part}
-                              </span>
+                                <span className="whitespace-nowrap">{part}</span>
+                              </Fragment>
                             ))}
                         </td>
                       ))}

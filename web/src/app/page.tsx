@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { type Filters, getObjects, type Objects, pickerValues, raceCounts, searchGames, type SidePlayer, stepGroups } from "@/lib/api";
+import { type Filters, getObjects, getPresets, type Objects, pickerValues, raceCounts, searchGames, type SidePlayer, stepGroups } from "@/lib/api";
 import { parseRaces, raceLabel } from "@/lib/races";
 import { apiStep, decodeGroups, HALLS, type Groups, played, type Step, stepObject } from "@/lib/steps";
+import { presetSteps, urlStep } from "@/lib/strategies";
 import { mss, PlayerName, record } from "@/lib/ui";
-import { type DraftStep, Sides, type SideState } from "./Sides";
+import { type DraftStep, type LoadPreset, Sides, type SideState } from "./Sides";
 import { SortSelect } from "./SortSelect";
 
 const LIMIT = 25; // player-games a page lists
@@ -83,9 +84,18 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const [player, opponent] = [read("player"), read("opponent")];
   const outcome = ({ won: "win", lost: "loss" } as const)[value("result") as "won" | "lost"] ?? null;
 
-  // the names and icons of every object the sides name, and the objects of each "@source" group
+  // the names and icons of every object the sides and the strategy presets name, and the objects of each "@source" group
+  const presetList = await getPresets();
   const steps = [...player.groups.flat(), ...opponent.groups.flat()];
-  const codes = [...new Set([...steps.flatMap((s) => s.codes.filter((c) => !c.startsWith("@"))), ...player.opened, ...opponent.opened, ...Object.values(HALLS)])];
+  const codes = [
+    ...new Set([
+      ...steps.flatMap((s) => s.codes.filter((c) => !c.startsWith("@"))),
+      ...player.opened,
+      ...opponent.opened,
+      ...Object.values(HALLS),
+      ...presetList.flatMap((p) => p.steps.flatMap((s) => s.codes)),
+    ]),
+  ];
   const groupKeys = [...new Map(steps.flatMap((s) => s.codes.filter((c) => c.startsWith("@")).map((c) => [`${s.kind}${c}`, { kind: s.kind, source: c.slice(1) }]))).values()];
   const [names, groups, maps, patches, players, counts] = await Promise.all([
     getObjects(codes),
@@ -117,6 +127,15 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   });
   const sides = { player: draft(player, value("result") === "won" ? "won" : value("result") === "lost" ? "lost" : ""), opponent: draft(opponent, "") };
   const halls = Object.fromEntries(Object.values(HALLS).map((c) => [c, { name: names[c]?.name ?? c, icon: names[c]?.icon ?? null }]));
+  // "Load a strategy": each preset's whole group, a variant under its parent
+  const byId = new Map(presetList.map((p) => [p.id, p]));
+  const presets: LoadPreset[] = presetList.map((p) => ({
+    id: p.id,
+    name: p.name,
+    race: p.race,
+    depth: p.parent_id ? 1 : 0,
+    steps: presetSteps(p, byId).map((st) => ({ ...urlStep(st), ...stepObject(urlStep(st), [p.race], names, groups) })),
+  }));
 
   const { summary: sum, scope, total, replays, sql, params, refused } = answer;
   // the steps, the outcome and the openers narrow the scope; races, names and replay filters set it
@@ -173,7 +192,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
             </div>
           </div>
         </div>
-        <Sides player={sides.player} opponent={sides.opponent} counts={counts} scope={filters} halls={halls} nextKey={key} />
+        <Sides player={sides.player} opponent={sides.opponent} counts={counts} scope={filters} halls={halls} nextKey={key} presets={presets} />
         {sort !== "-added" && <input type="hidden" name="sort" value={sort} />}
         <div className="flex items-center justify-end gap-5">
           {set && <Link href="/">Clear</Link>}

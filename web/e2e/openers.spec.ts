@@ -1,16 +1,18 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { search, strip, stripOf } from "./helpers";
 
-// The openers tree on /openers: each level equals POST /query's answer for that prefix.
+// The openers tree, the Openers tab of Strategies: each level equals POST /query's answer for that
+// prefix, over games of 2 minutes or more. The old /openers route redirects to it.
 const API = process.env.API_URL ?? "http://api:8000";
 
 type Level = { code: string; games: number; wins: number; losses: number; minutes_total: number }[];
 const rows = (page: Page) => page.locator("tbody tr");
 const mss = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 const record = (w: number, l: number) => (w + l ? `${w} – ${l}` + (w + l >= 10 ? ` (${Math.round((100 * w) / (w + l))}%)` : "") : "—");
-const DECIDED = { result: ["win", "loss"] };
-// Night Elf on /openers is picked Night Elf: random 0
+const DECIDED = { result: ["win", "loss"], duration_ms: { gte: 120000 } };
+// Night Elf on the tab is picked Night Elf: random 0; Human is the tab's race when none is chosen
 const NE = { race: ["NE"], random: [0] };
+const HU = { race: ["HU"], random: [0] };
 
 /**
  * The buildings after a prefix, every figure over player-games won or lost. Most played first, or
@@ -43,18 +45,20 @@ const expected = (lvl: Level, name: Record<string, string>) =>
   lvl.map((r) => [name[r.code], String(r.games), record(r.wins, r.losses), mss((r.minutes_total / r.games) * 60000)]);
 
 test.describe("openers tree", () => {
-  test("Night Elf by default: the first level's games, record and length equal POST /query's", async ({ page, request }) => {
-    const root = await level(request, NE, []);
+  test("/openers lands on the tab, Human by default: the first level's games, record and length equal POST /query's", async ({ page, request }) => {
+    const root = await level(request, HU, []);
     expect(root.length).toBeGreaterThan(0);
     const name = await names(request, root.map((r) => r.code));
     await page.goto("/openers");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Openers");
-    await expect(page.getByRole("button", { name: "Race: Night Elf" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Openers" })).toHaveAttribute("aria-current", "page");
+    await expect(page).toHaveURL(/\/strategies\/openers(\?|$)/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Strategies");
+    await expect(page.getByRole("button", { name: "Race: Human" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Strategies" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("link", { name: "Openers", exact: true })).toHaveAttribute("aria-current", "page");
     expect(await cells(page)).toEqual(expected(root, name));
     // one unit per row: its games are its wins plus its losses
     for (const r of root) expect(r.games).toBe(r.wins + r.losses);
-    const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { ...NE, ...DECIDED } } })).json()).rows[0].games;
+    const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { ...HU, ...DECIDED } } })).json()).rows[0].games;
     await expect(page.locator(".bar .chip")).toHaveText(`${total} games won or lost`);
   });
 
@@ -64,11 +68,10 @@ test.describe("openers tree", () => {
     const root = await level(request, filters, []);
     expect(root.length).toBeGreaterThan(0);
     const name = await names(request, root.map((r) => r.code));
-    await page.goto("/openers");
+    await page.goto("/openers?race=NE");
     const patch = page.getByRole("combobox", { name: "Patch" });
     await expect(patch).toHaveValue("");
     await patch.selectOption("2.0");
-    await page.getByRole("button", { name: "Show openers" }).click();
     await expect(page).toHaveURL(/[?&]patch=2\.0(&|$)/);
     expect(await cells(page)).toEqual(expected(root, name));
     const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { ...filters, ...DECIDED } } })).json()).rows[0].games;
@@ -78,7 +81,7 @@ test.describe("openers tree", () => {
     await rows(page).first().getByRole("link", { name: `List the games of ${name[root[0].code]}` }).click();
     await expect(page).toHaveURL(/^[^?]*\/\?.*patch=2\.0/);
     await expect(page.getByRole("combobox", { name: "Patch" })).toHaveValue("2.0");
-    const want = await search(request, { filters: { patch: ["2.0"] }, player: { race: ["NE"], opened_with: [root[0].code] } });
+    const want = await search(request, { filters: { patch: ["2.0"], duration_ms: { gte: 120000 } }, player: { race: ["NE"], opened_with: [root[0].code] } });
     expect(await strip(page)).toEqual(stripOf(want));
   });
 
@@ -86,9 +89,8 @@ test.describe("openers tree", () => {
     const root = await level(request, NE, [], "winrate");
     expect(root.some((r) => r.games < 10)).toBeTruthy();
     const name = await names(request, root.map((r) => r.code));
-    await page.goto("/openers");
+    await page.goto("/openers?race=NE");
     await page.getByRole("combobox", { name: "Sort by" }).selectOption({ label: "Best win rate" });
-    await page.getByRole("button", { name: "Show openers" }).click();
     await expect(page).toHaveURL(/[?&]sort=winrate(&|$)/);
     expect(await cells(page)).toEqual(expected(root, name));
     const top = root.find((r) => r.games >= 10)!.code;
@@ -128,7 +130,7 @@ test.describe("openers tree", () => {
     const kids = await level(request, NE, [top]);
     expect(kids.length).toBeGreaterThan(0);
     const name = await names(request, [...root, ...kids].map((r) => r.code));
-    await page.goto("/openers");
+    await page.goto("/openers?race=NE");
     const toggle = page.getByRole("link", { name: name[top], exact: true });
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await toggle.click();
@@ -160,10 +162,10 @@ test.describe("openers tree", () => {
     const link = row.getByRole("link", { name: `List the games of ${name[kids[0].code]}` });
     await expect(link).toHaveText(String(kids[0].games));
     await link.click();
-    await expect(page).toHaveURL(new RegExp(`/\\?race=NE&opponent_race=OC&opened=${root[0].code}\\.${kids[0].code}$`));
+    await expect(page).toHaveURL(new RegExp(`/\\?race=NE&opponent_race=OC&min=2&opened=${root[0].code}\\.${kids[0].code}$`));
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Replays");
     // the list is POST /search's player-games of that opener: an Opened with condition on the Player side
-    const want = await search(request, { player: { race: ["NE"], opened_with: [root[0].code, kids[0].code] }, opponent: { race: ["OC"] } });
+    const want = await search(request, { filters: { duration_ms: { gte: 120000 } }, player: { race: ["NE"], opened_with: [root[0].code, kids[0].code] }, opponent: { race: ["OC"] } });
     expect(want.total).toBe(kids[0].games);
     expect(await strip(page)).toEqual(stripOf(want));
     await expect(page.getByRole("group", { name: "Opened with" }).getByRole("img")).toHaveCount(2);
