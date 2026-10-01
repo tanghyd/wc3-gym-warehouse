@@ -1,130 +1,191 @@
 import Link from "next/link";
-import { type Filters, pickerValues, raceCounts, searchReplays, stepObjects } from "@/lib/api";
-import { parseRaces, raceFilters } from "@/lib/races";
-import { decodeSteps, KINDS } from "@/lib/steps";
-import { Field, matchup, mss, ObjIcon, PlayerName, record, Result } from "@/lib/ui";
-import { PlayerSlot } from "./PlayerSlot";
+import { type Filters, getObjects, type Objects, pickerValues, raceCounts, searchGames, type SidePlayer, stepGroups } from "@/lib/api";
+import { parseRaces, racePair, raceLabel } from "@/lib/races";
+import { apiStep, decodeGroups, HALLS, type Groups, type Step } from "@/lib/steps";
+import { mss, PlayerName, record } from "@/lib/ui";
+import { type DraftStep, Sides, type SideState } from "./Sides";
+import { SortSelect } from "./SortSelect";
 
-const OPENERS = ["opener_1", "opener_2", "opener_3", "opener_4", "opener_5", "opener_6"];
-const RESULTS: Record<string, string> = { won: "win", lost: "loss" };
-const LIMIT = 100; // games a search lists
+const LIMIT = 25; // player-games a page lists
+const SORTS: Record<string, string> = { "-added": "Recently added", added: "First added", "-duration": "Longest", duration: "Shortest", map: "Map" };
+const CODE = /^[A-Za-z0-9_]{1,8}$/;
+// The URL keys of each side.
+const KEYS = {
+  player: { race: "race", name: "player", steps: "steps", opened: "opened" },
+  opponent: { race: "opponent_race", name: "opp_player", steps: "opp_steps", opened: "opp_opened" },
+} as const;
+
+const fmt = (n: number) => n.toLocaleString("en-US");
+/** The races a side's values play, for its town halls: NE for NE and RN, none for any race. */
+const played = (race: string[]) => [...new Set(race.map((v) => racePair(v)[0]).filter((r) => HALLS[r]))];
+
+/** A player of a row: name and race icon, under it his heroes in pick order with their final levels. */
+function Who({ p, objects }: { p: SidePlayer; objects: Objects }) {
+  return (
+    <>
+      <PlayerName name={p.name} race={p.race} className="max-w-full" />
+      {p.heroes.length > 0 && (
+        <ul aria-label="Heroes" className="heroes">
+          {p.heroes.map((h, i) => {
+            const label = `${objects[h.code]?.name ?? "Unknown hero"}, level ${h.level}`;
+            return (
+              <li key={i} title={label}>
+                {objects[h.code]?.icon ? <img src={objects[h.code].icon!} width={22} height={22} alt={label} /> : <span role="img" aria-label={label} className="tile empty" style={{ ["--s" as string]: "20px" }} />}
+                <span className="lv" aria-hidden>
+                  {h.level}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
+  );
+}
+
+/** A result from the Player's view: a win or loss square and the word. */
+function ResultMark({ won }: { won: boolean | null }) {
+  if (won === null) return <span className="text-muted">No result</span>;
+  return (
+    <span className="res">
+      <span aria-hidden className={`sq ${won ? "bg-win" : "bg-loss"}`} />
+      {won ? "Won" : "Lost"}
+    </span>
+  );
+}
 
 export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
   const value = (k: string) => (typeof sp[k] === "string" ? sp[k] : "");
-  const [objects, maps, patches, players, counts] = await Promise.all([stepObjects(), pickerValues("map"), pickerValues("patch"), pickerValues("player"), raceCounts({})]);
-  // race and opponent_race hold race values, such as NE or NE,RN
-  const [race, oppRace] = [parseRaces(value("race")), parseRaces(value("opponent_race"))];
-  const byCode = Object.fromEntries(objects.map((o) => [o.code, o]));
-  // A step's code gives its kind; a code that is no step object drops out.
-  const steps = (k: string) => decodeSteps(value(k)).filter((s) => byCode[s.code]);
-  const apiSteps = (k: string) =>
-    steps(k).map((s) => ({
-      type: KINDS[byCode[s.code].kind][1],
-      code: s.code,
-      within_prev_s: s.within,
-      from_min: s.from === null ? null : s.from / 60,
-      to_min: s.to === null ? null : s.to / 60,
-    }));
-  // The opener prefix a row of /openers links here with: opener_1 to opener_k, no gap.
-  const prefix = OPENERS.map(value);
-  prefix.splice(prefix.indexOf("") < 0 ? 6 : prefix.indexOf(""));
+  const sort = SORTS[value("sort")] ? value("sort") : "-added";
+  const page = Math.max(1, Math.floor(Number(value("page"))) || 1);
+  /** This page's URL with some keys changed; null drops a key. */
+  const href = (patch: Record<string, string | null>) => {
+    const q = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" && v ? [[k, v]] : [])));
+    for (const [k, v] of Object.entries(patch)) if (v === null) q.delete(k);
+    else q.set(k, v);
+    return `/?${q}`;
+  };
 
-  // Player 1 is the focus: the row whose result the table reports. Map, patch, length and opener ride on him.
+  // The replay filters: map, patch and length in minutes, both ends included, on exact ms.
   const filters: Filters = {};
-  Object.assign(filters, raceFilters(race), raceFilters(oppRace, "opponent_race", "opponent_random"));
-  for (const k of ["map", "patch", "player"]) if (value(k)) filters[k] = [value(k)];
-  prefix.forEach((c, i) => (filters[OPENERS[i]] = [c]));
-  if (value("opp_player")) filters.opponent = [value("opp_player")];
-  if (RESULTS[value("result")]) filters.result = [RESULTS[value("result")]];
-  // ?min= and ?max= are the game length in minutes, both ends included; the filter is on exact ms
+  for (const k of ["map", "patch"]) if (value(k)) filters[k] = [value(k)];
   const [min, max] = [value("min"), value("max")].map((v) => (v && Number.isFinite(Number(v)) ? Number(v) * 60000 : undefined));
   if (min !== undefined || max !== undefined) filters.duration_ms = { gte: min, lte: max };
-  // Player 2 is another player of the game: the focus's opponent, so each side names the other.
-  const p2: Filters = {};
-  Object.assign(p2, raceFilters(oppRace), raceFilters(race, "opponent_race", "opponent_random"));
-  for (const [k, from] of [["player", "opp_player"], ["opponent", "player"]])
-    if (value(from)) p2[k] = [value(from)];
-  if (RESULTS[value("opp_result")]) p2.result = [RESULTS[value("opp_result")]];
-  const p2Steps = apiSteps("opp_steps");
-  // the pickers count games on the replay filters
-  const scope: Filters = Object.fromEntries(Object.entries(filters).filter(([k]) => ["map", "patch", "duration_ms"].includes(k)));
-  const others = p2.result || p2Steps.length ? [{ filters: p2, steps: p2Steps }] : [];
-  const p1Steps = apiSteps("steps");
 
-  const answer = await searchReplays({ filters, steps: p1Steps, others, limit: LIMIT + 1 });
-  const { sql, params, refused } = answer;
-  // The API keeps the first LIMIT + 1 by replay id; the one past LIMIT only says that more exist.
-  const more = answer.replays.length > LIMIT;
-  const past = more ? answer.replays.map((r) => r.replay_id).sort().at(-1) : undefined;
-  const replays = answer.replays.filter((r) => r.replay_id !== past);
-  // with no condition on a player there is no focus, and players stay in slot order
-  const focused = Object.keys(filters).some((k) => !["map", "patch", "duration_ms"].includes(k)) || p1Steps.length > 0 || others.length > 0;
-  const won = replays.map((r) => r.players.find((p) => p.player_id === r.focus_player_id)?.won);
+  const read = (who: keyof typeof KEYS) => {
+    const k = KEYS[who];
+    return {
+      race: parseRaces(value(k.race)),
+      name: value(k.name),
+      groups: decodeGroups(value(k.steps)),
+      opened: value(k.opened).split(".").filter((c) => CODE.test(c)).slice(0, 6),
+    };
+  };
+  const [player, opponent] = [read("player"), read("opponent")];
+  const outcome = ({ won: "win", lost: "loss" } as const)[value("result") as "won" | "lost"] ?? null;
+
+  // the names and icons of every object the sides name, and the objects of each "@source" group
+  const steps = [...player.groups.flat(), ...opponent.groups.flat()];
+  const codes = [...new Set([...steps.flatMap((s) => s.codes.filter((c) => !c.startsWith("@"))), ...player.opened, ...opponent.opened, ...Object.values(HALLS)])];
+  const groupKeys = [...new Map(steps.flatMap((s) => s.codes.filter((c) => c.startsWith("@")).map((c) => [`${s.kind}${c}`, { kind: s.kind, source: c.slice(1) }]))).values()];
+  const [names, groups, maps, patches, players, counts] = await Promise.all([
+    getObjects(codes),
+    stepGroups(groupKeys),
+    pickerValues("map"),
+    pickerValues("patch"),
+    pickerValues("player"),
+    raceCounts(filters),
+  ]);
+  const groupCodes = Object.fromEntries(Object.entries(groups).map(([k, g]) => [k, g.codes]));
+  const apiSide = (s: typeof player) => ({
+    race: s.race,
+    name: s.name || null,
+    opened_with: s.opened,
+    groups: s.groups.map((g) => ({ steps: g.map((st) => apiStep(st, played(s.race), groupCodes)) })),
+  });
+  const answer = await searchGames({ filters, player: { ...apiSide(player), outcome }, opponent: apiSide(opponent), sort, limit: LIMIT, offset: (page - 1) * LIMIT });
+  const heroes = await getObjects([...new Set(answer.replays.flatMap((r) => [...r.player.heroes, ...r.opponent.heroes].map((h) => h.code)))]);
+
+  // the sides as the editor starts them, each step with its name and icon
+  let key = 0;
+  const label = (s: Step, race: string[]) => {
+    const one = (c: string) => ({ name: names[c]?.name ?? c, icon: names[c]?.icon ?? null });
+    if (s.kind === "expand") return played(race).length === 1 ? one(HALLS[played(race)[0]]) : { name: "Any town hall", icon: null };
+    const g = s.codes[0]?.startsWith("@") ? groups[`${s.kind}${s.codes[0]}`] : null;
+    if (g) return { name: `Any from ${g.name}`, icon: g.icon };
+    return s.codes.length > 1 ? { ...one(s.codes[0]), name: `${one(s.codes[0]).name} or ${s.codes.length - 1} more` } : one(s.codes[0]);
+  };
+  const draft = (s: typeof player, outcomeWord: SideState["outcome"]): SideState => ({
+    race: s.race,
+    name: s.name,
+    outcome: outcomeWord,
+    groups: (s.groups as Groups).map((g) => g.map((st): DraftStep => ({ ...st, key: key++, ...label(st, s.race) }))),
+    opened: s.opened.map((c) => ({ code: c, name: names[c]?.name ?? c, icon: names[c]?.icon ?? null })),
+  });
+  const sides = { player: draft(player, value("result") === "won" ? "won" : value("result") === "lost" ? "lost" : ""), opponent: draft(opponent, "") };
+  const halls = Object.fromEntries(Object.values(HALLS).map((c) => [c, { name: names[c]?.name ?? c, icon: names[c]?.icon ?? null }]));
+
+  const { summary: sum, scope, total, replays, sql, params, refused } = answer;
+  // the steps, the outcome and the openers narrow the scope; races, names and replay filters set it
+  const narrowed = steps.length > 0 || outcome !== null || player.opened.length > 0 || opponent.opened.length > 0;
+  const scopeWords = player.race.length || opponent.race.length ? `${raceLabel(player.race)} v ${raceLabel(opponent.race)} games` : "games";
+  const avg = (t: { games: number; duration_ms_total: number }) => (t.games ? mss(t.duration_ms_total / t.games) : "—");
+  const first = (page - 1) * LIMIT;
   const set = Object.values(sp).some((v) => v);
-  const withoutOpener = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" && v && !OPENERS.includes(k) ? [[k, v]] : [])));
+  const sortLink = (col: "map" | "duration") => {
+    const next = col === "map" ? (sort === "map" ? "-map" : "map") : sort === "-duration" ? "duration" : "-duration";
+    return href({ sort: next, page: null });
+  };
+  const ariaSort = (col: string) => (sort.replace("-", "") === col ? (sort.startsWith("-") ? "descending" : "ascending") : undefined);
 
   return (
-    <main className="wrap py-6">
+    <main className="wrap flex flex-col gap-4 py-6">
       <h1>Replays</h1>
 
       {/* keyed by the query, so a link or Back redraws the fields from the URL */}
-      <form key={JSON.stringify(sp)} className="mt-4 flex flex-col gap-4">
-        <div className="card flex flex-wrap items-end gap-3 p-4">
-          <Field label="Map">
+      <form key={JSON.stringify(sp)} className="flex flex-col gap-4">
+        <div className="card filters">
+          <label className="flex min-w-0 flex-col gap-1 text-sm">
+            <span className="text-muted">Map</span>
             <select name="map" defaultValue={value("map")} className="field">
               <option value="">Any</option>
               {maps.map((m) => (
                 <option key={m}>{m}</option>
               ))}
             </select>
-          </Field>
-          <Field label="Patch">
+          </label>
+          <label className="flex min-w-0 flex-col gap-1 text-sm">
+            <span className="text-muted">Patch</span>
             <select name="patch" defaultValue={value("patch")} className="field">
               <option value="">Any</option>
               {patches.map((p) => (
                 <option key={p}>{p}</option>
               ))}
             </select>
-          </Field>
-          <div role="group" aria-labelledby="minutes" className="flex min-w-36 flex-1 flex-col gap-1 text-sm">
+          </label>
+          <div role="group" aria-labelledby="minutes" className="flex min-w-0 flex-col gap-1 text-sm">
             <span id="minutes" className="text-muted">
               Minutes
             </span>
-            <div className="flex items-center gap-2">
-              <input name="min" type="number" min={0} step="any" inputMode="decimal" placeholder="from" aria-label="Minutes from" defaultValue={value("min")} className="field w-full" />
+            <div className="range">
+              <input name="min" type="number" min={0} step="any" inputMode="decimal" placeholder="from" aria-label="Minutes from" defaultValue={value("min")} className="field" />
               <span aria-hidden className="text-muted">
                 –
               </span>
-              <input name="max" type="number" min={0} step="any" inputMode="decimal" placeholder="to" aria-label="Minutes to" defaultValue={value("max")} className="field w-full" />
+              <input name="max" type="number" min={0} step="any" inputMode="decimal" placeholder="to" aria-label="Minutes to" defaultValue={value("max")} className="field" />
             </div>
           </div>
-          {prefix.length > 0 && (
-            <div role="group" aria-labelledby="opener" className="flex flex-col gap-1 text-sm">
-              <span id="opener" className="text-muted">
-                Opener
-              </span>
-              <div className="flex h-[38px] items-center gap-1">
-                {prefix.map((c, i) => (
-                  <span key={i}>
-                    <input type="hidden" name={OPENERS[i]} value={c} />
-                    <ObjIcon code={c} objects={byCode} size={28} alt={byCode[c]?.name ?? c} />
-                  </span>
-                ))}
-                <Link href={`/?${withoutOpener}`} className="ml-2">
-                  Remove
-                </Link>
-              </div>
-            </div>
-          )}
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <PlayerSlot n={1} race={race} counts={counts} scope={scope} name={value("player")} outcome={value("result")} steps={steps("steps")} objects={objects} />
-          <PlayerSlot n={2} race={oppRace} counts={counts} scope={scope} name={value("opp_player")} outcome={value("opp_result")} steps={steps("opp_steps")} objects={objects} />
-        </div>
-        <div className="flex items-center justify-end gap-4">
+        <Sides player={sides.player} opponent={sides.opponent} counts={counts} scope={filters} halls={halls} nextKey={key} />
+        {sort !== "-added" && <input type="hidden" name="sort" value={sort} />}
+        <div className="flex items-center justify-end gap-5">
           {set && <Link href="/">Clear</Link>}
           <button type="submit" className="btn btn-gold">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <circle cx="11" cy="11" r="6.5" />
+              <path d="M16 16l4 4" />
+            </svg>
             Search
           </button>
         </div>
@@ -135,90 +196,126 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
         ))}
       </datalist>
 
-      <section className="card mt-4">
+      <section className="card" aria-labelledby="games-title">
         <div className="bar">
-          <h2>Games</h2>
-          {!refused && <span className="chip bg-primary text-on-primary">{more ? `${LIMIT}+` : replays.length}</span>}
-          {focused && replays.length > 0 && (
-            <span className="text-sm">
-              Player 1 record {record(won.filter((w) => w === true).length, won.filter((w) => w === false).length)}
+          <h2 id="games-title">Games</h2>
+          {!refused && <span className="chip bg-primary text-on-primary">{fmt(total)}</span>}
+          <span className="ml-auto flex items-center gap-2">
+            <span aria-hidden className="text-sm text-banner-muted">
+              Sort
             </span>
-          )}
+            <SortSelect value={sort} options={Object.entries(SORTS).map(([v, l]) => [v, l, href({ sort: v === "-added" ? null : v, page: null })])} />
+          </span>
         </div>
-        {more && <p className="border-b px-4 py-3 text-sm text-muted">Showing the first {LIMIT}. Narrow the filters to see the rest.</p>}
         {refused ? (
           <p role="alert" className="p-8 text-center">
             The API refused this search: {refused}
           </p>
-        ) : replays.length === 0 ? (
-          <p className="p-8 text-center text-muted">No replay matches. {p1Steps.length || p2Steps.length ? "Drop a step or widen the filters." : "Widen the filters."}</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Map</th>
-                  <th className="hidden sm:table-cell">Matchup</th>
-                  <th>Players</th>
-                  {focused && <th className="hidden sm:table-cell">Player 1</th>}
-                  <th className="hidden text-right sm:table-cell">Length</th>
-                </tr>
-              </thead>
-              <tbody>
-                {replays.map((r) => {
-                  // the focus player first, then the rest by slot
-                  const rank = (p: { player_id: number }) => (focused && p.player_id === r.focus_player_id ? -1 : p.player_id);
-                  const players = [...r.players].sort((a, b) => rank(a) - rank(b));
-                  const focus = r.players.find((p) => p.player_id === r.focus_player_id);
-                  return (
-                    <tr key={r.replay_id} className="align-top">
-                      <td>
+          <>
+            <div className="stats">
+              <div className="stat">
+                <span className="s-l">Games</span>
+                <span className="s-v">{fmt(sum.games)}</span>
+                <span className="s-n">{narrowed && scope.games ? `${Math.round((100 * sum.games) / scope.games)}% of ${fmt(scope.games)} ${scopeWords}` : scopeWords === "games" ? "All games" : scopeWords.replace(/ games$/, "")}</span>
+                {sum.both_players > 0 && <span className="s-n">{fmt(sum.both_players)} {sum.both_players === 1 ? "game counts" : "games count"} for both players</span>}
+              </div>
+              <div className="stat">
+                <span className="s-l">Player record</span>
+                <span className="s-v">{record(sum.wins, sum.losses)}</span>
+                {narrowed && (
+                  <span className="s-n">
+                    All {fmt(scope.games)}: {record(scope.wins, scope.losses)}
+                  </span>
+                )}
+              </div>
+              <div className="stat">
+                <span className="s-l">Avg length</span>
+                <span className="s-v">{avg(sum)}</span>
+                {narrowed && (
+                  <span className="s-n">
+                    All {fmt(scope.games)}: {avg(scope)}
+                  </span>
+                )}
+              </div>
+            </div>
+            {replays.length === 0 ? (
+              <p className="p-8 text-center text-muted">No game matches. {steps.length ? "Drop a step or widen the filters." : "Widen the filters."}</p>
+            ) : (
+              <table className="games">
+                <thead>
+                  <tr>
+                    <th scope="col" className="c-p">Player</th>
+                    <th scope="col" className="c-o">Opponent</th>
+                    <th scope="col" className="c-m" aria-sort={ariaSort("map")}>
+                      <Link href={sortLink("map")} className="text-on-surface">
+                        Map
+                      </Link>
+                    </th>
+                    <th scope="col" className="c-r">Result</th>
+                    <th scope="col" className="c-l text-right" aria-sort={ariaSort("duration")}>
+                      <Link href={sortLink("duration")} className="text-on-surface">
+                        Length
+                      </Link>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {replays.map((r) => (
+                    <tr key={`${r.replay_id}-${r.player.name}`}>
+                      <td className="c-p">
+                        <Who p={r.player} objects={heroes} />
+                      </td>
+                      <td className="c-o">
+                        <span className="vs">v</span>
+                        <Who p={r.opponent} objects={heroes} />
+                      </td>
+                      <td className="c-m">
                         {/* no prefetch: it runs generateMetadata, a full replay read per row */}
-                        <Link href={`/replays/${r.replay_id}`} prefetch={false} className="block max-w-28 font-bold break-words sm:max-w-none">
+                        <Link href={`/replays/${r.replay_id}`} prefetch={false}>
                           {r.map || "Unknown map"}
                         </Link>
-                        {/* a phone has no room for the Length column, so the length sits under the map */}
-                        <span className="mt-0.5 block text-sm text-muted sm:hidden">{mss(r.duration_ms)}</span>
                       </td>
-                      <td className="hidden sm:table-cell">{matchup(players)}</td>
-                      <td>
-                        <ul className="flex flex-col gap-2">
-                          {players.map((p) => (
-                            <li key={p.player_id} className="flex min-w-0 flex-col gap-1">
-                              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                                <PlayerName name={p.name} race={p.race} className="max-w-48 sm:max-w-none" />
-                                {p.won && <Result won />}
-                              </div>
-                              {/* his heroes in pick order, a quiet second line */}
-                              {p.heroes.length > 0 && (
-                                <ul aria-label="Heroes" className="flex flex-wrap gap-1">
-                                  {p.heroes.map((h, i) => {
-                                    const label = `${byCode[h.code]?.name ?? "Unknown hero"}, level ${h.final_level}`;
-                                    return (
-                                      <li key={i}>
-                                        <ObjIcon code={h.code} objects={byCode} size={20} alt={label} title={label} />
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
+                      <td className="c-r">
+                        <ResultMark won={r.player.won} />
                       </td>
-                      {focused && <td className="hidden sm:table-cell">{focus && focus.won !== null && <Result won={focus.won} />}</td>}
-                      <td className="hidden text-right sm:table-cell">{mss(r.duration_ms)}</td>
+                      <td className="c-l text-right">{mss(r.duration_ms)}</td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {total > 0 && (
+              <nav aria-label="Games pages" className="pager">
+                <span>
+                  {fmt(first + 1)}–{fmt(first + replays.length)} of {fmt(total)}
+                </span>
+                {page > 1 ? (
+                  <Link href={href({ page: page === 2 ? null : String(page - 1) })} className="btn btn-line">
+                    Previous
+                  </Link>
+                ) : (
+                  <span aria-disabled="true" className="btn btn-line opacity-50">
+                    Previous
+                  </span>
+                )}
+                {first + LIMIT < total ? (
+                  <Link href={href({ page: String(page + 1) })} className="btn btn-line">
+                    Next
+                  </Link>
+                ) : (
+                  <span aria-disabled="true" className="btn btn-line opacity-50">
+                    Next
+                  </span>
+                )}
+              </nav>
+            )}
+          </>
         )}
         {sql && (
           <details className="border-t">
             <summary className="cursor-pointer px-4 py-3 text-sm text-muted">Show SQL</summary>
-            <pre className="overflow-x-auto px-4 pb-4 text-xs leading-relaxed">
+            <pre className="overflow-x-auto px-4 pb-4 text-xs leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
               {sql + Object.entries(params).map(([k, v]) => `\n-- ${k} = ${v}`).join("")}
             </pre>
           </details>

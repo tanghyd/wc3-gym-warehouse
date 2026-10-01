@@ -205,7 +205,7 @@ export default async function OpenersPage({ searchParams }: PageProps<"/openers"
                       </div>
                     </td>
                     <td className="text-right">
-                      <Link href={href("/", path.map((c, i) => [`opener_${i + 1}`, c]))} prefetch={false} aria-label={`List the games of ${name}`} className="font-bold">
+                      <Link href={href("/", [["opened", path.join(".")]])} prefetch={false} aria-label={`List the games of ${name}`} className="font-bold">
                         {r.games}
                       </Link>
                     </td>

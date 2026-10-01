@@ -40,7 +40,7 @@ test.describe("race control", () => {
       // the race icon with its stone "?" badge, loaded
       const icon = item.getByRole("img", { name });
       await expect(icon).toHaveAttribute("src", `/race-icons/RANDOM_${name.slice(7).toUpperCase().replace(" ", "_")}.png`);
-      expect(await icon.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+      await expect.poll(() => icon.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBeGreaterThan(0);
     }
   });
 

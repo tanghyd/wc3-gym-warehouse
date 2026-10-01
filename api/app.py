@@ -14,18 +14,18 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 
 from compile import (
+    OPPONENTS_SQL,
     REPLAY_SQL,
-    ROWS_SQL,
     BadRequest,
     Model,
     ObjectsRequest,
     QueryRequest,
     SearchRequest,
-    array,
     compile_objects,
     compile_query,
     compile_search,
     race_value,
+    tuples,
 )
 
 CH_URL = os.environ.get("CLICKHOUSE_URL", "http://clickhouse:8123")
@@ -131,30 +131,42 @@ def _won(team_id: int, winning_team_id: int) -> bool | None:
     return None if winning_team_id < 0 else team_id == winning_team_id
 
 
+def _side(r: dict[str, Any]) -> dict[str, Any]:
+    """One player of a listed player-game: name, race value, result and heroes in pick order."""
+    return {
+        "name": r["player"], "race": race_value(r["race"], r["random"]),
+        "won": None if r["result"] == "unknown" else r["result"] == "win",
+        "heroes": [{"code": c, "level": lv} for c, lv in zip(r["heroes"], r["hero_levels"], strict=True)],
+    }
+
+
 @app.post("/search")
 def search(req: SearchRequest) -> dict[str, Any]:
+    """Player-games of the Player side: the summary and the scope counted in one statement,
+    one page of the list in another, and each listed game's opponent row."""
     try:
-        sql, params = compile_search(req, model("player_games"))
+        stats_sql, rows_sql, params = compile_search(req, model("player_games"))
     except BadRequest as e:
         raise HTTPException(400, str(e)) from e
-    focus = {r["replay_id"]: r["focus_player_id"] for r in run(sql, params)}
-    rows = []
-    if focus:
-        for r in run(ROWS_SQL, {"ids": array(focus)}):
-            rows.append({
-                "replay_id": r["replay_id"], "map": r["map"], "matchup": r["matchup"],
-                "duration_ms": r["duration_ms"], "winning_team_id": r["winning_team_id"],
-                "download_url": None,  # no public file host for source_key yet
-                "focus_player_id": focus[r["replay_id"]],
-                "players": [
-                    {
-                        "player_id": pid, "name": name, "race": race_value(race, random), "team_id": team, "won": _won(team, r["winning_team_id"]),
-                        "heroes": [{"code": code, "final_level": level} for _slot, code, level in heroes],
-                    }
-                    for pid, name, race, random, team, heroes in r["players"]
-                ],
-            })
-    return {"replays": rows, "sql": sql, "params": params}
+    s = run(stats_sql, params)[0]
+    rows = run(rows_sql, params)
+    pairs = tuples((r["replay_id"], r["opponent_id"]) for r in rows)
+    opponents = {(o["replay_id"], o["player_id"]): o for o in run(OPPONENTS_SQL, {"pairs": pairs})} if rows else {}
+    return {
+        "total": s["games"],
+        # both_players: games where both players fit the Player side, so each counts twice
+        "summary": {k: s[k] for k in ("games", "wins", "losses", "duration_ms_total")} | {"both_players": s["games"] - s["replays"]},
+        "scope": {k: s[f"scope_{k}"] for k in ("games", "wins", "losses", "duration_ms_total")},
+        "replays": [
+            {
+                "replay_id": r["replay_id"], "map": r["map"], "duration_ms": r["duration_ms"],
+                "player": _side(r), "opponent": _side(opponents[(r["replay_id"], r["opponent_id"])]),
+            }
+            for r in rows
+        ],
+        "sql": f"{stats_sql};\n\n{rows_sql}",
+        "params": params,
+    }
 
 
 @app.get("/replays/{replay_id}")

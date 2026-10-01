@@ -4,8 +4,10 @@ import { expect, test } from "@playwright/test";
 // Full-page screenshots for a look in both themes, written to shots/ (gitignored).
 const PAGES = [
   ["search", "/"],
-  // a Night Elf build against an Orc one: timing on two steps, a hero, an outcome
-  ["search-build", `/?race=NE&result=won&steps=${encodeURIComponent("eate@-120,eaom~20,Edem")}&opponent_race=OC&opp_steps=ofor`],
+  // the spec's example: Demon Hunter first and 5 Archers by 6:00, against a Blademaster-first Orc
+  ["search-build", `/?race=NE&steps=${encodeURIComponent("hero:Edem#1,trained:earc*5@-360")}&opponent_race=OC&opp_steps=${encodeURIComponent("hero:Obla#1")}`],
+  // two alternatives, a then step within 1:30, one base by 8:00, and an Openers path on a Random Undead
+  ["search-groups", `/?race=UD,RU&steps=${encodeURIComponent("hero:Udea#1,~90trained:ugho*6|hero:Ulic#1,!expand@-480")}&opened=usep.uaod&result=won`],
   // the Night Elf tree, open down to the sixth building
   ["openers", "/openers?race=NE&open=eate&open=eate.eaom&open=eate.eaom.eden&open=eate.eaom.eden.etoa&open=eate.eaom.eden.etoa.edob"],
   // the Undead tree by best win rate, open down to a Slaughterhouse sixth
@@ -48,13 +50,24 @@ for (const width of [1280, 390]) {
           expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(BACKGROUND[theme]);
           if (width === 390) expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
-          // the object picker open on Player 2's next step
+          // the pickers on the Player's next step: Trained, Hired, Learned skill and Hero, then a step's settings
           if (name === "search-build") {
-            const p2 = page.getByRole("region", { name: "Player 2" });
-            await p2.getByRole("button", { name: "Add step" }).click();
-            await p2.getByRole("button", { name: "Timing for step 1" }).click();
-            await p2.screenshot({ path: shot("-picker") });
-            if (width === 390) expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+            const player = page.getByRole("region", { name: "Player", exact: true });
+            for (const kind of ["Trained", "Hired", "Learned skill", "Hero"]) {
+              await player.getByRole("button", { name: "Add step" }).last().click();
+              await player.getByRole("menuitem", { name: kind, exact: true }).click();
+              const picker = player.getByRole("group", { name: /^Objects for step/ });
+              await picker.locator(".opt").first().waitFor();
+              if (kind !== "Hero") await picker.locator(".col-left .opt").nth(1).click();
+              await player.screenshot({ path: shot(`-picker-${kind.toLowerCase().replace(" ", "-")}`) });
+              if (width === 390) expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+              await picker.getByRole("searchbox", { name: "Find by name" }).press("Escape");
+            }
+            await player.getByRole("button", { name: /^Step 2: Trained Archer/ }).click();
+            await player.screenshot({ path: shot("-settings") });
+            await player.getByRole("button", { name: "Race: Night Elf" }).click();
+            await player.getByRole("menuitem", { name: /^Random/ }).click();
+            await page.screenshot({ path: shot("-races"), clip: { x: 0, y: 0, width, height: Math.round(page.viewportSize()!.height * 1.2) } });
           }
 
           // the timeline's other view

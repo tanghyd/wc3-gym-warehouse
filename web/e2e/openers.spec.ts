@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { search, strip, stripOf } from "./helpers";
 
 // The openers tree on /openers: each level equals POST /query's answer for that prefix.
 const API = process.env.API_URL ?? "http://api:8000";
@@ -77,8 +78,8 @@ test.describe("openers tree", () => {
     await rows(page).first().getByRole("link", { name: `List the games of ${name[root[0].code]}` }).click();
     await expect(page).toHaveURL(/^[^?]*\/\?.*patch=2\.0/);
     await expect(page.getByRole("combobox", { name: "Patch" })).toHaveValue("2.0");
-    const res = await request.post(`${API}/search`, { data: { filters: { ...filters, opener_1: [root[0].code] } } });
-    await expect(page.locator("tbody tr")).toHaveCount((await res.json()).replays.length);
+    const want = await search(request, { filters: { patch: ["2.0"] }, player: { race: ["NE"], opened_with: [root[0].code] } });
+    expect(await strip(page)).toEqual(stripOf(want));
   });
 
   test("best win rate puts rows from 10 games up first and keeps the sort while a row opens", async ({ page, request }) => {
@@ -159,18 +160,17 @@ test.describe("openers tree", () => {
     const link = row.getByRole("link", { name: `List the games of ${name[kids[0].code]}` });
     await expect(link).toHaveText(String(kids[0].games));
     await link.click();
-    await expect(page).toHaveURL(new RegExp(`/\\?race=NE&opponent_race=OC&opener_1=${root[0].code}&opener_2=${kids[0].code}$`));
+    await expect(page).toHaveURL(new RegExp(`/\\?race=NE&opponent_race=OC&opened=${root[0].code}\\.${kids[0].code}$`));
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Replays");
-    // the list is POST /search's games of that opener, each game once and any result: the first 100 by id
-    const opened = { ...filters, opener_1: [root[0].code], opener_2: [kids[0].code] };
-    const res = await request.post(`${API}/search`, { data: { filters: opened } });
-    const want: string[] = (await res.json()).replays.map((r: { replay_id: string }) => r.replay_id);
-    expect(want.length).toBeGreaterThan(0);
-    await expect(page.locator("tbody tr")).toHaveCount(want.length);
-    expect(await page.locator('tbody a[href^="/replays/"]').evaluateAll((as) => as.map((a) => a.getAttribute("href")!.split("/").pop()))).toEqual(want);
-    const total: number = (await (await request.post(`${API}/query`, { data: { measures: ["replays"], filters: opened } })).json()).rows[0].replays;
-    await expect(page.locator(".bar .chip")).toHaveText(total > 100 ? "100+" : String(total));
-    await expect(page.getByRole("group", { name: "Opener" }).getByRole("img")).toHaveCount(2);
+    // the list is POST /search's player-games of that opener: an Opened with condition on the Player side
+    const want = await search(request, { player: { race: ["NE"], opened_with: [root[0].code, kids[0].code] }, opponent: { race: ["OC"] } });
+    expect(want.total).toBe(kids[0].games);
+    expect(await strip(page)).toEqual(stripOf(want));
+    await expect(page.getByRole("group", { name: "Opened with" }).getByRole("img")).toHaveCount(2);
+    // its remove button drops the condition
+    await page.getByRole("button", { name: "Remove the opener" }).click();
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page).not.toHaveURL(/opened=/);
   });
 
   test("a race with no game says what to widen", async ({ page }) => {

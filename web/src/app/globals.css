@@ -211,6 +211,143 @@
   .table td { padding: 10px 12px; }
   .table tbody tr { border-top: 1px solid var(--color-border); }
   .table tbody tr:hover { background: rgba(var(--v-theme-on-surface), 0.04); }
+
+  /* A quiet text button in link gold. */
+  .btn-quiet {
+    display: inline-flex; align-items: center; height: 38px; padding: 0 10px; border-radius: 0.35rem;
+    color: rgb(var(--v-theme-primary-text)); cursor: pointer;
+  }
+  .btn-quiet:hover:not(:disabled) { background: rgba(var(--v-theme-on-surface), 0.06); }
+  .btn-quiet:disabled { opacity: 0.4; cursor: default; }
+  .btn-line:disabled { opacity: 0.5; cursor: default; }
+
+  /* A field on a banner: the banner's ink over a 40% edge. */
+  .field.on-bar { height: 32px; background: transparent; color: rgb(var(--v-theme-on-banner)); border-color: rgba(var(--v-theme-on-banner), 0.4); font-size: 0.875rem; }
+  .field.on-bar option { color: rgb(var(--v-theme-on-surface)); background: rgb(var(--v-theme-surface)); }
+
+  /* The one filter row of a page, and a from-to pair of fields. */
+  .filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding: 16px; }
+  .filters > * { flex: 1 1 180px; }
+  .filters > :last-child { flex: 0 1 auto; }
+  .range { display: flex; align-items: center; gap: 8px; }
+  .range .field { width: 76px; }
+
+  /* The sides panel: Player and Opponent under their banners, the swap button on the seam. */
+  .versus { display: grid; grid-template-columns: minmax(0, 1fr) 0 minmax(0, 1fr); }
+  .versus > .side { min-width: 0; display: flex; flex-direction: column; }
+  .versus > .side:first-child > .bar { border-radius: calc(0.35rem - 1px) 0 0 0; }
+  .versus > .side:last-child > .bar { border-radius: 0 calc(0.35rem - 1px) 0 0; padding-left: 32px; }
+  .versus > .side:last-child { border-left: 1px solid var(--color-border); }
+  .swap { position: relative; z-index: 2; }
+  .swap-btn {
+    position: absolute; top: 6px; left: -20px; width: 40px; height: 40px; border-radius: 9999px;
+    display: grid; place-items: center; cursor: pointer;
+    background: rgb(var(--v-theme-surface)); color: rgb(var(--v-theme-on-surface));
+    border: 1px solid oklch(80% 0.06 80 / 0.6); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+  .swap-btn .v { display: none; }
+  .side-body { flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 16px; }
+  .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: end; }
+
+  /* A step: its icon, kind word over object name, time chips, then its tools. */
+  .steps .step { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 6px 0; }
+  .steps .num { font-size: 0.8125rem; color: var(--color-muted); text-align: right; }
+  .step-main { display: flex; align-items: center; gap: 10px; min-width: 0; border-radius: 0.35rem; text-align: left; cursor: pointer; }
+  .step-main[aria-expanded="true"] .obj { text-decoration: underline; text-decoration-color: rgb(var(--v-theme-primary)); text-underline-offset: 3px; }
+  .st { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+  .st .kind { font-size: 0.8125rem; color: var(--color-muted); }
+  .st .obj { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .quals { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+  .qual {
+    display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; border-radius: 9999px;
+    border: 1px solid var(--color-border); font-size: 0.8125rem; white-space: nowrap;
+  }
+  .tools { display: flex; }
+  .steps .link { display: flex; padding-left: 28px; }
+  .seg-xs { display: inline-flex; overflow: hidden; border: 1px solid var(--color-border); border-radius: 9999px; font-size: 0.75rem; }
+  .seg-xs button { padding: 1px 9px; color: var(--color-muted); cursor: pointer; }
+  .seg-xs button + button { border-left: 1px solid var(--color-border); }
+  .seg-xs button[aria-pressed="true"] { background: rgb(var(--v-theme-surface-light)); color: rgb(var(--v-theme-on-surface)); font-weight: 700; }
+  .seg-xs button:disabled { opacity: 0.4; cursor: default; }
+  .settings { display: flex; flex-direction: column; gap: 14px; padding: 12px; }
+  /* Alternatives: boxes of steps with "or" between them. */
+  .alt { border: 1px solid var(--color-border); border-radius: 0.35rem; padding: 6px 10px 10px; }
+  .or { padding: 6px 0 6px 12px; font-size: 0.8125rem; font-weight: 700; color: var(--color-muted); }
+
+  /* The summary strip: three figures, each a label, a number and one muted line. */
+  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-border); }
+  .stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 14px 16px; }
+  .stat + .stat { border-left: 1px solid var(--color-border); }
+  .s-l, .s-n { font-size: 0.875rem; color: var(--color-muted); }
+  .s-v { font-size: 1.75rem; font-weight: 700; line-height: 1.15; font-variant-numeric: lining-nums proportional-nums; }
+
+  /* The games list: one player-game a row, two lines; a card of three lines on a phone. */
+  .games { width: 100%; border-collapse: collapse; text-align: left; }
+  .games th { padding: 10px 16px; border-bottom: 1px solid var(--color-border); font-size: 0.875rem; font-weight: 700; white-space: nowrap; }
+  .games td { padding: 8px 16px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+  .games tbody tr:hover { background: rgba(var(--v-theme-on-surface), 0.04); }
+  .games th[aria-sort] a { color: rgb(var(--v-theme-primary-text)); }
+  .games .c-p, .games .c-o { width: 28%; }
+  .games .vs { display: none; }
+  .heroes { display: flex; gap: 12px; margin-top: 4px; }
+  .heroes li { position: relative; display: block; }
+  .heroes img { width: 22px; height: 22px; border-radius: 2px; box-shadow: 0 0 0 1px var(--tile-edge); }
+  /* a hero's final level on the icon's corner, like the in-game hero level */
+  .lv {
+    position: absolute; right: -7px; bottom: -4px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 3px;
+    background: rgb(var(--v-theme-banner)); color: rgb(var(--v-theme-on-banner)); font-size: 10px; font-weight: 700; line-height: 14px; text-align: center;
+    box-shadow: 0 0 0 1px oklch(80% 0.06 80 / 0.6);
+  }
+  .res { display: inline-flex; align-items: center; gap: 6px; }
+  .sq { width: 12px; height: 12px; border-radius: 2px; }
+  .pager { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 16px; font-size: 0.875rem; color: var(--color-muted); }
+  .pager > span:first-child { margin-right: 8px; }
+  .pager .btn { height: 32px; padding: 0 12px; color: rgb(var(--v-theme-on-surface)); }
+
+  @media (max-width: 639px) {
+    .filters > * { flex: 1 1 140px; }
+    .filters > :last-child { flex: 1 1 100%; }
+    .range .field { flex: 1; width: auto; }
+
+    .versus { grid-template-columns: minmax(0, 1fr); }
+    .versus > .side:first-child > .bar { border-radius: calc(0.35rem - 1px) calc(0.35rem - 1px) 0 0; }
+    .versus > .side:last-child > .bar { border-radius: 0; padding-left: 16px; }
+    .versus > .side:last-child { border-left: 0; }
+    .swap { height: 0; }
+    .swap-btn { left: auto; right: 16px; top: -20px; }
+    .swap-btn .h { display: none; }
+    .swap-btn .v { display: grid; }
+    .side-body { padding: 12px; }
+    .pair { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    .steps .step { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "s x" "q q"; gap: 4px 10px; }
+    .steps .num, .tools .move { display: none; }
+    .step-main { grid-area: s; }
+    .quals { grid-area: q; justify-content: flex-start; padding-left: 48px; }
+    .quals:empty { display: none; }
+    .tools { grid-area: x; }
+    .steps .link { padding-left: 8px; }
+
+    .stats { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .stat:nth-child(3) { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--color-border); }
+    .stat { padding: 12px; }
+    .s-v { font-size: 1.4rem; }
+
+    .games thead { display: none; }
+    .games, .games tbody { display: block; }
+    .games tr {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "p r" "o o" "m l";
+      gap: 4px 12px; padding: 12px; border-bottom: 1px solid var(--color-border);
+    }
+    .games td { display: block; padding: 0; border: 0; width: auto !important; min-width: 0; }
+    .games .c-p { grid-area: p; }
+    .games .c-o { grid-area: o; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .games .c-o .vs { display: inline; font-size: 0.875rem; color: var(--color-muted); }
+    .games .c-m { grid-area: m; font-size: 0.875rem; }
+    .games .c-r { grid-area: r; }
+    .games .c-l { grid-area: l; font-size: 0.875rem; color: var(--color-muted); }
+    .games .heroes { display: none; }
+    .pager { padding: 12px; }
+  }
 }
 
 /* The gold button's lower edge and drop shadow, softer on the light ground, and the dark frame of a tile. */

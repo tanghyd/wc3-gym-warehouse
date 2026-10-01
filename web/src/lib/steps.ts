@@ -1,65 +1,112 @@
-// Build-order steps: the order kinds, which objects fit a race, and the step codec of the URL.
+// Strategy steps: the step kinds, the URL codec of a side's steps, and the POST /search step.
 
-/** The kinds a step can name: mappings kind -> [label, replay_events event_type]. */
+/** A step kind: its word, the API kind it searches, and its picker (none for Expanded). */
 export const KINDS = {
-  building: ["Built", "building"],
-  unit: ["Trained", "unit"],
-  hired: ["Hired", "unit"],
-  upgrade: ["Researched", "upgrade"],
-  hero: ["Hero", "hero_trained"],
-  hero_skill: ["Learned skill", "hero_skill"],
-  item: ["Bought", "item"],
+  built: { label: "Built", api: "building", picker: "building" },
+  trained: { label: "Trained", api: "unit", picker: "unit" },
+  hired: { label: "Hired", api: "unit", picker: "hired" },
+  researched: { label: "Researched", api: "upgrade", picker: "upgrade" },
+  hero: { label: "Hero", api: "hero", picker: "hero" },
+  skill: { label: "Learned skill", api: "skill", picker: "skill" },
+  bought: { label: "Bought", api: "item", picker: "item" },
+  expand: { label: "Expanded", api: "building", picker: null },
 } as const;
 export type Kind = keyof typeof KINDS;
 
-/** An object a step can name: a mappings row of a step kind, with its icon path and race letter. */
-export type StepObject = { code: string; name: string; kind: Kind; hero: string; icon: string | null; letter: string };
-
-/** The race letter in an object code, per race code; Night Elf is e. */
-export const LETTERS: Record<string, string> = { HU: "h", OC: "o", NE: "e", UD: "u" };
-
-// Codes whose letter names no race: War Drums Damage Increase (w) is Orc's.
-const OWN_LETTER: Record<string, string> = { Rwdm: "o" };
+/** Each race's town hall: an order of one is an expansion. */
+export const HALLS: Record<string, string> = { HU: "htow", OC: "ogre", NE: "etol", UD: "unpl" };
 
 /**
- * The letter of an object's race: first in a building, unit or hero code, after R in an upgrade code.
- * A skill takes its hero's letter, so Searing Arrows (AHfa) is the Priestess of the Moon's.
+ * One step as the URL holds it. `codes` are object codes, or one "@source" for every object of a
+ * picker group, such as "@ntav" for any Tavern hero; Expanded has none. Times are whole seconds.
  */
-export function letterOf(o: Omit<StepObject, "icon" | "letter">, heroCodes: Record<string, string>) {
-  const code = o.kind === "hero_skill" ? (heroCodes[o.hero] ?? "") : o.code;
-  return OWN_LETTER[code] ?? code[o.kind === "upgrade" ? 1 : 0]?.toLowerCase() ?? "";
-}
+export type Step = {
+  kind: Kind;
+  codes: string[];
+  count: number;
+  from: number | null;
+  to: number | null;
+  link: "and" | "then";
+  within: number | null;
+  nth: number | null;
+  negate: boolean;
+};
+/** A side's steps: groups of steps, any of which may hold. */
+export type Groups = Step[][];
 
-/** Whether a race can order an object. An item, n (neutral) and any other letter fit every race; so does no race or Random. */
-export function fits(o: StepObject, race: string) {
-  const own = LETTERS[race];
-  if (!own || o.kind === "item") return true;
-  return o.letter === own || !Object.values(LETTERS).includes(o.letter);
-}
+export const newStep = (kind: Kind): Step => ({ kind, codes: [], count: 1, from: null, to: null, link: "and", within: null, nth: kind === "hero" ? 1 : null, negate: false });
 
-/** A step as the URL holds it: whole seconds, null for no limit. */
-export type Step = { code: string; within: number | null; from: number | null; to: number | null };
+// [~[within]][!]kind[:codes][#nth][*count][@from-to]
+const TOKEN = /^(~(\d*))?(!)?([a-z]+)(?::([A-Za-z0-9_@.]+))?(?:#([1-3]))?(?:\*([1-9]))?(?:@(\d*)-(\d*))?$/;
+const CODE = /^@?[A-Za-z0-9_]{1,8}$/;
 
-const TOKEN = /^([A-Za-z0-9_]{1,8})(?:~(\d+))?(?:@(\d*)-(\d*))?$/;
-
-/** "eate@-120,eaom~20": a code, then ~ seconds after the step before, then @ from-to seconds of game time. */
-export function decodeSteps(value: string): Step[] {
+/**
+ * "hero:Edem#1,trained:earc*5@-360|!expand@-540": groups split by "|", steps by ",". A step is
+ * its kind and codes (split by "."), then #nth hero, *count and @from-to seconds of game time.
+ * A leading ~ links it to the step above with "then", ~90 within 90 s; a leading ! is "did not happen".
+ */
+export function decodeGroups(value: string): Groups {
   const n = (v?: string) => (v ? Number(v) : null);
-  return value.split(",").flatMap((t) => {
-    const m = TOKEN.exec(t);
-    return m ? [{ code: m[1], within: n(m[2]), from: n(m[3]), to: n(m[4]) }] : [];
-  });
+  return value
+    .split("|")
+    .map((g) =>
+      g.split(",").flatMap((t, i): Step[] => {
+        const m = TOKEN.exec(t);
+        if (!m || !(m[4] in KINDS)) return [];
+        const kind = m[4] as Kind;
+        const codes = (m[5] ?? "").split(".").filter((c) => CODE.test(c));
+        if (!codes.length && kind !== "expand") return [];
+        const then = m[1] !== undefined && i > 0;
+        return [{ kind, codes, count: Number(m[7] ?? 1), from: n(m[8]), to: n(m[9]), link: then ? "then" : "and", within: then ? n(m[2]) : null, nth: kind === "hero" ? n(m[6]) : null, negate: !then && !!m[3] }];
+      }),
+    )
+    .filter((g) => g.length)
+    .slice(0, 4);
 }
 
-export function encodeSteps(steps: Step[]) {
-  return steps
-    .map((s) => s.code + (s.within === null ? "" : `~${s.within}`) + (s.from === null && s.to === null ? "" : `@${s.from ?? ""}-${s.to ?? ""}`))
-    .join(",");
+export function encodeGroups(groups: Groups) {
+  return groups
+    .filter((g) => g.length)
+    .map((g) =>
+      g
+        .map((s, i) => {
+          const link = i > 0 && s.link === "then" ? `~${s.within ?? ""}` : "";
+          const time = s.from === null && s.to === null ? "" : `@${s.from ?? ""}-${s.to ?? ""}`;
+          return `${link}${s.negate ? "!" : ""}${s.kind}${s.codes.length ? `:${s.codes.join(".")}` : ""}${s.nth ? `#${s.nth}` : ""}${s.count > 1 ? `*${s.count}` : ""}${time}`;
+        })
+        .join(","),
+    )
+    .join("|");
 }
 
-// The API's bounds on a step: at most 7200 s after the previous one, inside the first 600 minutes.
+/** A step for POST /search. `groupCodes` gives the codes of an "@source" group; Expanded takes the halls of the side's races. */
+export function apiStep(s: Step, races: string[], groupCodes: Record<string, string[]>) {
+  const codes =
+    s.kind === "expand"
+      ? races.length
+        ? [...new Set(races.map((r) => HALLS[r]).filter(Boolean))]
+        : Object.values(HALLS)
+      : s.codes.flatMap((c) => (c.startsWith("@") ? (groupCodes[`${s.kind}${c}`] ?? []) : [c]));
+  return {
+    kind: KINDS[s.kind].api,
+    codes,
+    count: s.count,
+    from_s: s.from,
+    to_s: s.to,
+    link: s.link,
+    within_s: s.link === "then" ? s.within : null,
+    nth: s.nth,
+    negate: s.negate,
+  };
+}
+
+// The API's bounds: a then gap of at most 7200 s, game time inside the first 600 minutes.
 export const MAX_WITHIN = 7200;
 const MAX_TIME = 36000;
+/** Steps in one group, groups on one side, and counted orders in one then chain. */
+export const MAX_STEPS = 8;
+export const MAX_GROUPS = 4;
+export const MAX_CHAIN_ORDERS = 32;
 
 /** "5" (minutes) or "5:30" as whole seconds; null when blank, not a time or past 600:00. */
 export function parseMss(v: string): number | null {
@@ -68,3 +115,14 @@ export function parseMss(v: string): number | null {
   const s = Math.round(Number(m[1]) * 60 + Number(m[2] ?? 0));
   return s <= MAX_TIME ? s : null;
 }
+
+/** A step's game time in words: "by 6:00", "from 3:00", "3:00 to 6:00", or "". */
+export function timeWords(s: Pick<Step, "from" | "to">) {
+  const t = (x: number) => `${Math.floor(x / 60)}:${String(x % 60).padStart(2, "0")}`;
+  if (s.from !== null && s.to !== null) return `${t(s.from)} to ${t(s.to)}`;
+  if (s.to !== null) return `by ${t(s.to)}`;
+  return s.from !== null ? `from ${t(s.from)}` : "";
+}
+
+/** "1st hero" for a hero step with nth, else the kind's word. */
+export const kindWord = (s: Pick<Step, "kind" | "nth">) => (s.kind === "hero" && s.nth ? `${["1st", "2nd", "3rd"][s.nth - 1]} hero` : KINDS[s.kind].label);

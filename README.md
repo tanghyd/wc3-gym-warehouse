@@ -99,7 +99,22 @@ The catalog lives on the dbt models. `meta.semantic` in `dbt/models/marts/marts.
 | `GET /catalog` | every semantic model, its dimensions with types, its measures |
 | `POST /query` | measures grouped by dimensions, under filters and an optional build order |
 | `POST /objects` | a step picker's groups for a kind (building, unit, hired, upgrade, hero, skill, item) and a side's race values, each object with the player-games in scope that ordered it |
-| `POST /search` | the replays holding a player who matches and whose opponent matches `others` |
+| `POST /search` | one page of the Player side's player-games, with the Player's figures (`summary`) and the same over the scope (`scope`) |
+
+```
+POST /search
+{ "filters": { "map": ["Echo Isles 2.2"], "duration_ms": { "gte": 120000 } },
+  "player":   { "race": ["NE"], "name": null, "outcome": "win", "opened_with": [],
+                "groups": [ { "steps": [ { "kind": "hero", "codes": ["Edem"], "nth": 1 },
+                                         { "kind": "unit", "codes": ["earc"], "count": 5, "to_s": 360 } ] } ] },
+  "opponent": { "race": ["OC"], "groups": [ { "steps": [ { "kind": "hero", "codes": ["Obla"], "nth": 1 } ] } ] },
+  "sort": "-added", "limit": 25, "offset": 0 }
+```
+
+- A side takes race values (`NE` is a picked Night Elf, `RN` a Random player who rolled Night Elf, `R` a Random player with no played race), a battle tag, the openers of an Openers row, and 1 to 4 groups of up to 8 steps. A group holds when all its steps hold; the side matches when any group holds. Only the Player has an outcome, because the Opponent's is its reverse.
+- A step is at least `count` orders of any of `codes` (kind `building`, `unit`, `upgrade`, `item`, `hero` or `skill`; a skill count is the skill level), each inside `from_s` to `to_s`. A `then` step comes after the step above, within `within_s` when set; each run of `then` steps is one `sequenceMatch` with a counted step's condition repeated (at most 32 orders). An `and` step is its own condition, and `negate` makes it "did not happen". `nth` on a hero step reads `player_games.heroes`.
+- The scope is the replay filters, both sides' races and names; `summary` adds the outcome, the openers and the steps. Both count player-games: a mirror game where both players fit the Player side counts once for each, a win and a loss, so it pulls the record toward 50%. `summary.both_players` says how many games count twice, and the page prints it.
+- `sort` is `added` (when the bucket got the replay), `duration` or `map`, with `-` for descending. The answer holds the two statements it ran in `sql`.
 
 ```
 POST /query
@@ -115,7 +130,7 @@ A filter is a list of values or a `{gte, lte}` range. A step names an event type
 
 ## The replay inspector (`web/`)
 
-A Next.js app in the wc3-gym-frontend look, light and dark, at http://localhost:3000. `/` lists the replays and searches build orders (`POST /search`): Player 1, whose result the list reports, and his opponent each take a race, a name, an outcome and ordered steps, each step an order of one object with optional timing; map, patch and length scope the game. `/openers` is the opener tree of one race, a level per building, most played or best win rate first; a row counts games won or lost, one per player, and links to its games on `/` (`POST /query` on `player_games.opener_N`). The URL holds every filter, step and open row, so a link rebuilds the page. `/replays/<id>` shows one game: the players, their heroes and skills, APM per minute, both build orders and the chat (`GET /replays/{id}`, plus one `POST /query` on `mappings` for the names). Server components read the API at `API_URL` (`http://api:8000` in compose), so the browser never calls it. The object and race icons live in `web/public/`.
+A Next.js app in the wc3-gym-frontend look, light and dark, at http://localhost:3000. `/` searches strategies (`POST /search`): the Player and the Opponent each take a race from the race menu (with a Random submenu and an "Include Random" switch), a battle tag and steps, picked from cascading pickers (`POST /objects`) and grouped into alternatives; the Player also takes an outcome, and Swap trades the sides. Map, patch and length scope the games. The Games card lists one player-game a row, 25 a page, under three figures: games, the Player's record and the average length, each against its scope. `/openers` is the opener tree of one race, a level per building, most played or best win rate first; a row counts games won or lost, one per player, and links to its games on `/` as an "Opened with" condition (`POST /query` on `player_games.opener_N`). The URL holds every filter, step and open row, so a link rebuilds the page. `/replays/<id>` shows one game: the players, their heroes and skills, APM per minute, both build orders and the chat (`GET /replays/{id}`, plus one `POST /query` on `mappings` for the names). Server components read the API at `API_URL` (`http://api:8000` in compose), so the browser never calls it. The object and race icons live in `web/public/`.
 
 | Recipe | Does |
 |---|---|

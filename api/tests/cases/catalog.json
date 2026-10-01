@@ -18,6 +18,20 @@
         ],
         "steps": false
       },
+      "objects": {
+        "dimensions": {
+          "kind": "LowCardinality(String)",
+          "code": "String",
+          "name": "String",
+          "source_code": "String",
+          "source_name": "String",
+          "race": "LowCardinality(String)"
+        },
+        "measures": [
+          "objects"
+        ],
+        "steps": false
+      },
       "player_games": {
         "dimensions": {
           "replay_id": "String",

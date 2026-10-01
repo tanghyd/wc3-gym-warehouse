@@ -1,0 +1,16 @@
+{
+  "route": "/search",
+  "request": {
+    "filters": {
+      "player": [
+        "Medusa#31315"
+      ]
+    }
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "detail": "'player' is not a replay filter: use replay_id, map, patch, minutes, duration_ms"
+    }
+  }
+}

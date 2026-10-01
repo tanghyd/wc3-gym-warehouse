@@ -3,21 +3,18 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cache } from "react";
 import { raceValue } from "./races";
-import { KINDS, letterOf, type StepObject } from "./steps";
+import { apiStep, KINDS, type Kind } from "./steps";
 
 const API_URL = process.env.API_URL ?? "http://api:8000";
 
 export type Player = { player_id: number; name: string; race: string; team_id: number; won: boolean | null };
 export type Hero = { slot: number; code: string; final_level: number };
 export type ReplayPlayer = Player & { apm: number; apm_per_minute: number[]; heroes: Hero[] };
-/** A player of a search row: his heroes in pick order. */
-export type RowPlayer = Player & { heroes: Omit<Hero, "slot">[] };
 export type GameEvent = { player_id: number; time_ms: number; event_type: string; code: string; hero_code: string | null };
 export type Chat = { time_ms: number; player_id: number; mode: string; message: string };
 type Header = { replay_id: string; map: string; matchup: string; duration_ms: number; winning_team_id: number; download_url: string | null };
 /** patch: the game patch from the build number, such as "3.0"; "" for a build with no patch row. */
 export type Replay = Header & { patch: string; players: ReplayPlayer[]; events: GameEvent[]; chat: Chat[] };
-export type ReplayRow = Header & { focus_player_id: number; players: RowPlayer[] };
 /** Name and icon path per object code; a code in no mappings row has no name. */
 export type Objects = Record<string, { name?: string; icon: string | null }>;
 
@@ -45,16 +42,24 @@ export const getReplay = cache((id: string) => api<Replay>(`/replays/${encodeURI
 
 /** A dimension's allowed values, or a numeric range. */
 export type Filters = Record<string, (string | number)[] | { gte?: number; lte?: number }>;
-export type ApiStep = { type: string; code: string; within_prev_s: number | null; from_min: number | null; to_min: number | null };
 
-type Search = { replays: ReplayRow[]; sql: string; params: Record<string, string>; refused?: string };
+/** One player of a listed player-game: his race value, his result and his heroes in pick order. */
+export type SidePlayer = { name: string; race: string; won: boolean | null; heroes: { code: string; level: number }[] };
+export type GameRow = { replay_id: string; map: string; duration_ms: number; player: SidePlayer; opponent: SidePlayer };
+/** Player-games counted: games, wins, losses and their summed length. */
+export type Tally = { games: number; wins: number; losses: number; duration_ms_total: number };
+export type SearchSide = { race: string[]; name: string | null; opened_with: string[]; groups: { steps: ReturnType<typeof apiStep>[] }[]; outcome?: "win" | "loss" | null };
+export type SearchRequest = { filters: Filters; player: SearchSide; opponent: SearchSide; sort: string; limit: number; offset: number };
+/** both_players: games where both players fit the Player side, so each counts once per player. */
+export type SearchAnswer = { total: number; summary: Tally & { both_players: number }; scope: Tally; replays: GameRow[]; sql: string; params: Record<string, string>; refused?: string };
 
-/** POST /search: the focus player's filters and steps, then his opponent's. A refused request answers its reason. */
-export async function searchReplays(body: { filters: Filters; steps?: ApiStep[]; others?: { filters: Filters; steps: ApiStep[] }[]; limit: number }): Promise<Search> {
+/** POST /search: one page of the Player side's player-games, the summary and the scope. A refused request answers its reason. */
+export async function searchGames(body: SearchRequest): Promise<SearchAnswer> {
   try {
-    return (await api<Search>("/search", body))!;
+    return (await api<SearchAnswer>("/search", body))!;
   } catch (e) {
-    if (e instanceof Refused) return { replays: [], sql: "", params: {}, refused: e.message };
+    const none = { games: 0, wins: 0, losses: 0, duration_ms_total: 0 };
+    if (e instanceof Refused) return { total: 0, summary: { ...none, both_players: 0 }, scope: none, replays: [], sql: "", params: {}, refused: e.message };
     throw e;
   }
 }
@@ -76,19 +81,6 @@ let iconFiles: Record<string, string> | undefined;
 function iconOf(code: string) {
   iconFiles ??= JSON.parse(readFileSync(join(process.cwd(), "public/icons.json"), "utf8")) as Record<string, string>;
   return iconFiles[code] ? `/icons/${iconFiles[code]}` : null;
-}
-
-/** Every object a build-order step can name, by name. */
-export async function stepObjects(): Promise<StepObject[]> {
-  const rows = await query<Omit<StepObject, "icon" | "letter">>({
-    model: "mappings",
-    dimensions: ["code", "name", "kind", "hero"],
-    filters: { kind: Object.keys(KINDS) },
-    order_by: ["name", "code"],
-    limit: 10000,
-  });
-  const heroCodes = Object.fromEntries(rows.filter((r) => r.kind === "hero").map((r) => [r.name, r.code]));
-  return rows.filter((r) => r.name).map((r) => ({ ...r, icon: iconOf(r.code), letter: letterOf(r, heroCodes) }));
 }
 
 /** Names from the mappings model in one read, icons from public/icons.json. */
@@ -126,4 +118,21 @@ export type PickerGroup = { source: { code: string; name: string; icon: string |
 export async function pickerGroups(kind: PickerKind, race: string[], filters: Filters): Promise<PickerGroup[]> {
   const { groups } = (await api<{ groups: { source: { code: string; name: string }; objects: Omit<PickerObject, "icon">[] }[] }>("/objects", { kind, race, filters }))!;
   return groups.map((g) => ({ source: { ...g.source, icon: iconOf(g.source.code) }, objects: g.objects.map((o) => ({ ...o, icon: iconOf(o.code) })) }));
+}
+
+/** The objects of each "@source" step group, keyed "kind@source" such as "hero@ntav": codes, the group's name and icon. */
+export async function stepGroups(keys: { kind: Kind; source: string }[]): Promise<Record<string, { codes: string[]; name: string; icon: string | null }>> {
+  if (!keys.length) return {};
+  const rows = await query<{ kind: string; source_code: string; source_name: string; code: string }>({
+    model: "objects",
+    dimensions: ["kind", "source_code", "source_name", "code"],
+    filters: { source_code: keys.map((k) => k.source) },
+    limit: 10000,
+  });
+  return Object.fromEntries(
+    keys.map(({ kind, source }) => {
+      const mine = rows.filter((r) => r.kind === KINDS[kind].picker && r.source_code === source);
+      return [`${kind}@${source}`, { codes: mine.map((r) => r.code), name: mine[0]?.source_name ?? source, icon: iconOf(source) ?? iconOf(mine[0]?.code ?? "") }];
+    }),
+  );
 }

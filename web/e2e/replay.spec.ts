@@ -7,7 +7,9 @@ const LONG = "aadf11f93e4e86b942973568335e7f7411cebc3cb3f22e241674ea4125d9d905";
 // Fading Autumn 1.3, HU v UD: the parser left UD's third hero with no code, and its skill AUa2 is in no mappings row
 const FADING = "02f31fadbf6319d381151aa63f1e99a3d828c51056b0161b2cfecbbaa338f4ce";
 const UD = "GOODOKOKOK#3144";
+// a race icon's name to its matchup letter; a Random race reads as the race it rolled
 const LETTER: Record<string, string> = { Human: "H", Orc: "O", "Night Elf": "N", Undead: "U", Random: "R" };
+for (const [race, letter] of Object.entries({ Human: "H", Orc: "O", "Night Elf": "N", Undead: "U" })) LETTER[`Random ${race}`] = letter;
 const API = process.env.API_URL ?? "http://api:8000";
 const NE = "thanks#11187";
 const OC = "Okeanos#22605";

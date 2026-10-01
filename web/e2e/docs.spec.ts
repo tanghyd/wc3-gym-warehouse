@@ -8,7 +8,7 @@ test("dbt docs list the warehouse models", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(DOCS);
   // the tree counts come from the parquet files, so a count proves the data loaded
-  const models = page.getByRole("button", { name: "Models 12" });
+  const models = page.getByRole("button", { name: "Models 13" });
   await expect(models).toBeVisible({ timeout: 30_000 });
   await models.click();
   for (const model of ["player_games", "replay_events", "raw_replays"])
@@ -21,7 +21,7 @@ test("dbt docs list the warehouse models", async ({ page }) => {
   await page.screenshot({ path: path.join(__dirname, "shots", "dbt-docs.png"), fullPage: true });
   // every column is declared in YAML, so the Columns tab is never empty (chat has 7)
   await page.goto(DOCS);
-  await page.getByRole("button", { name: "Models 12" }).click();
+  await page.getByRole("button", { name: "Models 13" }).click();
   await page.getByText("chat", { exact: true }).first().click();
   await expect(page.getByRole("tab", { name: /Columns\s*7/ })).toBeVisible();
 });

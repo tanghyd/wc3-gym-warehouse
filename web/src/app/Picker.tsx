@@ -1,11 +1,11 @@
 "use client";
-import { type KeyboardEvent, useEffect, useId, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import type { Filters, PickerGroup, PickerKind, PickerObject } from "@/lib/api";
 import { RaceIcon, Tile } from "@/lib/ui";
 import { loadPicker } from "./actions";
 
 /** What a pick sends back: one object, or every object of one group. */
-export type Pick = { codes: string[]; name: string; icon: string | null };
+export type Pick = { codes: string[]; name: string; icon: string | null; source?: string };
 
 // A cascade's column heads, [group, object]; Hero and Built list their groups as headed sections.
 const HEADS: Partial<Record<PickerKind, [string, string]>> = {
@@ -55,6 +55,9 @@ export function Picker(props: {
   const [q, setQ] = useState("");
   const [active, setActive] = useState<string | null>(null);
   const [drilled, setDrilled] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  // On a phone a drill hides the row that has focus, so focus moves to the other column's head.
+  const refocus = (selector: string) => requestAnimationFrame(() => root.current?.querySelector<HTMLElement>(selector)?.focus());
 
   useEffect(() => {
     let live = true;
@@ -75,7 +78,8 @@ export function Picker(props: {
   const current = shown.find((g) => g.source.code === active) ?? shown[0];
   const heads = HEADS[kind];
   const pickObject = (o: PickerObject) => onPick({ codes: [o.code], name: o.name, icon: o.icon });
-  const pickGroup = (g: PickerGroup) => onPick({ codes: g.objects.map((o) => o.code), name: `Any from ${g.source.name}`, icon: g.source.icon ?? g.objects[0]?.icon ?? null });
+  const pickGroup = (g: PickerGroup) =>
+    onPick({ codes: g.objects.map((o) => o.code), name: `Any from ${g.source.name}`, icon: g.source.icon ?? g.objects[0]?.icon ?? null, source: g.source.code });
   // the right column: the open group's objects, or every match of a search
   const listed = heads && t ? shown.flatMap((g) => g.objects.map((o) => [o, g.source.name] as const)) : (current?.objects ?? []).map((o) => [o, ""] as const);
 
@@ -109,7 +113,7 @@ export function Picker(props: {
   };
 
   return (
-    <div role="group" aria-label={props.label} className="pop picker flex flex-col gap-2.5 p-2.5" onKeyDown={onKey}>
+    <div ref={root} role="group" aria-label={props.label} className="pop picker flex flex-col gap-2.5 p-2.5" onKeyDown={onKey}>
       {kind === "hero" && props.onNth && (
         <div className="flex flex-col gap-1 text-sm">
           <span id={`${id}-nth`} className="text-muted">
@@ -161,10 +165,12 @@ export function Picker(props: {
                     type="button"
                     className="opt"
                     aria-current={!t && g === current ? "true" : undefined}
-                    onClick={() => {
+                    onClick={(e) => {
+                      const hides = getComputedStyle(e.currentTarget.closest(".cascade")!).gridTemplateColumns.split(" ").length === 1;
                       setQ("");
                       setActive(g.source.code);
                       setDrilled(true);
+                      if (hides) refocus(".col-right .back");
                     }}
                   >
                     {groupMark(g)}
@@ -177,7 +183,14 @@ export function Picker(props: {
           </div>
           <div className="col-right min-w-0">
             <div className="colhead">
-              <button type="button" className="back items-center gap-1 font-bold text-primary-text" onClick={() => setDrilled(false)}>
+              <button
+                type="button"
+                className="back items-center gap-1 font-bold text-primary-text"
+                onClick={() => {
+                  setDrilled(false);
+                  refocus('.col-left [aria-current="true"]');
+                }}
+              >
                 <Chevron back />
                 {t ? "Groups" : current?.source.name}
               </button>

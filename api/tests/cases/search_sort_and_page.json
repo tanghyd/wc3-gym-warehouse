@@ -8,60 +8,63 @@
         "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8"
       ]
     },
-    "player": {
-      "name": "Medusa#31315",
-      "outcome": "win"
-    }
+    "sort": "-duration",
+    "limit": 2,
+    "offset": 1
   },
   "response": {
     "status": 200,
     "body": {
-      "total": 2,
+      "total": 6,
       "summary": {
-        "games": 2,
-        "wins": 2,
-        "losses": 0,
-        "duration_ms_total": 809900,
-        "both_players": 0
+        "games": 6,
+        "wins": 3,
+        "losses": 3,
+        "duration_ms_total": 3494238,
+        "both_players": 3
       },
       "scope": {
-        "games": 2,
-        "wins": 2,
-        "losses": 0,
-        "duration_ms_total": 809900
+        "games": 6,
+        "wins": 3,
+        "losses": 3,
+        "duration_ms_total": 3494238
       },
       "replays": [
         {
-          "replay_id": "0ddbb4abacfb6b62d88223ac6bb3902edc0bdc3a2eac55e29ffe367405cffa60",
-          "map": "Springtime 1.3",
-          "duration_ms": 403900,
+          "replay_id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
+          "map": "Concealed Hill",
+          "duration_ms": 937219,
           "player": {
-            "name": "Medusa#31315",
-            "race": "NE",
-            "won": true,
+            "name": "Okeanos#22605",
+            "race": "OC",
+            "won": false,
             "heroes": [
               {
-                "code": "Edem",
+                "code": "Ofar",
+                "level": 3
+              },
+              {
+                "code": "Oshd",
                 "level": 2
               },
               {
-                "code": "Ekee",
+                "code": "Otch",
                 "level": 1
               }
             ]
           },
           "opponent": {
-            "name": "FoCuS#31324",
-            "race": "OC",
-            "won": false,
+            "name": "thanks#11187",
+            "race": "NE",
+            "won": true,
             "heroes": [
               {
-                "code": "Obla",
-                "level": 2
+                "code": "Edem",
+                "level": 4
               },
               {
-                "code": "Oshd",
-                "level": 1
+                "code": "Ekee",
+                "level": 4
               }
             ]
           }
@@ -71,6 +74,17 @@
           "map": "Springtime 1.3",
           "duration_ms": 406000,
           "player": {
+            "name": "moosangsung#1804",
+            "race": "HU",
+            "won": false,
+            "heroes": [
+              {
+                "code": "Hmkg",
+                "level": 2
+              }
+            ]
+          },
+          "opponent": {
             "name": "Medusa#31315",
             "race": "NE",
             "won": true,
@@ -82,17 +96,6 @@
               {
                 "code": "Nngs",
                 "level": 1
-              }
-            ]
-          },
-          "opponent": {
-            "name": "moosangsung#1804",
-            "race": "HU",
-            "won": false,
-            "heroes": [
-              {
-                "code": "Hmkg",
-                "level": 2
               }
             ]
           }

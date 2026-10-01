@@ -541,6 +541,12 @@ models:
       One row per object a step picker lists, with the source it comes from: units, mercenaries,
       upgrades, heroes and items from the object_sources seed, each skill under the hero that
       learns it, each building under its race. The query API's POST /objects reads it.
+    config:
+      meta:
+        semantic:
+          dimensions: [kind, code, name, source_code, source_name, race]
+          measures:
+            objects: count()
     data_tests:
       - unique:
           name: objects_one_row_per_source
