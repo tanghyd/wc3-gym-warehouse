@@ -25,9 +25,17 @@ ingest:
 cron:
     {{ssh}} 'line="*/10 * * * * cd ~/wc3-gym-warehouse && flock -n /tmp/ingest.lock /usr/local/bin/just ingest >> ~/ingest.log 2>&1"; { crontab -l 2>/dev/null | grep -vF "just ingest"; echo "$line"; } | crontab -'
 
-# forward the inspector (3000), Grafana (3001) and dbt's docs (8080) to localhost until Ctrl-C
-open:
-    {{ssh}} -N -o ExitOnForwardFailure=yes -L 3000:127.0.0.1:3000 -L 3001:127.0.0.1:3001 -L 8080:127.0.0.1:8080
+# the URLs of the box's services as they appear on this machine while `just deploy open` runs
+urls:
+    @echo 'While `just deploy open` runs (every port on the box is 127.0.0.1 only):'
+    @echo '  inspector  http://localhost:3000'
+    @echo '  API        http://localhost:8000/catalog'
+    @echo '  Grafana    http://localhost:3001'
+    @echo '  dbt docs   http://localhost:8080'
+
+# forward the inspector (3000), the API (8000), Grafana (3001) and dbt's docs (8080) to localhost until Ctrl-C
+open: urls
+    {{ssh}} -N -o ExitOnForwardFailure=yes -L 3000:127.0.0.1:3000 -L 8000:127.0.0.1:8000 -L 3001:127.0.0.1:3001 -L 8080:127.0.0.1:8080
 
 # the containers, the disk, the last ingest passes and the last dbt build's summary
 status:

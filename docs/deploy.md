@@ -53,7 +53,7 @@ backend) keeps the only write key; ClickHouse holds no bucket key at all.
 6. **Cron.** `just deploy cron` installs one line for the `warehouse` user: `just ingest` every 10 minutes under
    `flock -n /tmp/ingest.lock`, so passes never overlap, appending to `~/ingest.log` (not rotated; size per pass `-`).
    `just deploy ingest` and `just deploy up` take the same lock and wait for a running pass.
-7. **Open.** `just deploy open` holds an ssh forward until Ctrl-C. Stop the local stack first: the ports are the same,
+7. **Open.** `just deploy open` prints the URLs (`just deploy urls` prints them alone) and holds an ssh forward until Ctrl-C: the inspector on http://localhost:3000, the API on 8000, Grafana on 3001, dbt docs on 8080. Stop the local stack first: the ports are the same,
 8. **Down.** `just deploy down` stops every container and drops the cron line; the ClickHouse volume and the clone stay on the disk. `just deploy up` then `just deploy cron` brings it back. Deleting the server in the Hetzner console is the only way to stop paying.
    and the forward exits rather than show the local stack.
 
