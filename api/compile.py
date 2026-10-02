@@ -36,20 +36,23 @@ class Range(BaseModel):
     lte: float | None = None
 
 
-# A filter is either the values a dimension may take or a numeric range.
-type Filter = Annotated[list[str | int | float], Field(min_length=1, max_length=500)] | Range
-type Filters = dict[str, Filter]
+# A filter is either the values a dimension may take or a numeric range. The caps keep a
+# request's parameters well under ClickHouse's 1 MiB URL limit.
+type Value = Annotated[str, Field(max_length=100)] | int | float
+type Filter = Annotated[list[Value], Field(min_length=1, max_length=500)] | Range
+type Filters = Annotated[dict[str, Filter], Field(max_length=20)]
+type Names = Annotated[list[str], Field(max_length=20)]
 type Steps = Annotated[list[Step], Field(max_length=10)]
 
 
 class QueryRequest(BaseModel):
     model: str = "player_games"
-    dimensions: list[str] = []
-    measures: list[str] = []
+    dimensions: Names = []
+    measures: Names = []
     filters: Filters = {}
     steps: Steps = []
     # Dimension or measure names; a leading "-" sorts that one descending.
-    order_by: list[str] = []
+    order_by: Names = []
     limit: Annotated[int, Field(ge=1, le=10000)] = 100
 
 
@@ -115,7 +118,20 @@ def tuples(values: Iterable[tuple[str | int, ...]]) -> str:
 
 
 def _base_type(ch_type: str) -> str:
-    return ch_type[len("LowCardinality(") : -1] if ch_type.startswith("LowCardinality(") else ch_type
+    """The type under LowCardinality and Nullable: the element type of an Array parameter."""
+    for wrapper in ("LowCardinality(", "Nullable("):
+        if ch_type.startswith(wrapper):
+            ch_type = ch_type[len(wrapper) : -1]
+    return ch_type
+
+
+def _kind(ch_type: str) -> str:
+    """number, time or text: what a dimension's values look like, so a value that does not
+    fit is refused here as a 400, not by ClickHouse as a failed query."""
+    base = _base_type(ch_type)
+    if base.startswith(("UInt", "Int", "Float", "Decimal")):
+        return "number"
+    return "time" if base.startswith("Date") else "text"
 
 
 def where_filters(model: Model, filters: Filters, params: Params) -> list[str]:
@@ -123,12 +139,19 @@ def where_filters(model: Model, filters: Filters, params: Params) -> list[str]:
     for name, f in filters.items():
         if name not in model.dimensions:
             raise BadRequest(f"unknown dimension {name!r}")
+        kind = _kind(model.dimensions[name])
         if isinstance(f, Range):
+            if kind == "text":
+                raise BadRequest(f"{name} is text: a range does not apply")
             if f.gte is not None:
                 out.append(f"{name} >= {params.add('Float64', repr(f.gte))}")
             if f.lte is not None:
                 out.append(f"{name} <= {params.add('Float64', repr(f.lte))}")
         else:
+            if kind == "number" and any(isinstance(v, str) for v in f):
+                raise BadRequest(f"{name} takes numbers")
+            if kind != "number" and any(not isinstance(v, str) for v in f):
+                raise BadRequest(f"{name} takes text")
             ch_type = f"Array({_base_type(model.dimensions[name])})"
             out.append(f"has({params.add(ch_type, array(f))}, {name})")
     return out
