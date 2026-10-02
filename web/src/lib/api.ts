@@ -78,12 +78,14 @@ export async function pickerValues(dimension: "map" | "patch" | "player") {
   return rows.map((r) => r[dimension]).filter(Boolean);
 }
 
-let iconFiles: Record<string, string> | undefined;
+let iconFiles: { classic: Record<string, string>; reforged: Record<string, string> } | undefined;
+const iconMap = (file: string) => JSON.parse(readFileSync(join(process.cwd(), "public", file), "utf8")) as Record<string, string>;
 
-/** An object's command-card icon from public/icons.json, or null. */
+/** An object's command-card icon: the classic art of public/icons-classic.json, else the Reforged of public/icons.json, else null. */
 function iconOf(code: string) {
-  iconFiles ??= JSON.parse(readFileSync(join(process.cwd(), "public/icons.json"), "utf8")) as Record<string, string>;
-  return iconFiles[code] ? `/icons/${iconFiles[code]}` : null;
+  iconFiles ??= { classic: iconMap("icons-classic.json"), reforged: iconMap("icons.json") };
+  if (iconFiles.classic[code]) return `/icons-classic/${iconFiles.classic[code]}`;
+  return iconFiles.reforged[code] ? `/icons/${iconFiles.reforged[code]}` : null;
 }
 
 /** Names from the mappings model in one read, icons from public/icons.json. */

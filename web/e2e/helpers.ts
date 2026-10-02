@@ -39,16 +39,15 @@ export const fmt = (n: number) => n.toLocaleString("en-US");
 export const record = (w: number, l: number) => (w + l ? `${w} – ${l}` + (w + l >= 10 ? ` (${Math.round((100 * w) / (w + l))}%)` : "") : "—");
 export const mss = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 
-/** The Games chip, the strip's three figures and the pager line. */
+/** The Games chip and the strip's two figures. */
 export async function strip(page: Page) {
   const value = (label: string) => page.locator(".stat").filter({ has: page.locator(".s-l", { hasText: label }) }).locator(".s-v").textContent();
-  return { total: await page.locator(".bar .chip").textContent(), games: await value("Games"), record: await value("Player record"), avg: await value("Avg length") };
+  return { total: await page.locator(".bar .chip").textContent(), games: await value("Games"), record: await value("Player record") };
 }
 export const stripOf = (a: Answer) => ({
   total: fmt(a.total),
   games: fmt(a.summary.games),
   record: record(a.summary.wins, a.summary.losses),
-  avg: a.summary.games ? mss(a.summary.duration_ms_total / a.summary.games) : "—",
 });
 
 /** The Replays URL of a side's steps, as the page encodes them. */

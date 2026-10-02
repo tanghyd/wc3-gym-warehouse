@@ -277,32 +277,45 @@
   .alt { border: 1px solid var(--color-border); border-radius: 0.35rem; padding: 6px 10px 10px; }
   .or { padding: 6px 0 6px 12px; font-size: 0.8125rem; font-weight: 700; color: var(--color-muted); }
 
-  /* The summary strip: three figures, each a label, a number and one muted line. */
-  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-border); }
+  /* The summary strip: two figures, each a label, a number and one muted line. */
+  .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-border); }
   .stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 14px 16px; }
   .stat + .stat { border-left: 1px solid var(--color-border); }
   .s-l, .s-n { font-size: 0.875rem; color: var(--color-muted); }
   .s-v { font-size: 1.75rem; font-weight: 700; line-height: 1.15; font-variant-numeric: lining-nums proportional-nums; }
 
-  /* The games list: one player-game a row, two lines; a card of three lines on a phone. */
-  .games { width: 100%; border-collapse: collapse; text-align: left; }
-  .games th { padding: 10px 16px; border-bottom: 1px solid var(--color-border); font-size: 0.875rem; font-weight: 700; white-space: nowrap; }
-  .games td { padding: 8px 16px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
-  .games tbody tr:hover { background: rgba(var(--v-theme-on-surface), 0.04); }
+  /* The games list: one player-game a row on one line, fixed columns, the hero icons its one bold mark;
+     two lines on a phone. */
+  .games { --hero: 24px; width: 100%; table-layout: fixed; border-collapse: collapse; text-align: left; }
+  .games th { height: 36px; padding: 0 10px; border-bottom: 1px solid var(--color-border); font-size: 0.875rem; font-weight: 700; color: var(--color-muted); white-space: nowrap; }
+  .games th a { color: inherit; }
+  .games td { padding: 5px 10px; border-bottom: 1px solid var(--color-border); vertical-align: middle; font-size: 0.9375rem; line-height: 1.25rem; white-space: nowrap; }
+  .games tbody tr:hover { background: rgb(var(--v-theme-surface-light)); }
   .games th[aria-sort] a { color: rgb(var(--v-theme-primary-text)); }
-  .games .c-p, .games .c-o { width: 28%; }
+  .games .c-p { padding-left: 16px; }
+  .games .c-ph, .games .c-oh { width: 120px; }
+  .games .c-r { width: 84px; }
+  .games .c-m { padding-right: 16px; overflow: hidden; text-overflow: ellipsis; }
+  .games .c-l { width: 80px; padding-right: 16px; text-align: right; }
   .games .vs { display: none; }
-  .heroes { display: flex; gap: 12px; margin-top: 4px; }
+  .who { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; vertical-align: middle; }
+  .who .tag { font-weight: 400; color: var(--color-muted); }
+  .heroes { display: flex; gap: 10px; }
   .heroes li { position: relative; display: block; }
-  .heroes img { width: 22px; height: 22px; border-radius: 2px; box-shadow: 0 0 0 1px var(--tile-edge); }
+  .heroes img, .heroes .none { display: block; width: var(--hero); height: var(--hero); border-radius: 2px; box-shadow: 0 0 0 1px var(--tile-edge); }
+  .heroes .none { display: grid; place-items: center; background: rgb(var(--v-theme-surface-light)); font-size: 12px; font-weight: 700; color: var(--color-muted); }
+  .heroes .none::before { content: "?"; }
   /* a hero's final level on the icon's corner, like the in-game hero level */
   .lv {
-    position: absolute; right: -7px; bottom: -4px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 3px;
-    background: rgb(var(--v-theme-banner)); color: rgb(var(--v-theme-on-banner)); font-size: 10px; font-weight: 700; line-height: 14px; text-align: center;
+    position: absolute; right: -6px; bottom: -3px; min-width: 13px; height: 13px; padding: 0 2px; border-radius: 3px;
+    background: rgb(var(--v-theme-banner)); color: rgb(var(--v-theme-on-banner)); font-size: 10px; font-weight: 700; line-height: 13px; text-align: center;
     box-shadow: 0 0 0 1px oklch(80% 0.06 80 / 0.6);
   }
   .res { display: inline-flex; align-items: center; gap: 6px; }
-  .sq { width: 12px; height: 12px; border-radius: 2px; }
+  .sq { width: 10px; height: 10px; border-radius: 2px; }
+  /* The Show switches over the games list; a column the reader hid is not drawn. */
+  .show-cols { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 10px 16px 6px; font-size: 0.875rem; }
+  [data-hide~="heroes"] .games :is(.c-ph, .c-oh), [data-hide~="result"] .games .c-r, [data-hide~="length"] .games .c-l { display: none; }
   .pager { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 16px; font-size: 0.875rem; color: var(--color-muted); }
   .pager > span:first-child { margin-right: 8px; }
   .pager .btn { height: 32px; padding: 0 12px; color: rgb(var(--v-theme-on-surface)); }
@@ -421,25 +434,31 @@
     .tools { grid-area: x; }
     .steps .link { padding-left: 8px; }
 
-    .stats { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-    .stat:nth-child(3) { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--color-border); }
     .stat { padding: 12px; }
     .s-v { font-size: 1.4rem; }
 
+    /* line 1: Player, his heroes, result, length; line 2: Opponent, his heroes, map */
+    .games { --hero: 20px; }
+    .games .heroes { gap: 8px; }
+    .games .who .tag { display: none; }
     .games thead { display: none; }
     .games, .games tbody { display: block; }
     .games tr {
-      display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "p r" "o o" "m l";
-      gap: 4px 12px; padding: 12px; border-bottom: 1px solid var(--color-border);
+      display: grid; grid-template-columns: minmax(0, 1fr) 84px 60px 42px; grid-template-areas: "p ph r l" "o oh m m";
+      align-items: center; gap: 4px 10px; padding: 6px 12px; border-bottom: 1px solid var(--color-border);
     }
     .games td { display: block; padding: 0; border: 0; width: auto !important; min-width: 0; }
-    .games .c-p { grid-area: p; }
-    .games .c-o { grid-area: o; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .games .c-p { grid-area: p; padding: 0; }
+    .games .c-ph { grid-area: ph; }
+    .games .c-r { grid-area: r; font-size: 0.875rem; }
+    .games .c-l { grid-area: l; padding: 0; font-size: 0.875rem; }
+    .games .c-o { grid-area: o; display: flex; align-items: center; gap: 6px; }
     .games .c-o .vs { display: inline; font-size: 0.875rem; color: var(--color-muted); }
-    .games .c-m { grid-area: m; font-size: 0.875rem; }
-    .games .c-r { grid-area: r; }
-    .games .c-l { grid-area: l; font-size: 0.875rem; color: var(--color-muted); }
-    .games .heroes { display: none; }
+    .games .c-oh { grid-area: oh; }
+    .games .c-m { grid-area: m; padding: 0; text-align: right; font-size: 0.875rem; }
+    /* with no heroes the names take their column; a hidden result or length leaves its place to the map */
+    [data-hide~="heroes"] .games tr { grid-template-columns: minmax(0, 1fr) 0 60px 42px; column-gap: 5px; }
+    .show-cols { padding: 10px 12px 6px; }
     .pager { padding: 12px; }
 
     .q-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
@@ -448,7 +467,6 @@
     .bars .mark { grid-template-columns: minmax(0, 40%) minmax(0, 1fr); gap: 8px; }
     .bar-label { font-size: 0.875rem; }
     .x-table th, .x-table td { padding-left: 8px; padding-right: 8px; }
-    .stats.tiles .stat:nth-child(3) { grid-column: auto; border-top: 0; }
 
     .named { --indent: 10px; }
     .named th, .named td { padding-left: 8px; padding-right: 8px; }

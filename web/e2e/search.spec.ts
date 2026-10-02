@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { fmt, listed, mss, q, record, rowsOf, search, strip, stripOf } from "./helpers";
+import { fmt, listed, q, record, rowsOf, search, strip, stripOf } from "./helpers";
 
 // The Replays list: one row per player-game of the Player side, the summary strip, the pager, the
 // sort and the swap, each compared with POST /search.
@@ -34,7 +34,9 @@ test.describe("replay list", () => {
     const { scope, summary } = want;
     await expect(page.locator(".stat").nth(0)).toContainText(`${Math.round((100 * summary.games) / scope.games)}% of ${fmt(scope.games)} Night Elf v Orc games, one per player`);
     await expect(page.locator(".stat").nth(1)).toContainText(`All ${fmt(scope.games)}: ${record(scope.wins, scope.losses)}`);
-    await expect(page.locator(".stat").nth(2)).toContainText(`All ${fmt(scope.games)}: ${mss(scope.duration_ms_total / scope.games)}`);
+    // two figures: the average length is gone
+    await expect(page.locator(".stat")).toHaveCount(2);
+    await expect(page.locator(".s-l", { hasText: "Avg length" })).toHaveCount(0);
     expect(await listed(page)).toEqual(rowsOf(want));
     // a row's result is the Player's: a square and the word
     const first = want.replays[0];
@@ -137,11 +139,77 @@ test.describe("replay list", () => {
     expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe("rgb(8, 5, 3)");
   });
 
-  test("on a phone a row is a card of three lines and nothing scrolls sideways", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(EXAMPLE);
-    await expect(page.locator("table.games thead")).toBeHidden();
+  test("the Show switches hide heroes, result and length, and the URL keeps the view", async ({ page, request }) => {
+    const want = await search(request, { player: { race: ["HU"] } });
+    await page.goto(q({ race: "HU" }));
+    const show = page.getByRole("group", { name: "Show columns" });
+    const box = (name: string) => show.getByRole("checkbox", { name });
+    const head = page.locator("table.games thead th");
+    // every column shows by default
+    for (const n of ["Heroes", "Result", "Length"]) await expect(box(n)).toBeChecked();
+    await expect(head).toHaveCount(7);
+    await box("Heroes").uncheck();
+    await expect(page).toHaveURL(/[?&]hide=heroes(&|$)/);
+    await expect(head).toHaveText(["Player", "Result", "Opponent", "Map", "Length"]);
     await expect(page.locator("table.games .heroes").first()).toBeHidden();
+    await box("Result").uncheck();
+    await box("Length").uncheck();
+    await expect(page).toHaveURL(/[?&]hide=heroes\.result\.length(&|$)/);
+    await expect(head).toHaveText(["Player", "Opponent", "Map"]);
+    // the rows stay POST /search's
+    expect(await listed(page)).toEqual(rowsOf(want));
+    // a link reproduces the view; the pager, a search and Clear keep it
+    await page.reload();
+    await expect(head).toHaveText(["Player", "Opponent", "Map"]);
+    await expect(box("Result")).not.toBeChecked();
+    await page.getByRole("link", { name: "Next" }).click();
+    await expect(page).toHaveURL(/[?&]page=2(&|$)/);
+    await expect(page).toHaveURL(/[?&]hide=heroes\.result\.length(&|$)/);
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page).toHaveURL(/[?&]hide=heroes\.result\.length(&|$)/);
+    await page.getByRole("link", { name: "Clear" }).click();
+    await expect(page).toHaveURL(/\/\?hide=heroes\.result\.length$/);
+    await expect(head).toHaveText(["Player", "Opponent", "Map"]);
+    // on again, the key goes
+    for (const n of ["Heroes", "Result", "Length"]) await box(n).check();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(head).toHaveCount(7);
+  });
+
+  test("on a phone the Show switches fit and a hidden column frees its place", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(q({ race: "HU", hide: "heroes" }));
+    await expect(page.getByRole("group", { name: "Show columns" })).toBeVisible();
+    await expect(page.locator("table.games .heroes").first()).toBeHidden();
+    await expect(page.locator("table.games tbody .c-r").first()).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  });
+
+  test("a row is one slim line of fixed columns, and two lines on a phone", async ({ page }) => {
+    await page.goto(EXAMPLE);
+    const rows = page.locator("table.games tbody tr");
+    const row = rows.first();
+    await expect(page.locator("table.games thead th")).toHaveText(["Player", "Heroes", "Result", "Opponent", "Heroes", "Map", "Length"]);
+    // one line: a 24 px hero icon and its padding set the height
+    const hero = row.locator(".c-ph .heroes img").first();
+    expect((await hero.boundingBox())!.width).toBe(24);
+    // the classic art W3Champions uses: the Demon Hunter the search asks for first
+    await expect(hero).toHaveAttribute("src", "/icons-classic/herodemonhunter.webp");
+    expect((await row.boundingBox())!.height).toBeLessThanOrEqual(40);
+    // every column starts at the same x on every row, and the length is right-aligned
+    const lefts = await rows.evaluateAll((trs) => trs.map((tr) => [...tr.children].map((td) => Math.round(td.getBoundingClientRect().left)).join(",")));
+    expect(new Set(lefts).size).toBe(1);
+    expect(await row.locator(".c-l").evaluate((td) => getComputedStyle(td).textAlign)).toBe("right");
+    // hover lays the surface-light token on the row, with no zebra between rows
+    expect(await rows.nth(1).evaluate((tr) => getComputedStyle(tr).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
+    await row.hover();
+    expect(await row.evaluate((tr) => getComputedStyle(tr).backgroundColor)).toBe("rgb(225, 228, 221)");
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator("table.games thead")).toBeHidden();
+    // two lines: the Player with his heroes, result and length over the Opponent with his heroes and the map
+    expect((await hero.boundingBox())!.width).toBe(20);
+    expect((await row.boundingBox())!.height).toBeLessThanOrEqual(64);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 });

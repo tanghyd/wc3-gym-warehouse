@@ -69,6 +69,79 @@ function Glyph({ d, size = 18 }: { d: string; size?: number }) {
 }
 
 const mss = (s: number | null) => (s === null ? "" : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`);
+// The API's bound on a step count.
+const MAX_COUNT = 9;
+
+/** A step's count as a typed whole number; blank or 0 is 1 again on blur, past 9 is 9. */
+function CountField({ value, labelledBy, onChange }: { value: number; labelledBy: string; onChange: (n: number) => void }) {
+  const [text, setText] = useState<string | null>(null);
+  return (
+    <input
+      className="field w-14 text-center"
+      inputMode="numeric"
+      aria-labelledby={labelledBy}
+      value={text ?? String(value)}
+      // the first click selects the count, so a typed digit replaces it
+      onMouseDown={(e) => {
+        if (document.activeElement === e.currentTarget) return;
+        e.preventDefault();
+        e.currentTarget.focus();
+      }}
+      onFocus={(e) => e.target.select()}
+      onChange={(e) => {
+        const t = e.target.value.replace(/\D/g, "").slice(0, 2);
+        setText(t);
+        if (Number(t) >= 1 && Number(t) <= MAX_COUNT) onChange(Number(t));
+      }}
+      onBlur={() => {
+        if (text === null) return;
+        setText(null);
+        onChange(Math.min(MAX_COUNT, Number(text) || 1));
+      }}
+    />
+  );
+}
+
+/** The format line under a time field, or the fix while its text is no time. */
+function TimeHint({ id, bad, max }: { id: string; bad: boolean; max?: number }) {
+  return (
+    <span id={id} aria-live="polite" className={bad ? "" : "text-muted"}>
+      {bad ? `Not a time. Type m:ss, such as 2:30, or seconds${max ? `, up to ${mss(max)}` : ""}.` : "m:ss, such as 2:30, or seconds"}
+    </span>
+  );
+}
+
+/** A time typed as m:ss, mm:ss or seconds; on blur it reads back as m:ss, or `onBad` flags text that is no time. */
+function TimeField(props: { label: string; value: number | null; bad: boolean; hintId: string; required?: boolean; ok?: (s: number) => boolean; onChange: (s: number | null) => void; onBad: (bad: boolean) => void }) {
+  const [text, setText] = useState<string | null>(null);
+  const read = (t: string) => {
+    const s = parseMss(t);
+    return s !== null && (props.ok?.(s) ?? true) ? s : null;
+  };
+  return (
+    <input
+      className="field w-20"
+      placeholder="m:ss"
+      aria-label={props.label}
+      aria-invalid={props.bad || undefined}
+      aria-describedby={props.hintId}
+      value={text ?? mss(props.value)}
+      onChange={(e) => {
+        const t = e.target.value;
+        setText(t);
+        const s = read(t);
+        if (s !== null) props.onChange(s);
+        else if (!t.trim() && !props.required) props.onChange(null);
+        if (s !== null || !t.trim()) props.onBad(false);
+      }}
+      onBlur={() => {
+        if (text === null) return;
+        if (read(text) !== null || !text.trim()) setText(null);
+        else props.onBad(true);
+      }}
+    />
+  );
+}
 
 /** Whether a step may be the step a "before" step names: another step of the group that happened. */
 const anchorable = (group: Step[], i: number, before: number) => before !== i + 1 && before <= group.length && !group[before - 1].negate && group[before - 1].before === null;
@@ -408,6 +481,8 @@ function StepLine(props: {
   const unlinkedWhy = aboveNegated || s.negate ? "A step that did not happen has no order" : "A step before another step links to no other step";
   const belowThen = i + 1 < group.length && group[i + 1].link === "then";
   const id = useId();
+  // a time field whose text is no time
+  const [bad, setBad] = useState({ from: false, to: false, within: false });
   return (
     <>
       {i > 0 && (
@@ -494,10 +569,8 @@ function StepLine(props: {
                 <button type="button" className="icon-btn" aria-label="Fewer" disabled={s.count <= 1} onClick={() => props.onChange({ count: s.count - 1 })}>
                   <Glyph d={G.minus} size={16} />
                 </button>
-                <output className="field inline-flex w-14 items-center justify-center" aria-live="polite">
-                  {s.count}
-                </output>
-                <button type="button" className="icon-btn" aria-label="More" disabled={s.count >= 9} onClick={() => props.onChange({ count: s.count + 1 })}>
+                <CountField value={s.count} labelledBy={`${id}-count`} onChange={(count) => props.onChange({ count })} />
+                <button type="button" className="icon-btn" aria-label="More" disabled={s.count >= MAX_COUNT} onClick={() => props.onChange({ count: s.count + 1 })}>
                   <Glyph d={G.plus} size={16} />
                 </button>
                 <label className={`ml-2 flex items-center gap-2 ${s.negate ? "opacity-50" : "cursor-pointer"}`}>
@@ -512,12 +585,12 @@ function StepLine(props: {
               Game time
             </span>
             <span className="flex items-center gap-2">
-              <input className="field w-20" placeholder="from" aria-label="From (m:ss)" defaultValue={mss(s.from)} onChange={(e) => props.onChange({ from: parseMss(e.target.value) })} />
-              <span aria-hidden className="text-muted">
-                –
-              </span>
-              <input className="field w-20" placeholder="to" aria-label="To (m:ss)" defaultValue={mss(s.to)} onChange={(e) => props.onChange({ to: parseMss(e.target.value) })} />
+              <span aria-hidden>From</span>
+              <TimeField label="From (m:ss)" value={s.from} bad={bad.from} hintId={`${id}-time-hint`} onChange={(from) => props.onChange({ from })} onBad={(b) => setBad((x) => ({ ...x, from: b }))} />
+              <span aria-hidden>to</span>
+              <TimeField label="To (m:ss)" value={s.to} bad={bad.to} hintId={`${id}-time-hint`} onChange={(to) => props.onChange({ to })} onBad={(b) => setBad((x) => ({ ...x, to: b }))} />
             </span>
+            <TimeHint id={`${id}-time-hint`} bad={bad.from || bad.to} />
           </div>
           {group.length > 1 && (
             <div className="flex flex-col gap-1 text-sm">
@@ -570,17 +643,19 @@ function StepLine(props: {
                   ))}
                 </span>
                 {s.link === "then" && s.within !== null && (
-                  <input
-                    className="field w-20"
-                    aria-label="Within (m:ss)"
-                    defaultValue={mss(s.within)}
-                    onChange={(e) => {
-                      const v = parseMss(e.target.value);
-                      if (v !== null && v > 0 && v <= MAX_WITHIN) props.onChange({ within: v });
-                    }}
+                  <TimeField
+                    label="Within (m:ss)"
+                    value={s.within}
+                    bad={bad.within}
+                    hintId={`${id}-within-hint`}
+                    required
+                    ok={(v) => v > 0 && v <= MAX_WITHIN}
+                    onChange={(within) => props.onChange({ within })}
+                    onBad={(b) => setBad((x) => ({ ...x, within: b }))}
                   />
                 )}
               </span>
+              {s.link === "then" && s.within !== null && <TimeHint id={`${id}-within-hint`} bad={bad.within} max={MAX_WITHIN} />}
             </div>
           )}
           <label className={`flex items-center gap-2.5 ${s.link === "then" || belowThen ? "opacity-50" : "cursor-pointer"}`}>
