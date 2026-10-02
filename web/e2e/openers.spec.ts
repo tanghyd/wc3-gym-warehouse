@@ -5,7 +5,7 @@ import { search, strip, stripOf } from "./helpers";
 // prefix, over games of 2 minutes or more. The old /openers route redirects to it.
 const API = process.env.API_URL ?? "http://api:8000";
 
-type Level = { code: string; games: number; wins: number; losses: number; minutes_total: number }[];
+type Level = { code: string; games: number; mirrors: number; wins: number | null; losses: number | null; minutes_total: number }[];
 const rows = (page: Page) => page.locator("tbody tr");
 const mss = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 const record = (w: number, l: number) => (w + l ? `${w} – ${l}` + (w + l >= 10 ? ` (${Math.round((100 * w) / (w + l))}%)` : "") : "—");
@@ -23,10 +23,11 @@ async function level(request: APIRequestContext, filters: Record<string, (string
   filters = { ...filters, ...DECIDED };
   prefix.forEach((c, i) => (filters = { ...filters, [`opener_${i + 1}`]: [c] }));
   const res = await request.post(`${API}/query`, {
-    data: { dimensions: [next], measures: ["games", "wins", "losses", "minutes_total"], filters, limit: 10000 },
+    data: { dimensions: [next], measures: ["games", "mirrors", "wins", "losses", "minutes_total"], filters, limit: 10000 },
   });
   const out: Level = (await res.json()).rows.filter((r: Record<string, string>) => r[next]).map((r: Record<string, number>) => ({ ...r, code: r[next] }));
-  const share = (r: Level[number]) => r.wins / r.games;
+  // a mirror adds no win or loss, so the share reads the other games
+  const share = (r: Level[number]) => (r.wins ?? 0) / Math.max(1, (r.wins ?? 0) + (r.losses ?? 0));
   return out.sort(
     (a, b) =>
       (sort === "winrate" ? Number(b.games >= 10) - Number(a.games >= 10) || share(b) - share(a) || b.games - a.games : b.games - a.games || share(b) - share(a)) ||
@@ -42,7 +43,7 @@ async function names(request: APIRequestContext, codes: string[]): Promise<Recor
 /** The cells as the page reads them: opener name, games, record, average length. */
 const cells = (page: Page) => rows(page).evaluateAll((trs) => trs.map((tr) => [...(tr as HTMLTableRowElement).cells].map((c) => c.innerText.trim())));
 const expected = (lvl: Level, name: Record<string, string>) =>
-  lvl.map((r) => [name[r.code], String(r.games), record(r.wins, r.losses), mss((r.minutes_total / r.games) * 60000)]);
+  lvl.map((r) => [name[r.code], String(r.games), record(r.wins ?? 0, r.losses ?? 0), mss((r.minutes_total / r.games) * 60000)]);
 
 test.describe("openers tree", () => {
   test("/openers lands on the tab, Human by default: the first level's games, record and length equal POST /query's", async ({ page, request }) => {
@@ -56,8 +57,8 @@ test.describe("openers tree", () => {
     await expect(page.getByRole("link", { name: "Strategies" })).toHaveAttribute("aria-current", "page");
     await expect(page.getByRole("link", { name: "Openers", exact: true })).toHaveAttribute("aria-current", "page");
     expect(await cells(page)).toEqual(expected(root, name));
-    // one unit per row: its games are its wins plus its losses
-    for (const r of root) expect(r.games).toBe(r.wins + r.losses);
+    // one unit per row: its games are its wins, its losses and its mirrors (both players opened this way)
+    for (const r of root) expect(r.games).toBe((r.wins ?? 0) + (r.losses ?? 0) + r.mirrors);
     const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { ...HU, ...DECIDED } } })).json()).rows[0].games;
     await expect(page.locator(".bar .chip")).toHaveText(`${total} games won or lost`);
   });

@@ -15,18 +15,18 @@ const FLOOR = 10; // games a win share needs to sort first and read in full ink
 const SORTS = { popular: "Most played", winrate: "Best win rate" };
 
 /** A row of the tree: one next building after its path. */
-type Row = { code: string; games: number; wins: number; losses: number; avgMs: number; branches: number };
+type Row = { code: string; games: number; wins: number | null; losses: number | null; avgMs: number; branches: number };
 
 /**
  * What players built next after `prefix`. Every figure counts games won or lost in which a player
- * opened this way, a game where both did once. The buildings after it, read apart, tell a row how
- * many ways it goes on.
+ * opened this way, a game where both did once: a mirror, which adds no win or loss. The buildings
+ * after it, read apart, tell a row how many ways it goes on.
  */
 async function level(base: Filters, prefix: string[], sort: string): Promise<Row[]> {
   const d = prefix.length;
   const [next, after] = [`opener_${d + 1}`, `opener_${d + 2}`];
   const filters: Filters = { ...base, ...Object.fromEntries(prefix.map((c, i) => [`opener_${i + 1}`, [c]])) };
-  type Figures = Record<string, string> & { games: number; wins: number; losses: number; minutes_total: number };
+  type Figures = Record<string, string> & { games: number; wins: number | null; losses: number | null; minutes_total: number };
   const [figures, splits] = await Promise.all([
     query<Figures>({ dimensions: [next], measures: ["games", "wins", "losses", "minutes_total"], filters, limit: 10000 }),
     d + 1 < DEPTH ? query<Record<string, string>>({ dimensions: [next, after], filters, limit: 10000 }) : [],
@@ -37,7 +37,8 @@ async function level(base: Filters, prefix: string[], sort: string): Promise<Row
   const rows: Row[] = figures
     .filter((r) => r[next])
     .map((r) => ({ code: r[next], games: r.games, wins: r.wins, losses: r.losses, avgMs: (r.minutes_total / r.games) * 60000, branches: branches.get(r[next]) ?? 0 }));
-  const share = (r: Row) => r.wins / r.games;
+  // a mirror (a game where both players opened this way) adds no win or loss, so the share reads the other games
+  const share = (r: Row) => (r.wins ?? 0) / Math.max(1, (r.wins ?? 0) + (r.losses ?? 0));
   // best win rate: rows from FLOOR games up first, so a 1 – 0 row never leads
   const order = (a: Row, b: Row) =>
     (sort === "winrate" ? Number(b.games >= FLOOR) - Number(a.games >= FLOOR) || share(b) - share(a) || b.games - a.games : b.games - a.games || share(b) - share(a)) ||
@@ -55,7 +56,7 @@ export default async function OpenersPage({ searchParams }: PageProps<"/strategi
   // the tab's own filters: patch and player
   const own: [string, string][] = ["patch", "player"].filter(value).map((k): [string, string] => [k, value(k)]);
   const pairs: [string, string][] = [...s.pairs, ...own];
-  // only games with a known winner, so games equal wins plus losses
+  // only games with a known winner, so a row's games are its wins, its losses and its mirrors
   const base: Filters = {
     ...raceFilters(race),
     ...raceFilters(opp, "opponent_race", "opponent_random"),
@@ -160,7 +161,7 @@ export default async function OpenersPage({ searchParams }: PageProps<"/strategi
                 const name = objects[r.code]?.name ?? r.code;
                 const icon = <ObjIcon code={r.code} objects={objects} size={28} alt="" />;
                 // on a phone the percent drops under the score
-                const [score, percent] = record(r.wins, r.losses).split(" (");
+                const [score, percent] = record(r.wins ?? 0, r.losses ?? 0).split(" (");
                 return (
                   <tr key={key(path)}>
                     <td>

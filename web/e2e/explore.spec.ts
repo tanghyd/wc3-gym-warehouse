@@ -3,7 +3,11 @@ import { API, fmt, mss, record } from "./helpers";
 
 // The Explore page: every table equals POST /query's rows, the chart follows the rule, and each
 // change of the query card lands in the URL.
-type Row = Record<string, string | number>;
+type Row = Record<string, string | number | null>;
+// a record cell: "—" when every game of the row is a mirror (null wins), then a line for its mirrors, which add no win or loss
+const recordCell = (r: Row) =>
+  (r.wins === null || r.losses === null ? "—" : record(Number(r.wins), Number(r.losses))) +
+  (Number(r.mirrors) ? `\n${fmt(Number(r.mirrors))} ${Number(r.mirrors) === 1 ? "mirror" : "mirrors"}, no result` : "");
 const RACE: Record<string, string> = { HU: "Human", OC: "Orc", NE: "Night Elf", UD: "Undead", RANDOM: "Random" };
 const RANDOM: Record<string, string> = { HU: "Random Human", OC: "Random Orc", NE: "Random Night Elf", UD: "Random Undead", RANDOM: "Random" };
 const raceWords = (race: string, random: number) => (random ? RANDOM[race] : RACE[race]);
@@ -33,7 +37,7 @@ const sorted = (xs: string[]) => [...xs].sort();
 
 test.describe("explore", () => {
   test("the default view is games by race and opponent race over games of 2 minutes or more", async ({ page, request }) => {
-    const rows = await rowsOf(request, ["race", "random", "opponent_race", "opponent_random"], ["games", "wins", "losses", "minutes_total"], MIN2);
+    const rows = await rowsOf(request, ["race", "random", "opponent_race", "opponent_random"], ["games", "mirrors", "wins", "losses", "minutes_total"], MIN2);
     await page.goto("/explore");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Explore");
     await expect(page.getByRole("link", { name: "Explore" })).toHaveAttribute("aria-current", "page");
@@ -46,7 +50,7 @@ test.describe("explore", () => {
     await expect(page.locator("#result-title ~ .chip")).toHaveText(`${fmt(Number(total))} games`);
 
     const want = rows.map((r) =>
-      [raceWords(String(r.race), Number(r.random)), raceWords(String(r.opponent_race), Number(r.opponent_random)), fmt(Number(r.games)), record(Number(r.wins), Number(r.losses)), mss((Number(r.minutes_total) / Number(r.games)) * 60000)].join(" | "),
+      [raceWords(String(r.race), Number(r.random)), raceWords(String(r.opponent_race), Number(r.opponent_random)), fmt(Number(r.games)), recordCell(r), mss((Number(r.minutes_total) / Number(r.games)) * 60000)].join(" | "),
     );
     const got = await table(page);
     expect(sorted(got)).toEqual(sorted(want));
@@ -66,13 +70,13 @@ test.describe("explore", () => {
 
   test("first hero by opponent race for Night Elf, as the mockup, equals POST /query", async ({ page, request }) => {
     const filters = { race: ["NE"], random: [0], ...MIN2 };
-    const rows = await rowsOf(request, ["first_hero", "opponent_race", "opponent_random"], ["games", "wins", "losses", "minutes_total"], filters);
+    const rows = await rowsOf(request, ["first_hero", "opponent_race", "opponent_random"], ["games", "mirrors", "wins", "losses", "minutes_total"], filters);
     const name = await names(request, rows.map((r) => String(r.first_hero)).filter(Boolean));
     await page.goto("/explore?rows=first_hero&cols=opponent_race&race=NE");
     await expect(page.getByRole("heading", { level: 2 })).toHaveText("Games by First Hero and Opponent Race");
     await expect(page.getByRole("button", { name: "Race: Night Elf" })).toBeVisible();
     const want = rows.map((r) =>
-      [r.first_hero ? name[String(r.first_hero)] : "No hero", raceWords(String(r.opponent_race), Number(r.opponent_random)), fmt(Number(r.games)), record(Number(r.wins), Number(r.losses)), mss((Number(r.minutes_total) / Number(r.games)) * 60000)].join(
+      [r.first_hero ? name[String(r.first_hero)] : "No hero", raceWords(String(r.opponent_race), Number(r.opponent_random)), fmt(Number(r.games)), recordCell(r), mss((Number(r.minutes_total) / Number(r.games)) * 60000)].join(
         " | ",
       ),
     );
@@ -97,6 +101,15 @@ test.describe("explore", () => {
     // the largest bar's value sits at its tip
     const top = [...rows].sort((a, b) => Number(b.games) - Number(a.games))[0];
     await expect(bars.first()).toContainText(fmt(Number(top.games)));
+    // a game is on one map, so Other adds up the maps it folds
+    if (rows.length > 13) {
+      const games = rows.map((r) => Number(r.games)).sort((a, b) => b - a);
+      await expect(bars.last()).toHaveAttribute("aria-label", new RegExp(`^Other: ${fmt(games.slice(12).reduce((s, g) => s + g, 0))} games`));
+    }
+    // a game has two players, so by player Other cannot add up and shows no count
+    expect((await rowsOf(request, ["player"], ["games"], MIN2)).length).toBeGreaterThan(13);
+    await page.goto("/explore?show=games&rows=player");
+    await expect(page.getByRole("list", { name: /^Games by Player/ }).getByRole("listitem").last()).toHaveAttribute("aria-label", /^Other: — games/);
   });
 
   test("minutes is ordered, so its columns keep their order; no dimension shows tiles", async ({ page, request }) => {
@@ -108,11 +121,13 @@ test.describe("explore", () => {
     const bins = rows.map((r) => Number(r.minutes_5)).sort((a, b) => a - b);
     expect(labels).toEqual(bins.map((b) => `${b}–${b + 5}`));
 
-    const [all] = await rowsOf(request, [], ["games", "wins", "losses", "apm_total", "apm_players"], MIN2);
+    const [all] = await rowsOf(request, [], ["games", "mirrors", "wins", "losses", "apm_total", "apm_players"], MIN2);
     await page.goto("/explore?show=games,record,avg_apm&rows=");
     await expect(page.locator(".stat")).toHaveCount(3);
     await expect(page.locator(".stat").nth(0)).toContainText(fmt(Number(all.games)));
-    await expect(page.locator(".stat").nth(1)).toContainText(record(Number(all.wins), Number(all.losses)));
+    // with no dimension every game is a mirror: no record, and the mirrors under it
+    expect(all.wins).toBeNull();
+    await expect(page.locator(".stat").nth(1)).toContainText(`—${fmt(Number(all.mirrors))} mirrors, no result`);
     await expect(page.locator(".stat").nth(2)).toContainText(fmt(Math.round(Number(all.apm_total) / Number(all.apm_players))));
   });
 

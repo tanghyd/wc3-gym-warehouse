@@ -1,6 +1,6 @@
 "use client";
 import { Fragment, type KeyboardEvent, type ReactNode, useState, useSyncExternalStore } from "react";
-import { type Catalog, dimsOf, measureText, measureValue, ordered, RACE_DIMS, RACE_ORDER, type Row, type Totals, type ValueLabel, type View } from "@/lib/explore";
+import { type Catalog, dimsOf, measureText, measureValue, mirrorsText, ordered, RACE_DIMS, RACE_ORDER, type Row, type Totals, type ValueLabel, type View } from "@/lib/explore";
 import { RaceIcon, Tile } from "@/lib/ui";
 import { usePending } from "./Query";
 
@@ -8,6 +8,7 @@ type Labels = Record<string, Record<string, ValueLabel>>;
 type Chart = { form: "tiles" | "bars" | "columns" | "heat" | "none"; measure: string | null };
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
+const fmtOr = (n: number | null) => (n === null ? "—" : fmt(n)); // null: an Other that cannot add up
 const PHONE = "(max-width: 639px)";
 const subscribe = (cb: () => void) => {
   const q = matchMedia(PHONE);
@@ -53,6 +54,12 @@ const sumBy = (rows: Row[], key: (r: Row) => string, m: string) => {
   return out;
 };
 
+/** Whether a dimension's values add up to the scope's figure: then no game falls under two of them, so Other may add up the values it folds. */
+function addsUp(byValue: Map<string, number>, total: Row[string]) {
+  const [sum, all] = [[...byValue.values()].reduce((s, v) => s + v, 0), Number(total ?? 0)];
+  return Math.abs(sum - all) <= 1e-9 * Math.abs(all);
+}
+
 /** The hover and focus readout of one mark: the value first, then what it counts. */
 function Tip({ value, label, style }: { value: string; label: string; style: React.CSSProperties }) {
   return (
@@ -90,16 +97,17 @@ function HeatMap({ rows, dr, dc, m, cat, labels, totals }: { rows: Row[]; dr: st
   const cells = sumBy(rows, (r) => `${rk(String(r[dr]))}\u0001${ck(String(r[dc]))}`, m);
   const rKeys = [...R.keep, ...(R.other.size ? [OTHER] : [])];
   const cKeys = [...C.keep, ...(C.other.size ? [OTHER] : [])];
-  const cell = (r: string, c: string) => cells.get(`${r}\u0001${c}`) ?? 0;
-  // Other adds up the values it folds
-  const rowTotal = (r: string) => (r === OTHER ? [...R.other].reduce((s, v) => s + (byRow.get(v) ?? 0), 0) : (byRow.get(r) ?? 0));
-  const colTotal = (c: string) => (c === OTHER ? [...C.other].reduce((s, v) => s + (byCol.get(v) ?? 0), 0) : (byCol.get(c) ?? 0));
+  // Other adds up the values it folds, or is null when a game can fall under two of them (a race, say)
+  const [rowsAdd, colsAdd] = [addsUp(byRow, totals.all[m]), addsUp(byCol, totals.all[m])];
+  const cell = (r: string, c: string) => ((r === OTHER && !rowsAdd) || (c === OTHER && !colsAdd) ? null : (cells.get(`${r}\u0001${c}`) ?? 0));
+  const rowTotal = (r: string) => (r !== OTHER ? (byRow.get(r) ?? 0) : rowsAdd ? [...R.other].reduce((s, v) => s + (byRow.get(v) ?? 0), 0) : null);
+  const colTotal = (c: string) => (c !== OTHER ? (byCol.get(c) ?? 0) : colsAdd ? [...C.other].reduce((s, v) => s + (byCol.get(v) ?? 0), 0) : null);
   const total = Number(totals.all[m] ?? 0);
   // bins 1 to t1-1, t1 to t2-1, t2 and up: 10 and 50 until a cell passes 999, then by tens
-  const max = Math.max(0, ...rKeys.flatMap((r) => cKeys.map((c) => cell(r, c))));
+  const max = Math.max(0, ...rKeys.flatMap((r) => cKeys.map((c) => cell(r, c) ?? 0)));
   const k = Math.max(1, Math.floor(Math.log10(Math.max(1, max))) - 1);
   const [t1, t2] = [10 ** k, 5 * 10 ** k];
-  const bin = (v: number) => (v <= 0 ? 0 : v < t1 ? 1 : v < t2 ? 2 : 3);
+  const bin = (v: number | null) => (v === null || v <= 0 ? 0 : v < t1 ? 1 : v < t2 ? 2 : 3);
   const unit = cat.labels[m].toLowerCase();
   const n = rKeys.length * cKeys.length;
   const tip = at === null ? null : { r: rKeys[Math.floor(at / cKeys.length)], c: cKeys[at % cKeys.length] };
@@ -145,19 +153,19 @@ function HeatMap({ rows, dr, dc, m, cat, labels, totals }: { rows: Row[]; dr: st
                   key={c}
                   id={id(idx)}
                   role="gridcell"
-                  aria-label={`${words(dr, r, labels)}, ${words(dc, c, labels)}: ${fmt(v)} ${unit}`}
+                  aria-label={`${words(dr, r, labels)}, ${words(dc, c, labels)}: ${fmtOr(v)} ${unit}`}
                   className={`heat-cell bin-${bin(v)} ${at === idx ? "on" : ""}`}
                   onPointerEnter={(e) => e.pointerType === "mouse" && setAt(idx)}
                   onPointerDown={() => setAt(idx)}
                 >
-                  {fmt(v)}
+                  {fmtOr(v)}
                   {at === idx && tip && (
-                    <Tip value={`${fmt(v)} ${unit}`} label={`${words(dr, r, labels)}, ${words(dc, c, labels)}`} style={{ top: "calc(100% + 6px)", ...(j > cKeys.length / 2 ? { right: 0 } : { left: 0 }) }} />
+                    <Tip value={`${fmtOr(v)} ${unit}`} label={`${words(dr, r, labels)}, ${words(dc, c, labels)}`} style={{ top: "calc(100% + 6px)", ...(j > cKeys.length / 2 ? { right: 0 } : { left: 0 }) }} />
                   )}
                 </span>
               );
             })}
-            {!narrow && <span className="heat-sum">{fmt(rowTotal(r))}</span>}
+            {!narrow && <span className="heat-sum">{fmtOr(rowTotal(r))}</span>}
           </div>
         ))}
         {!narrow && (
@@ -167,7 +175,7 @@ function HeatMap({ rows, dr, dc, m, cat, labels, totals }: { rows: Row[]; dr: st
             </span>
             {cKeys.map((c) => (
               <span key={c} className="heat-sum text-center">
-                {fmt(colTotal(c))}
+                {fmtOr(colTotal(c))}
               </span>
             ))}
             <span className="heat-sum font-bold">{fmt(total)}</span>
@@ -201,12 +209,16 @@ function Bars({ rows, d, m, cat, labels, columns, all }: { rows: Row[]; d: strin
   const [at, setAt] = useState<number | null>(null);
   const totals = sumBy(rows, (r) => String(r[d]), m);
   const F = columns ? { keep: orderValues(cat, d, totals), other: new Set<string>() } : fold(cat, d, totals, 13);
-  const marks = [...F.keep.map((v) => [v, totals.get(v)!] as const), ...(F.other.size ? [[OTHER, [...F.other].reduce((s, v) => s + totals.get(v)!, 0)] as const] : [])];
-  const max = Math.max(1, ...marks.map(([, v]) => v));
+  // Other adds up the values it folds, or is null when a game can fall under two of them (a race, say)
+  const other = addsUp(totals, all[m]) ? [...F.other].reduce((s, v) => s + totals.get(v)!, 0) : null;
+  const marks: (readonly [string, number | null])[] = [...F.keep.map((v) => [v, totals.get(v)!] as const), ...(F.other.size ? [[OTHER, other] as const] : [])];
+  const max = Math.max(1, ...marks.map(([, v]) => v ?? 0));
   // a share of the whole scope: a game counts under each value one of its players has
   const sum = Number(all[m] ?? 0);
   const unit = cat.labels[m].toLowerCase();
-  const label = (v: string, n: number) => `${words(d, v, labels)}: ${fmt(n)} ${unit}, ${sum ? Math.round((100 * n) / sum) : 0}%`;
+  const pct = (n: number) => `${sum ? Math.round((100 * n) / sum) : 0}%`;
+  const TWO = "a game can fall under two of its values";
+  const label = (v: string, n: number | null) => `${words(d, v, labels)}: ${fmtOr(n)} ${unit}, ${n === null ? TWO : pct(n)}`;
   const capLabels = !narrow || marks.length <= 10;
   return (
     <div
@@ -231,8 +243,8 @@ function Bars({ rows, d, m, cat, labels, columns, all }: { rows: Row[]; d: strin
           {columns ? (
             <>
               <span className="col-track">
-                {capLabels && <span className="cap">{fmt(n)}</span>}
-                <span className="col-fill" style={{ height: `${(100 * n) / max}%` }} />
+                {capLabels && <span className="cap">{fmtOr(n)}</span>}
+                <span className="col-fill" style={{ height: `${(100 * (n ?? 0)) / max}%` }} />
               </span>
               <span className="col-label">{words(d, v, labels).split("–")[0]}</span>
             </>
@@ -242,12 +254,12 @@ function Bars({ rows, d, m, cat, labels, columns, all }: { rows: Row[]; d: strin
                 <Value d={d} v={v} labels={labels} />
               </span>
               <span className="bar-track">
-                <span className="bar-fill" style={{ width: `calc((100% - 3.5rem) * ${n / max})` }} />
-                <span className="tip-value">{fmt(n)}</span>
+                <span className="bar-fill" style={{ width: `calc((100% - 3.5rem) * ${(n ?? 0) / max})` }} />
+                <span className="tip-value">{fmtOr(n)}</span>
               </span>
             </>
           )}
-          {at === i && <Tip value={`${fmt(n)} ${unit}`} label={`${words(d, v, labels)}, ${sum ? Math.round((100 * n) / sum) : 0}% of ${fmt(sum)}`} style={{ top: "calc(100% + 4px)", ...(columns && i > marks.length / 2 ? { right: 0 } : { left: columns ? 0 : "30%" }) }} />}
+          {at === i && <Tip value={`${fmtOr(n)} ${unit}`} label={`${words(d, v, labels)}, ${n === null ? TWO : `${pct(n)} of ${fmt(sum)}`}`} style={{ top: "calc(100% + 4px)", ...(columns && i > marks.length / 2 ? { right: 0 } : { left: columns ? 0 : "30%" }) }} />}
         </div>
       ))}
       {columns && <p className="col-axis">{cat.labels[d]}</p>}
@@ -281,7 +293,7 @@ export function Result(props: { view: View; cat: Catalog; rows: Row[]; totals: T
     const head = [...dims.map((d) => cat.labels[d]), ...view.show.flatMap((m) => (cat.types[m] === "record" ? [`${cat.labels[m]} wins`, `${cat.labels[m]} losses`] : [cat.labels[m]]))];
     const lines = sorted.map((r) => [
       ...dims.map((d) => words(d, String(r[d]), labels)),
-      ...view.show.flatMap((m) => (cat.types[m] === "record" ? cat.parts[m].map((p) => Number(r[p] ?? 0)) : [cat.types[m] === "average" ? measureValue(cat, m, r).toFixed(1) : Number(r[m] ?? 0)])),
+      ...view.show.flatMap((m) => (cat.types[m] === "record" ? cat.parts[m].map((p) => (r[p] == null ? "" : Number(r[p]))) : [cat.types[m] === "average" ? measureValue(cat, m, r).toFixed(1) : Number(r[m] ?? 0)])),
     ]);
     const blob = new Blob([[head, ...lines].map((l) => l.map(cell).join(",")).join("\n") + "\n"], { type: "text/csv" });
     const a = document.createElement("a");
@@ -299,6 +311,7 @@ export function Result(props: { view: View; cat: Catalog; rows: Row[]; totals: T
           <div key={m} className="stat">
             <span className="s-l">{cat.labels[m]}</span>
             <span className="s-v">{rows[0] ? measureText(cat, m, rows[0]) : "—"}</span>
+            {rows[0] && mirrorsText(cat, m, rows[0]) && <span className="s-n">{mirrorsText(cat, m, rows[0])}</span>}
           </div>
         ))}
       </div>
@@ -370,6 +383,7 @@ export function Result(props: { view: View; cat: Catalog; rows: Row[]; totals: T
                                 <span className="whitespace-nowrap">{part}</span>
                               </Fragment>
                             ))}
+                          {mirrorsText(cat, m, r) && <span className="block text-xs text-muted">{mirrorsText(cat, m, r)}</span>}
                         </td>
                       ))}
                     </tr>

@@ -12,8 +12,8 @@ export type Catalog = {
   notes: Record<string, string>;
 };
 
-/** A row of POST /query after the page reads it: dimension values as text, measure parts as numbers. */
-export type Row = Record<string, string | number>;
+/** A row of POST /query after the page reads it: dimension values as text, measure parts as numbers, null wins and losses when every game is a mirror. */
+export type Row = Record<string, string | number | null>;
 /**
  * A view's figures over its whole scope (all), and per value of a heat map's row and of its column
  * dimension. A game counts once in a row, so a game whose players fall in two rows counts in both:
@@ -84,8 +84,11 @@ export function viewHref(v: View) {
 /** The dimensions of a view, rows first then the column. */
 export const dimsOf = (v: View) => [...v.rows, ...(v.cols ? [v.cols] : [])];
 
-/** The measures POST /query reads for the shown ones: each one's parts or itself, and games for the total. */
-export const queryMeasures = (v: View, cat: Catalog) => [...new Set(["games", ...v.show.flatMap((m) => cat.parts[m] ?? [m])])];
+/** The measures POST /query reads for the shown ones: each one's parts or itself, games for the total, and mirrors beside a record. */
+export const queryMeasures = (v: View, cat: Catalog) => {
+  const mirrors = v.show.some((m) => cat.types[m] === "record") && cat.measures.includes("mirrors") ? ["mirrors"] : [];
+  return [...new Set(["games", ...v.show.flatMap((m) => cat.parts[m] ?? [m]), ...mirrors])];
+};
 
 /** Whether a dimension has an order of its own, so its values are not sorted by count. */
 export const ordered = (cat: Catalog, d: string) => /^(U?Int|Float)/.test(cat.dimensions[d] ?? "");
@@ -105,7 +108,8 @@ export function chartOf(v: View, cat: Catalog): { form: "tiles" | "bars" | "colu
 export function measureText(cat: Catalog, m: string, row: Row) {
   const n = (k: string) => Number(row[k] ?? 0);
   const type = cat.types[m];
-  if (type === "record") return record(n(cat.parts[m][0]), n(cat.parts[m][1]));
+  // a record is null when every game of the row is a mirror
+  if (type === "record") return row[cat.parts[m][0]] == null || row[cat.parts[m][1]] == null ? "—" : record(n(cat.parts[m][0]), n(cat.parts[m][1]));
   if (type === "average") {
     const [total, count] = cat.parts[m];
     if (!n(count)) return "—";
@@ -113,6 +117,12 @@ export function measureText(cat: Catalog, m: string, row: Row) {
     return total === "minutes_total" ? mss(avg * 60000) : Math.round(avg).toLocaleString("en-US");
   }
   return Math.round(n(m)).toLocaleString("en-US");
+}
+
+/** Under a record: the row's mirrors (games with both players in the row), which add no win or loss. */
+export function mirrorsText(cat: Catalog, m: string, row: Row) {
+  const k = Number(row.mirrors ?? 0);
+  return cat.types[m] === "record" && k > 0 ? `${k.toLocaleString("en-US")} ${k === 1 ? "mirror" : "mirrors"}, no result` : null;
 }
 
 /** A measure's value for sorting and the CSV: a record's win share, an average's value. */
