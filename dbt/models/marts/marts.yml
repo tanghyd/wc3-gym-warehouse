@@ -195,7 +195,7 @@ models:
         description: For a custom-map code, its group (ui-menu, builder, tower, upgrade, item, other), or '' for a melee code.
 
   - name: replays
-    description: One row per replay, the header and the lobby settings, with a readable map name.
+    description: One row per replay of a valid game (valid_replays), the header and the lobby settings, with a readable map name.
     columns:
       - name: replay_id
         description: "{{ doc('replay_id') }}"
@@ -236,10 +236,12 @@ models:
         description: >-
           From the parser's leaves (observers skipped). A player leave marked victory (result
           09000000) names the winning team, because the winner can leave before the loser's
-          leave is logged. Otherwise the team opposite the first player to quit won: the first
-          player leave, or the saver (saverPlayerId) when no player leave is recorded, because
-          a FLO player-saved w3c- file drops the saver's own leave. -1 unless the game has
-          exactly two teams. The parser's own winningTeamId is not read.
+          leave is logged. Otherwise, in 1v1, the player opposite the first to quit won: the
+          first player leave, or the saver (saverPlayerId) when no player leave is recorded,
+          because a FLO player-saved w3c- file drops the saver's own leave. In a team game the
+          other team won when every player of one team left before any player of the other.
+          -1 (no winner) otherwise, and unless the game has exactly two teams. The parser's
+          own winningTeamId is not read.
       - name: winner_names
         description: The names of the players on the winning team, sorted and joined by commas, or '' when winning_team_id is -1.
       - name: random_seed
@@ -252,8 +254,9 @@ models:
       - name: duplicate_of
         description: >-
           For a second file of a game, the replay_id of the copy that stands for the game, or
-          '' on that copy itself. The copy is one with a recorded winner first, then the
-          lowest replay_id. player_games leaves duplicates out.
+          '' on that copy itself. The copy is the most complete one: the longest, then the
+          one with the most events (valid_replays.events), then the lowest replay_id.
+          player_games leaves duplicates out.
       - name: start_spots
         description: The number of start spots in the lobby.
       - name: observers

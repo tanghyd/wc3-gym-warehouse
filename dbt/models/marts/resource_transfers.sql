@@ -12,10 +12,8 @@ SELECT
     toUInt32(coalesce(JSONExtract(t, 'ms', 'Nullable(UInt32)'),
                       JSONExtractUInt(t, 'time')))           AS time_ms,
     toUInt32(t_idx)                                          AS seq
-FROM {{ ref('raw_replays') }} AS r
+FROM {{ ref('valid_replays') }} AS r
 ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p
 ARRAY JOIN
     JSONExtractArrayRaw(p, 'resourceTransfers')                 AS t,
     arrayEnumerate(JSONExtractArrayRaw(p, 'resourceTransfers')) AS t_idx
--- raw_replays keeps a replaced document until a merge, so read it deduplicated.
-SETTINGS final = 1

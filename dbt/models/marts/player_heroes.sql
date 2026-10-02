@@ -12,7 +12,7 @@ heroes AS (
         toUInt8(h_idx - 1)                         AS hero_slot,
         toLowCardinality(JSONExtractString(h, 'id')) AS hero_id,
         toUInt8(JSONExtractUInt(h, 'level'))       AS final_level
-    FROM {{ ref('raw_replays') }} AS r
+    FROM {{ ref('valid_replays') }} AS r
     ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p
     ARRAY JOIN
         JSONExtractArrayRaw(p, 'heroes')                 AS h,
@@ -41,5 +41,3 @@ SELECT
 FROM heroes AS h
 LEFT JOIN first_skill AS f ON f.replay_id = h.replay_id AND f.player_id = h.player_id AND f.hero_slot = h.hero_slot
 LEFT JOIN orders AS o ON o.replay_id = h.replay_id AND o.player_id = h.player_id AND o.object_code = h.hero_id
--- raw_replays keeps a replaced document until a merge, so read it deduplicated.
-SETTINGS final = 1

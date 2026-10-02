@@ -7,8 +7,6 @@ SELECT
     toUInt8(kv.1)                              AS group_key,
     toUInt32(JSONExtractUInt(kv.2, 'assigned')) AS assigned,
     toUInt32(JSONExtractUInt(kv.2, 'used'))    AS used
-FROM {{ ref('raw_replays') }} AS r
+FROM {{ ref('valid_replays') }} AS r
 ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p
 ARRAY JOIN JSONExtractKeysAndValuesRaw(JSONExtractRaw(p, 'groupHotkeys')) AS kv
--- raw_replays keeps a replaced document until a merge, so read it deduplicated.
-SETTINGS final = 1

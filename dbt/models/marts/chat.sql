@@ -9,9 +9,7 @@ SELECT
     JSONExtractString(c, 'message')              AS message,
     toUInt32(JSONExtractUInt(c, 'timeMS'))       AS time_ms,
     toUInt32(c_idx)                              AS seq
-FROM {{ ref('raw_replays') }} AS r
+FROM {{ ref('valid_replays') }} AS r
 ARRAY JOIN
     JSONExtractArrayRaw(r.doc, 'chat')                 AS c,
     arrayEnumerate(JSONExtractArrayRaw(r.doc, 'chat')) AS c_idx
--- raw_replays keeps a replaced document until a merge, so read it deduplicated.
-SETTINGS final = 1

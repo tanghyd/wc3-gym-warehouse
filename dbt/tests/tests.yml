@@ -17,3 +17,5 @@ data_tests:
     description: Every game_key has exactly one replay that stands for it, and each duplicate points to that replay.
   - name: objects_are_named_and_complete
     description: Every picker object has a name in mappings, and every melee skill sits under a hero.
+  - name: every_player_gave_an_order
+    description: Every player in replay_players has a row in player_order_events, because valid_replays leaves out a game in which a player gave no order.

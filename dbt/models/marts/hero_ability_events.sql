@@ -15,7 +15,7 @@ WITH skills AS (
         toLowCardinality(trim(BOTH '"' FROM JSONExtractRaw(ev, 'value'))) AS ability_id,
         toUInt32(JSONExtractUInt(ev, 'time'))             AS time_ms,
         toUInt32(ev_idx)                                  AS seq
-    FROM {{ ref('raw_replays') }} AS r
+    FROM {{ ref('valid_replays') }} AS r
     ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p
     ARRAY JOIN
         JSONExtractArrayRaw(p, 'heroes')                 AS h,
@@ -51,5 +51,3 @@ SELECT
     -- a normal skill stops at level 3, so a 4th point is a click the game refused
     toUInt8(is_click OR level > 3) AS is_repeat
 FROM levels
--- raw_replays keeps a replaced document until a merge, so read it deduplicated.
-SETTINGS final = 1

@@ -12,18 +12,27 @@ WITH
     -- victory screen before the loser's leave is logged, so this outranks quit order.
     arrayFirst(l -> JSONExtractString(l, 'result') = '09000000'
                     AND has(player_ids, JSONExtractUInt(l, 'playerId')), leaves) AS victory_leave,
-    -- Who quit, in order: each leave's player, then the saver. A FLO player-saved file
-    -- stops at the saver's own leave and drops it, so with no player leave recorded the
-    -- saver quit first.
+    -- 1v1: who quit, in order: each leave's player, then the saver. A FLO player-saved
+    -- file stops at the saver's own leave and drops it, so with no player leave recorded
+    -- the saver quit first.
     arrayPushBack(arrayMap(l -> JSONExtractUInt(l, 'playerId'), leaves),
                   JSONExtractUInt(r.doc, 'saverPlayerId')) AS quitters,
     -- The first player to quit lost, observers skipped. 0 when no quitter is a player.
     arrayFirstIndex(id -> has(player_ids, id), quitters) AS first_quit,
-    -- The victory leave's team won, else the team that did not quit first. -1 unless the
-    -- game has exactly two teams and one of those names a side.
+    -- Team game: the team of each player leave in log order, each player once, observers skipped.
+    arrayMap(id -> team_ids[indexOf(player_ids, id)],
+             arrayDistinct(arrayFilter(id -> has(player_ids, id), arrayMap(l -> JSONExtractUInt(l, 'playerId'), leaves)))) AS leave_teams,
+    -- How many leaves in a row, from the first, are of the first team to lose a player.
+    if(arrayFirstIndex(t -> t != leave_teams[1], leave_teams) = 0, length(leave_teams),
+       arrayFirstIndex(t -> t != leave_teams[1], leave_teams) - 1) AS first_team_run,
+    -- The victory leave's team won. Else in 1v1 the player who did not quit first won, and
+    -- in a team game the other team won when every player of one team left before any
+    -- player of the other. -1 (no winner) otherwise, and unless the game has two teams.
     multiIf(length(arrayDistinct(team_ids)) != 2, -1,
             victory_leave != '', team_ids[indexOf(player_ids, JSONExtractUInt(victory_leave, 'playerId'))],
-            first_quit > 0, arrayFirst(t -> t != team_ids[indexOf(player_ids, quitters[first_quit])], team_ids),
+            length(team_ids) = 2, if(first_quit > 0, arrayFirst(t -> t != team_ids[indexOf(player_ids, quitters[first_quit])], team_ids), -1),
+            notEmpty(leave_teams) AND first_team_run >= countEqual(team_ids, leave_teams[1]),
+                arrayFirst(t -> t != leave_teams[1], team_ids),
             -1) AS winner
 SELECT
     r.replay_id                                                          AS replay_id,
@@ -60,8 +69,8 @@ SELECT
     JSONExtractInt(r.doc, 'randomseed')                                  AS random_seed,
     concat(toString(random_seed), ':',
            arrayStringConcat(arraySort(arrayMap(p -> JSONExtractString(p, 'name'), players)), ',')) AS game_key,
-    -- The copy that stands for the game: one with a recorded winner, then the lowest
-    -- id. '' on that copy itself.
+    -- The copy that stands for the game: the longest, then the one with the most events,
+    -- then the lowest id. '' on that copy itself.
     if(first_value(r.replay_id) OVER game = r.replay_id, '', first_value(r.replay_id) OVER game) AS duplicate_of,
     toUInt8(JSONExtractUInt(r.doc, 'startSpots'))                        AS start_spots,
     JSONExtract(r.doc, 'observers', 'Array(String)')                     AS observers,
@@ -76,9 +85,7 @@ SELECT
     JSONExtractBool(r.doc, 'settings', 'randomHero')                     AS random_hero,
     JSONExtractBool(r.doc, 'settings', 'randomRaces')                    AS random_races,
     JSONExtractBool(r.doc, 'settings', 'hideTerrain')                    AS hide_terrain
-FROM {{ ref('raw_replays') }} AS r
+FROM {{ ref('valid_replays') }} AS r
 LEFT JOIN {{ ref('patches') }} AS pt ON pt.build_number = toUInt32(JSONExtractUInt(r.doc, 'buildNumber'))
 WINDOW game AS (PARTITION BY game_key
-                ORDER BY winner >= 0 DESC, r.replay_id)
--- raw_replays keeps a replaced document until a merge, so read it deduplicated.
-SETTINGS final = 1
+                ORDER BY JSONExtractUInt(r.doc, 'duration') DESC, r.events DESC, r.replay_id)

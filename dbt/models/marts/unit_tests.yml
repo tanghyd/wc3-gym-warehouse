@@ -1,6 +1,6 @@
 # Fixtures are SQL, not dict rows: dbt 2.0.6 casts dict rows to Nullable(<column type>),
 # which ClickHouse refuses for LowCardinality and which makes the JSON functions on
-# raw_replays.doc return Nullable(Array), an illegal type. A SQL expect compares
+# valid_replays.doc return Nullable(Array), an illegal type. A SQL expect compares
 # every column, so it lists them all. dbt 2.0.6 checks only the String columns: it
 # shows integer and array columns as [unsupported], and a wrong integer passes.
 unit_tests:
@@ -91,13 +91,13 @@ unit_tests:
       order keeps RANDOM, with random 1.
     model: replay_players
     given:
-      - input: ref('raw_replays')
+      - input: ref('valid_replays')
         format: sql
         rows: |
           SELECT
             'r1' AS replay_id,
             '{"id":"r1","duration":120000,"players":[{"id":1,"race":"H"},{"id":2,"race":"O"},{"id":3,"race":"N"},{"id":4,"race":"U"},{"id":5,"race":"R"},{"id":6,"race":"X"}]}' AS doc,
-            now() AS ingested_at
+            toUInt32(0) AS events
     expect:
       format: sql
       rows: |
@@ -122,7 +122,7 @@ unit_tests:
       A player who picked a race keeps it (p5).
     model: replay_players
     given:
-      - input: ref('raw_replays')
+      - input: ref('valid_replays')
         format: sql
         rows: |
           SELECT
@@ -133,7 +133,7 @@ unit_tests:
               {"id":3,"race":"R","raceDetected":"","buildings":{"order":[{"id":"otrb","ms":7000}]},"units":{"order":[{"id":"ugho","ms":5000}]}},
               {"id":4,"race":"R","raceDetected":""},
               {"id":5,"race":"H","raceDetected":"O"}]}' AS doc,
-            now() AS ingested_at
+            toUInt32(0) AS events
     expect:
       format: sql
       rows: |
@@ -152,22 +152,23 @@ unit_tests:
   - name: replays_result_and_duplicate
     description: >-
       replays gives -1 when neither a player leave nor the saver names a loser. Within one
-      game key the copy that stands for the game is one with a known winner (b2), then the
-      lowest id (c1). game_key sorts the names, so a copy that lists its players in another
-      order (a2) matches. patch comes from the patches seed, '' for a build it has no row for.
+      game key the copy that stands for the game is the longest (b1 outranks b2, which has the
+      winner), then the one with the most events (c2 over c1), then the lowest id (a1). game_key
+      sorts the names, so a copy that lists its players in another order (a2) matches. patch
+      comes from the patches seed, '' for a build it has no row for.
     model: replays
     given:
-      - input: ref('raw_replays')
+      - input: ref('valid_replays')
         format: sql
         rows: |
           SELECT * FROM VALUES(
-            'replay_id String, doc String, ingested_at DateTime',
-            ('a1', '{"type":"1on1","buildNumber":7000,"randomseed":1,"leaves":[{"playerId":2}],"source_key":"replays/w3warehouse-ladder/a1.w3g","players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', now()),
-            ('a2', '{"type":"1on1","buildNumber":7000,"randomseed":1,"leaves":[{"playerId":2}],"source_key":"replays/local/a2.w3g","players":[{"id":2,"name":"B","teamid":1},{"id":1,"name":"A","teamid":0}]}', now()),
-            ('b1', '{"type":"1on1","buildNumber":6117,"randomseed":2,"source_key":"replays/1/game1.w3g","players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', now()),
-            ('b2', '{"type":"1on1","buildNumber":6117,"randomseed":2,"leaves":[{"playerId":1}],"source_key":"replays/1/game2.w3g","players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', now()),
-            ('c1', '{"type":"1on1","buildNumber":9999,"randomseed":3,"source_key":"x/c1.w3g","players":[{"id":1,"name":"C","teamid":0},{"id":2,"name":"D","teamid":1}]}', now()),
-            ('c2', '{"type":"1on1","buildNumber":9999,"randomseed":3,"source_key":"x/c2.w3g","players":[{"id":1,"name":"C","teamid":0},{"id":2,"name":"D","teamid":1}]}', now()))
+            'replay_id String, doc String, events UInt32',
+            ('a1', '{"type":"1on1","buildNumber":7000,"randomseed":1,"leaves":[{"playerId":2}],"source_key":"replays/w3warehouse-ladder/a1.w3g","players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0),
+            ('a2', '{"type":"1on1","buildNumber":7000,"randomseed":1,"leaves":[{"playerId":2}],"source_key":"replays/local/a2.w3g","players":[{"id":2,"name":"B","teamid":1},{"id":1,"name":"A","teamid":0}]}', 0),
+            ('b1', '{"type":"1on1","buildNumber":6117,"randomseed":2,"duration":600000,"source_key":"replays/1/game1.w3g","players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0),
+            ('b2', '{"type":"1on1","buildNumber":6117,"randomseed":2,"duration":300000,"leaves":[{"playerId":1}],"source_key":"replays/1/game2.w3g","players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0),
+            ('c1', '{"type":"1on1","buildNumber":9999,"randomseed":3,"source_key":"x/c1.w3g","players":[{"id":1,"name":"C","teamid":0},{"id":2,"name":"D","teamid":1}]}', 5),
+            ('c2', '{"type":"1on1","buildNumber":9999,"randomseed":3,"source_key":"x/c2.w3g","players":[{"id":1,"name":"C","teamid":0},{"id":2,"name":"D","teamid":1}]}', 10))
       - input: ref('patches')
         format: sql
         rows: |
@@ -189,14 +190,14 @@ unit_tests:
            0, 0, 'A', 1, '1:A,B', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
           ('a2', '', '', '', '', '1on1', '', 0, 7000, '', '3.0', 0, 0, 'replays/local/a2.w3g',
            0, 0, 'A', 1, '1:A,B', 'a1', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
-          ('b1', '', '', '', '', '1on1', '', 0, 6117, '', '2.0', 0, 0, 'replays/1/game1.w3g',
-           0, -1, '', 2, '2:A,B', 'b2', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
-          ('b2', '', '', '', '', '1on1', '', 0, 6117, '', '2.0', 0, 0, 'replays/1/game2.w3g',
-           0, 1, 'B', 2, '2:A,B', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('b1', '', '', '', '', '1on1', '', 600000, 6117, '', '2.0', 0, 0, 'replays/1/game1.w3g',
+           0, -1, '', 2, '2:A,B', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('b2', '', '', '', '', '1on1', '', 300000, 6117, '', '2.0', 0, 0, 'replays/1/game2.w3g',
+           0, 1, 'B', 2, '2:A,B', 'b1', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
           ('c1', '', '', '', '', '1on1', '', 0, 9999, '', '', 0, 0, 'x/c1.w3g',
-           0, -1, '', 3, '3:C,D', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+           0, -1, '', 3, '3:C,D', 'c2', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
           ('c2', '', '', '', '', '1on1', '', 0, 9999, '', '', 0, 0, 'x/c2.w3g',
-           0, -1, '', 3, '3:C,D', 'c1', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0))
+           0, -1, '', 3, '3:C,D', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0))
 
   - name: replays_winner_from_the_leave_records
     description: >-
@@ -210,17 +211,17 @@ unit_tests:
       the winner B leaving with result 09000000 before the loser A, so B won.
     model: replays
     given:
-      - input: ref('raw_replays')
+      - input: ref('valid_replays')
         format: sql
         rows: |
           SELECT * FROM VALUES(
-            'replay_id String, doc String, ingested_at DateTime',
-            ('w1', '{"randomseed":1,"saverPlayerId":1,"leaves":[{"playerId":24,"reason":"0c000000","result":"0b000000"},{"playerId":2,"reason":"01000000","result":"07000000"},{"playerId":1,"reason":"01000000","result":"09000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', now()),
-            ('w2', '{"randomseed":2,"saverPlayerId":1,"leaves":[{"playerId":2,"reason":"07000000","result":"07000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', now()),
-            ('w3', '{"randomseed":3,"saverPlayerId":1,"leaves":[{"playerId":24,"reason":"0c000000","result":"0b000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', now()),
-            ('w4', '{"randomseed":4,"saverPlayerId":1,"winningTeamId":0,"leaves":[{"playerId":1,"reason":"0c000000","result":"07000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', now()),
-            ('w5', '{"randomseed":5,"saverPlayerId":1,"leaves":[{"playerId":3,"reason":"01000000","result":"07000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1},{"id":3,"name":"C","teamid":2}]}', now()),
-            ('w6', '{"randomseed":6,"saverPlayerId":1,"leaves":[{"playerId":2,"reason":"09000000","result":"09000000"},{"playerId":1,"reason":"0b000000","result":"0d000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', now()))
+            'replay_id String, doc String, events UInt32',
+            ('w1', '{"randomseed":1,"saverPlayerId":1,"leaves":[{"playerId":24,"reason":"0c000000","result":"0b000000"},{"playerId":2,"reason":"01000000","result":"07000000"},{"playerId":1,"reason":"01000000","result":"09000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0),
+            ('w2', '{"randomseed":2,"saverPlayerId":1,"leaves":[{"playerId":2,"reason":"07000000","result":"07000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0),
+            ('w3', '{"randomseed":3,"saverPlayerId":1,"leaves":[{"playerId":24,"reason":"0c000000","result":"0b000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0),
+            ('w4', '{"randomseed":4,"saverPlayerId":1,"winningTeamId":0,"leaves":[{"playerId":1,"reason":"0c000000","result":"07000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0),
+            ('w5', '{"randomseed":5,"saverPlayerId":1,"leaves":[{"playerId":3,"reason":"01000000","result":"07000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1},{"id":3,"name":"C","teamid":2}]}', 0),
+            ('w6', '{"randomseed":6,"saverPlayerId":1,"leaves":[{"playerId":2,"reason":"09000000","result":"09000000"},{"playerId":1,"reason":"0b000000","result":"0d000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0))
       - input: ref('patches')
         format: sql
         rows: |
@@ -248,3 +249,45 @@ unit_tests:
            0, -1, '', 5, '5:A,B,C', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
           ('w6', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
            0, 1, 'B', 6, '6:A,B', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0))
+
+  - name: replays_team_game_winner
+    description: >-
+      A 2v2 (A and B on team 0, C and D on team 1), checked through winner_names. t1 has a
+      leave marked victory, so A's team won although C left first. In t2 C and D left before
+      any player of team 0 (an observer's leave and a second leave of C skipped), so team 0
+      won. In t3 C left, then A, then D: no team left whole first, so no winner. t4 records
+      no player leave: the saver does not count in a team game, so no winner.
+    model: replays
+    given:
+      - input: ref('valid_replays')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, doc String, events UInt32',
+            ('t1', '{"randomseed":1,"saverPlayerId":1,"leaves":[{"playerId":3,"result":"07000000"},{"playerId":1,"result":"09000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":0},{"id":3,"name":"C","teamid":1},{"id":4,"name":"D","teamid":1}]}', 0),
+            ('t2', '{"randomseed":2,"saverPlayerId":1,"leaves":[{"playerId":24,"result":"0b000000"},{"playerId":3,"result":"07000000"},{"playerId":3,"result":"07000000"},{"playerId":4,"result":"07000000"},{"playerId":1,"result":"07000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":0},{"id":3,"name":"C","teamid":1},{"id":4,"name":"D","teamid":1}]}', 0),
+            ('t3', '{"randomseed":3,"saverPlayerId":1,"leaves":[{"playerId":3,"result":"07000000"},{"playerId":1,"result":"07000000"},{"playerId":4,"result":"07000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":0},{"id":3,"name":"C","teamid":1},{"id":4,"name":"D","teamid":1}]}', 0),
+            ('t4', '{"randomseed":4,"saverPlayerId":1,"leaves":[],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":0},{"id":3,"name":"C","teamid":1},{"id":4,"name":"D","teamid":1}]}', 0))
+      - input: ref('patches')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES('build_number UInt32, patch String, description String', (6117, '2.0', 'Reforged 2.0'))
+    expect:
+      format: sql
+      rows: |
+        SELECT * FROM VALUES(
+          'replay_id String, map String, map_json String, gamename String,
+           creator String, type String, matchup String, duration_ms UInt32, build_number UInt32, version String,
+           patch String, expansion UInt8, parse_time_ms UInt32, source_key String, added_at DateTime, winning_team_id Int8,
+           winner_names String, random_seed Int64, game_key String, duplicate_of String,
+           start_spots UInt8, observers Array(String), speed UInt8, fixed_teams UInt8, teams_together UInt8,
+           full_shared_unit_control UInt8, always_visible UInt8, map_explored UInt8, referees UInt8,
+           observer_mode String, random_hero UInt8, random_races UInt8, hide_terrain UInt8',
+          ('t1', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
+           0, 0, 'A,B', 1, '1:A,B,C,D', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('t2', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
+           0, 0, 'A,B', 2, '2:A,B,C,D', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('t3', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
+           0, -1, '', 3, '3:A,B,C,D', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('t4', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
+           0, -1, '', 4, '4:A,B,C,D', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0))

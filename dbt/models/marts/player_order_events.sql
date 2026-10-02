@@ -17,7 +17,7 @@ WITH orders AS (
         toUInt32(o_idx)                               AS seq,
         JSONExtract(o, 'x', 'Nullable(Float32)')      AS x,
         JSONExtract(o, 'y', 'Nullable(Float32)')      AS y
-    FROM {{ ref('raw_replays') }} AS r
+    FROM {{ ref('valid_replays') }} AS r
     ARRAY JOIN JSONExtractArrayRaw(r.doc, 'players') AS p
     -- (kind, the player key that holds its orders)
     ARRAY JOIN [('building', 'buildings'), ('unit', 'units'), ('item', 'items'),
@@ -38,5 +38,3 @@ SELECT
 FROM orders
 WINDOW same_code AS (PARTITION BY replay_id, player_id, kind, object_code ORDER BY time_ms, seq
                      ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)
--- raw_replays keeps a replaced document until a merge, so read it deduplicated.
-SETTINGS final = 1
