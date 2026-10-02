@@ -1,20 +1,9 @@
-# The warehouse transform: parsed replay JSON in the bucket -> ClickHouse marts.
+# The warehouse transform: parsed replay documents in ingest.docs -> ClickHouse marts.
 # `just dbt build` runs it in the dbt container against the local ClickHouse.
 name: w3g
 version: "1.0"
 profile: w3g
 require-dbt-version: ">=2.0.0,<3.0.0"
-
-# The bucket.parsed_docs source (models/landing/landing.yml): an S3 table over the
-# parsed_docs named collection, so the bucket reads like any other table. Its own
-# database keeps it away from the api and grafana users, which read w3g only.
-on-run-start:
-  - CREATE DATABASE IF NOT EXISTS bucket
-  - >-
-    CREATE OR REPLACE TABLE bucket.parsed_docs
-    (doc String COMMENT 'One parsed replay document, as JSON text.')
-    ENGINE = S3(parsed_docs, format = 'JSONAsString')
-    COMMENT 'The parsed replay documents the drain writes under parsed/ in the bucket, one file per replay.'
 
 models:
   w3g:
