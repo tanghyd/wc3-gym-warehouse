@@ -13,13 +13,13 @@ env:
     @test -f .env.box || { echo '.env.box is missing: cp .env.example .env.box and fill it in (docs/deploy.md)' >&2; exit 1; }
     {{ssh}} 'cat > wc3-gym-warehouse/.env && chmod 600 wc3-gym-warehouse/.env' < .env.box
 
-# check out a pushed branch on the box, then build and start the services of the box's COMPOSE_PROFILES
+# check out a pushed branch on the box, build and start the services of the box's COMPOSE_PROFILES, queue a marts rebuild, prune old images; waits for a running ingest pass
 deploy branch='main':
-    {{ssh}} 'cd wc3-gym-warehouse && git fetch -q origin {{branch}} && git checkout -q -B {{branch}} FETCH_HEAD && docker compose up -d --build --remove-orphans'
+    {{ssh}} 'cd wc3-gym-warehouse && flock /tmp/ingest.lock sh -c "git fetch -q origin {{branch}} && git checkout -q -B {{branch}} FETCH_HEAD && docker compose up -d --build --remove-orphans && mkdir -p data && touch data/dbt-build-pending && docker image prune -f && docker builder prune -f --filter until=168h"'
 
-# one drain pass on the box, then dbt build when it inserted documents
+# one drain pass on the box, then dbt build when it inserted documents or one is pending; waits for the cron's pass
 ingest:
-    {{ssh}} 'cd wc3-gym-warehouse && just ingest'
+    {{ssh}} 'cd wc3-gym-warehouse && flock /tmp/ingest.lock just ingest'
 
 # run `just ingest` on the box every 10 minutes, one pass at a time, appending to ~/ingest.log
 cron:
@@ -31,4 +31,4 @@ open:
 
 # the containers, the disk, the last ingest passes and the last dbt build's summary
 status:
-    {{ssh}} 'cd wc3-gym-warehouse && docker compose ps --format "table {{{{.Service}}\t{{{{.Status}}"; df -h /; tail -n 20 ~/ingest.log; grep "Done. PASS=" ~/ingest.log | tail -n 1'
+    {{ssh}} 'cd wc3-gym-warehouse && docker compose ps --format "table {{{{.Service}}\t{{{{.Status}}"; df -h /; tail -n 20 ~/ingest.log; grep "Summary:" ~/ingest.log | tail -n 1'

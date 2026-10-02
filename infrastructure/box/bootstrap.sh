@@ -10,10 +10,24 @@ just_sha256=7fedeb22c7e14d9ef1551e8b793700866d80f409f9884b0e80ebb65c11d4874d  # 
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a  # no prompts from apt or needrestart
 apt=(apt-get -y -q -o DPkg::Lock::Timeout=300)  # first boot's apt timers can hold the lock
 
-# Packages, then daily security updates by unattended-upgrades.
-"${apt[@]}" update
+# Three tries, 10 s apart: first boot's apt-daily can hold the dpkg or lists lock, which DPkg::Lock::Timeout skips.
+retry() { for try in 1 2 3; do "$@" && return 0; sleep 10; done; return 1; }
+
+# Finish an interrupted install first, then packages, then daily security updates by unattended-upgrades.
+retry dpkg --configure -a
+retry "${apt[@]}" update
 "${apt[@]}" install ca-certificates curl git ufw unattended-upgrades
 printf 'APT::Periodic::Update-Package-Lists "1";\nAPT::Periodic::Unattended-Upgrade "1";\n' > /etc/apt/apt.conf.d/20auto-upgrades
+
+# A 4 GB swapfile when the box has no swap, so one memory peak slows the box instead of killing a container.
+# The fstab line is written before swapon, so an interrupted run is finished by the next one.
+if [ -z "$(swapon --show --noheadings)" ]; then
+  fallocate -l 4G /swapfile
+  chmod 600 /swapfile
+  mkswap -q /swapfile
+  grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  swapon /swapfile
+fi
 
 # Docker Engine and the compose plugin from docker.com's apt repo (docs.docker.com/engine/install/ubuntu).
 install -m 0755 -d /etc/apt/keyrings
@@ -21,7 +35,7 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/doc
 chmod a+r /etc/apt/keyrings/docker.asc
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
   > /etc/apt/sources.list.d/docker.list
-"${apt[@]}" update
+retry "${apt[@]}" update
 "${apt[@]}" install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # Container logs rotate at 10 MB, 3 files each. Docker restarts only when the file changes.
