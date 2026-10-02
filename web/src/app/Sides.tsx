@@ -166,7 +166,7 @@ function Side(props: {
   /** Expanded names the side's town hall: one race's, or any. */
   const hall = () => {
     const h = races.length === 1 ? props.halls[HALLS[races[0]]] : null;
-    return h ? { name: h.name, icon: h.icon } : { name: "Any town hall", icon: null };
+    return h ? { name: h.name, icon: h.icon } : { name: "Any expansion", icon: null };
   };
   const add = (gi: number, kind: Kind) => {
     const key = props.nextKey();

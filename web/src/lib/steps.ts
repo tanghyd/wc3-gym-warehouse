@@ -162,7 +162,7 @@ export const played = (race: string[]) => [...new Set(race.map((v) => racePair(v
  */
 export function stepObject(s: Step, race: string[], names: Objects, groups: Record<string, { name: string; icon: string | null }>) {
   const one = (c: string) => ({ name: names[c]?.name ?? c, icon: names[c]?.icon ?? null });
-  if (s.kind === "expand") return played(race).length === 1 ? one(HALLS[played(race)[0]]) : { name: "Any town hall", icon: null };
+  if (s.kind === "expand") return played(race).length === 1 ? one(HALLS[played(race)[0]]) : { name: "Any expansion", icon: null };
   const g = s.codes[0]?.startsWith("@") ? groups[`${s.kind}${s.codes[0]}`] : null;
   if (g) return { name: `Any from ${g.name}`, icon: g.icon };
   return s.codes.length > 1 ? { ...one(s.codes[0]), name: `${one(s.codes[0]).name} or ${s.codes.length - 1} more` } : one(s.codes[0]);
