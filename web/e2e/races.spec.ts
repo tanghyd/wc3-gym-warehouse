@@ -8,7 +8,7 @@ const RACE = { HU: "Human", OC: "Orc", NE: "Night Elf", UD: "Undead" } as const;
 const RANDOM = { HU: "Random Human", OC: "Random Orc", NE: "Random Night Elf", UD: "Random Undead" } as const;
 const MIN2 = { duration_ms: { gte: 120000 } };
 
-/** Player-games per (race, random) pair, as "NE:0" -> games. */
+/** Games per (race, random) pair, as "NE:0" -> games: a game with two players of one pair counts once. */
 async function counts(request: APIRequestContext) {
   const res = await request.post(`${API}/query`, { data: { dimensions: ["race", "random"], measures: ["games"], filters: MIN2, limit: 100 } });
   return Object.fromEntries((await res.json()).rows.map((r: { race: string; random: number; games: number }) => [`${r.race}:${r.random}`, r.games]));
@@ -22,13 +22,13 @@ async function decided(request: APIRequestContext, filters: Record<string, (stri
 const fmt = (n: number) => n.toLocaleString("en-US");
 
 test.describe("race control", () => {
-  test("the menu lists the four races and a Random submenu with their player-games", async ({ page, request }) => {
+  test("the menu lists the four races and a Random submenu with their games", async ({ page, request }) => {
     const n = await counts(request);
     await page.goto("/strategies/openers?race=NE");
     await page.getByRole("button", { name: "Opponent race: Any race" }).click();
     const menu = page.getByRole("menu", { name: "Opponent race" });
-    // picked races in the fixed order, then Random; Any race counts every player-game
-    const total = Object.values(n).reduce((a: number, b) => a + (b as number), 0);
+    // picked races in the fixed order, then Random; Any race counts each game once, not the races added up
+    const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: MIN2 } })).json()).rows[0].games as number;
     await expect(menu.getByRole("menuitemradio", { name: /^Any race/ })).toContainText(fmt(total));
     for (const [code, name] of Object.entries(RACE)) await expect(menu.getByRole("menuitemradio", { name: new RegExp(`^${name}`) })).toContainText(fmt(n[`${code}:0`] ?? 0));
     const names = await menu.locator(':scope > li > [role^="menuitem"] > span:not(.opt-count)').allInnerTexts();

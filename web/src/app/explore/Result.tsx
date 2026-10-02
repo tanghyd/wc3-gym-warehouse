@@ -1,6 +1,6 @@
 "use client";
 import { Fragment, type KeyboardEvent, type ReactNode, useState, useSyncExternalStore } from "react";
-import { type Catalog, dimsOf, measureText, measureValue, ordered, RACE_DIMS, RACE_ORDER, type Row, type ValueLabel, type View } from "@/lib/explore";
+import { type Catalog, dimsOf, measureText, measureValue, ordered, RACE_DIMS, RACE_ORDER, type Row, type Totals, type ValueLabel, type View } from "@/lib/explore";
 import { RaceIcon, Tile } from "@/lib/ui";
 import { usePending } from "./Query";
 
@@ -77,20 +77,24 @@ function walk(e: KeyboardEvent, at: number | null, n: number, cols = n): number 
  * three gold bins and a zero cell, a total column and a total row. At most 8 rows and 9 columns,
  * 5 on a phone; the smallest fold into Other.
  */
-function HeatMap({ rows, dr, dc, m, cat, labels }: { rows: Row[]; dr: string; dc: string; m: string; cat: Catalog; labels: Labels }) {
+function HeatMap({ rows, dr, dc, m, cat, labels, totals }: { rows: Row[]; dr: string; dc: string; m: string; cat: Catalog; labels: Labels; totals: Totals }) {
   const narrow = useNarrow();
   const [at, setAt] = useState<number | null>(null);
-  const R = fold(cat, dr, sumBy(rows, (r) => String(r[dr]), m), 8);
-  const C = fold(cat, dc, sumBy(rows, (r) => String(r[dc]), m), narrow ? 5 : 9);
+  // a game counts once in a row or a column, so the totals are read apart, not added up from the cells
+  const byRow = sumBy(totals.rows, (r) => String(r[dr]), m);
+  const byCol = sumBy(totals.cols, (r) => String(r[dc]), m);
+  const R = fold(cat, dr, byRow, 8);
+  const C = fold(cat, dc, byCol, narrow ? 5 : 9);
   const rk = (v: string) => (R.other.has(v) ? OTHER : v);
   const ck = (v: string) => (C.other.has(v) ? OTHER : v);
   const cells = sumBy(rows, (r) => `${rk(String(r[dr]))}\u0001${ck(String(r[dc]))}`, m);
   const rKeys = [...R.keep, ...(R.other.size ? [OTHER] : [])];
   const cKeys = [...C.keep, ...(C.other.size ? [OTHER] : [])];
   const cell = (r: string, c: string) => cells.get(`${r}\u0001${c}`) ?? 0;
-  const rowTotal = (r: string) => cKeys.reduce((s, c) => s + cell(r, c), 0);
-  const colTotal = (c: string) => rKeys.reduce((s, r) => s + cell(r, c), 0);
-  const total = rKeys.reduce((s, r) => s + rowTotal(r), 0);
+  // Other adds up the values it folds
+  const rowTotal = (r: string) => (r === OTHER ? [...R.other].reduce((s, v) => s + (byRow.get(v) ?? 0), 0) : (byRow.get(r) ?? 0));
+  const colTotal = (c: string) => (c === OTHER ? [...C.other].reduce((s, v) => s + (byCol.get(v) ?? 0), 0) : (byCol.get(c) ?? 0));
+  const total = Number(totals.all[m] ?? 0);
   // bins 1 to t1-1, t1 to t2-1, t2 and up: 10 and 50 until a cell passes 999, then by tens
   const max = Math.max(0, ...rKeys.flatMap((r) => cKeys.map((c) => cell(r, c))));
   const k = Math.max(1, Math.floor(Math.log10(Math.max(1, max))) - 1);
@@ -192,14 +196,15 @@ function HeatMap({ rows, dr, dc, m, cat, labels }: { rows: Row[]; dr: string; dc
  * One dimension and a count: horizontal bars in one gold step, the largest first, the top 12 and
  * Other, each value at its bar's tip. An ordered dimension (minutes) gets columns in its order.
  */
-function Bars({ rows, d, m, cat, labels, columns }: { rows: Row[]; d: string; m: string; cat: Catalog; labels: Labels; columns: boolean }) {
+function Bars({ rows, d, m, cat, labels, columns, all }: { rows: Row[]; d: string; m: string; cat: Catalog; labels: Labels; columns: boolean; all: Row }) {
   const narrow = useNarrow();
   const [at, setAt] = useState<number | null>(null);
   const totals = sumBy(rows, (r) => String(r[d]), m);
   const F = columns ? { keep: orderValues(cat, d, totals), other: new Set<string>() } : fold(cat, d, totals, 13);
   const marks = [...F.keep.map((v) => [v, totals.get(v)!] as const), ...(F.other.size ? [[OTHER, [...F.other].reduce((s, v) => s + totals.get(v)!, 0)] as const] : [])];
   const max = Math.max(1, ...marks.map(([, v]) => v));
-  const sum = marks.reduce((s, [, v]) => s + v, 0);
+  // a share of the whole scope: a game counts under each value one of its players has
+  const sum = Number(all[m] ?? 0);
   const unit = cat.labels[m].toLowerCase();
   const label = (v: string, n: number) => `${words(d, v, labels)}: ${fmt(n)} ${unit}, ${sum ? Math.round((100 * n) / sum) : 0}%`;
   const capLabels = !narrow || marks.length <= 10;
@@ -251,14 +256,14 @@ function Bars({ rows, d, m, cat, labels, columns }: { rows: Row[]; d: string; m:
 }
 
 /** The result card: the chart the view's form picks, the table of every row, the CSV and the SQL. */
-export function Result(props: { view: View; cat: Catalog; rows: Row[]; labels: Labels; title: string; chart: Chart; truncated: boolean; sql: string }) {
+export function Result(props: { view: View; cat: Catalog; rows: Row[]; totals: Totals; labels: Labels; title: string; chart: Chart; truncated: boolean; sql: string }) {
   const { view, cat, rows, labels, chart } = props;
   const pending = usePending();
   const narrow = useNarrow();
   const [all, setAll] = useState(false);
   const [copied, setCopied] = useState(false);
   const dims = dimsOf(view);
-  const games = rows.reduce((s, r) => s + Number(r.games ?? 0), 0);
+  const games = Number(props.totals.all.games ?? 0);
   // the table: every row, the first chosen count first, largest first
   const by = view.show.find((m) => cat.types[m] === "count") ?? view.show[0];
   const sorted = [...rows].sort((a, b) => measureValue(cat, by, b) - measureValue(cat, by, a));
@@ -298,8 +303,8 @@ export function Result(props: { view: View; cat: Catalog; rows: Row[]; labels: L
         ))}
       </div>
     );
-  else if (chart.form === "heat") figure = <HeatMap rows={rows} dr={dims[0]} dc={dims[1]} m={chart.measure!} cat={cat} labels={labels} />;
-  else if (chart.form === "bars" || chart.form === "columns") figure = <Bars rows={rows} d={dims[0]} m={chart.measure!} cat={cat} labels={labels} columns={chart.form === "columns"} />;
+  else if (chart.form === "heat") figure = <HeatMap rows={rows} dr={dims[0]} dc={dims[1]} m={chart.measure!} cat={cat} labels={labels} totals={props.totals} />;
+  else if (chart.form === "bars" || chart.form === "columns") figure = <Bars rows={rows} d={dims[0]} m={chart.measure!} cat={cat} labels={labels} columns={chart.form === "columns"} all={props.totals.all} />;
 
   return (
     <section className="card" aria-labelledby="result-title">

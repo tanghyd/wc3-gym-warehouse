@@ -14,6 +14,12 @@ export type Catalog = {
 
 /** A row of POST /query after the page reads it: dimension values as text, measure parts as numbers. */
 export type Row = Record<string, string | number>;
+/**
+ * A view's figures over its whole scope (all), and per value of a heat map's row and of its column
+ * dimension. A game counts once in a row, so a game whose players fall in two rows counts in both:
+ * a total is read on its own, never added up from the rows.
+ */
+export type Totals = { all: Row; rows: Row[]; cols: Row[] };
 
 /** The race dimensions, each with the flag column that makes its value a race value such as RN. */
 export const RACE_DIMS: Record<string, string> = { race: "random", opponent_race: "opponent_random" };

@@ -41,8 +41,9 @@ test.describe("explore", () => {
     await expect(page.getByRole("button", { name: "Avg APM", exact: true })).toHaveAttribute("aria-pressed", "false");
     await expect(page.getByRole("button", { name: "Minutes: 2 or more" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2 })).toHaveText("Games by Race and Opponent Race");
-    const total = rows.reduce((s, r) => s + Number(r.games), 0);
-    await expect(page.locator("#result-title ~ .chip")).toHaveText(`${fmt(total)} games`);
+    // a game counts once in a row, and a game of two races in two rows: the chip reads every game on its own
+    const [{ games: total }] = await rowsOf(request, [], ["games"], MIN2);
+    await expect(page.locator("#result-title ~ .chip")).toHaveText(`${fmt(Number(total))} games`);
 
     const want = rows.map((r) =>
       [raceWords(String(r.race), Number(r.random)), raceWords(String(r.opponent_race), Number(r.opponent_random)), fmt(Number(r.games)), record(Number(r.wins), Number(r.losses)), mss((Number(r.minutes_total) / Number(r.games)) * 60000)].join(" | "),
@@ -53,11 +54,12 @@ test.describe("explore", () => {
     const games = got.map((l) => Number(l.split(" | ")[2].replace(/,/g, "")));
     expect(games).toEqual([...games].sort((a, b) => b - a));
 
-    // two dimensions and a count: a heat map whose cells add up to the total
+    // two dimensions and a count: a heat map of the rows, its Total corner every game
     const grid = page.getByRole("grid");
     await expect(grid).toBeVisible();
     const cells = await grid.getByRole("gridcell").evaluateAll((els) => els.map((e) => Number(e.textContent!.replace(/,/g, ""))));
-    expect(cells.reduce((a, b) => a + b, 0)).toBe(total);
+    expect(cells.reduce((a, b) => a + b, 0)).toBe(rows.reduce((s, r) => s + Number(r.games), 0));
+    await expect(grid.locator(".heat-sum.font-bold")).toHaveText(fmt(Number(total)));
     // the four bins plus zero name their ranges in the legend
     await expect(page.getByRole("list", { name: "Legend" })).toContainText("50 or more");
   });
@@ -106,12 +108,12 @@ test.describe("explore", () => {
     const bins = rows.map((r) => Number(r.minutes_5)).sort((a, b) => a - b);
     expect(labels).toEqual(bins.map((b) => `${b}–${b + 5}`));
 
-    const [all] = await rowsOf(request, [], ["games", "wins", "losses", "apm_total"], MIN2);
+    const [all] = await rowsOf(request, [], ["games", "wins", "losses", "apm_total", "apm_players"], MIN2);
     await page.goto("/explore?show=games,record,avg_apm&rows=");
     await expect(page.locator(".stat")).toHaveCount(3);
     await expect(page.locator(".stat").nth(0)).toContainText(fmt(Number(all.games)));
     await expect(page.locator(".stat").nth(1)).toContainText(record(Number(all.wins), Number(all.losses)));
-    await expect(page.locator(".stat").nth(2)).toContainText(fmt(Math.round(Number(all.apm_total) / Number(all.games))));
+    await expect(page.locator(".stat").nth(2)).toContainText(fmt(Math.round(Number(all.apm_total) / Number(all.apm_players))));
   });
 
   test("a record alone and three dimensions get no chart, only the table", async ({ page, request }) => {
@@ -143,8 +145,8 @@ test.describe("explore", () => {
     await list.getByRole("checkbox").first().check();
     await expect(page).toHaveURL(new RegExp(`[?&]map=${encodeURIComponent(String(top.map)).replace(/%20/g, "\\+")}(&|$)`));
     await expect(page.getByRole("button", { name: `Map: ${top.map}` })).toBeVisible();
-    const rows = await rowsOf(request, ["race", "random"], ["games"], { ...MIN2, map: [top.map] });
-    await expect(page.locator("#result-title ~ .chip")).toHaveText(`${fmt(rows.reduce((s, r) => s + Number(r.games), 0))} games`);
+    const [{ games }] = await rowsOf(request, [], ["games"], { ...MIN2, map: [top.map] });
+    await expect(page.locator("#result-title ~ .chip")).toHaveText(`${fmt(Number(games))} games`);
 
     // removing the minutes filter keeps it removed on reload
     await page.getByRole("button", { name: "Remove the Minutes filter" }).click();

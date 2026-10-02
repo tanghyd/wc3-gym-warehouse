@@ -6,7 +6,7 @@ import { countWords, HALLS, KINDS, type Kind, type Step, timeWords } from "./ste
 /** A POST /search step as GET /strategies answers it, defaults left out. */
 export type ApiStep = { kind: string; codes: string[]; count?: number; from_s?: number; to_s?: number; link?: "and" | "then"; within_s?: number; nth?: number; exactly?: boolean; before?: number; negate?: boolean };
 export type Preset = { id: string; name: string; race: string; parent_id: string | null; source: string; vs_races: string[]; steps: ApiStep[] };
-/** Games, wins, losses and summed length of a preset or of the scope. */
+/** Games, wins, losses and summed length of a preset. */
 export type Stats = { games: number; wins: number; losses: number; duration_ms_total: number };
 
 const HALL_CODES = new Set(Object.values(HALLS));

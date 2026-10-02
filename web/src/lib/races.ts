@@ -1,5 +1,5 @@
-// The race values every race control and row speaks. A player-game has a played race and a flag
-// for a picked Random; the nine values name the pair: HU means picked Human, RH a Random player
+// The race values every race control and row speaks. A player of a game has a played race and a
+// flag for a picked Random; the nine values name the pair: HU means picked Human, RH a Random player
 // who rolled Human, and R a Random player with no played race (no race-specific order).
 
 /** Race value -> name, race-icons/ file and matchup letter. */
@@ -19,6 +19,9 @@ export const RACES: Record<string, [string, string, string]> = {
 export const PICKED = ["HU", "OC", "NE", "UD"] as const;
 /** Each race's Random value. */
 export const RANDOM_OF: Record<string, string> = { HU: "RH", OC: "RO", NE: "RN", UD: "RU" };
+/** The race menu counts' keys for every game and for every game with a Random player of a race. */
+export const ANY_RACE = "";
+export const ANY_RANDOM = "random";
 const BASE_OF: Record<string, string> = Object.fromEntries(Object.entries(RANDOM_OF).map(([r, v]) => [v, r]));
 
 /** The value of a played race and its random flag: ("NE", 1) -> "RN", ("RANDOM", 1) -> "R". */

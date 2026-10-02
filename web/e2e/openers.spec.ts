@@ -15,7 +15,7 @@ const NE = { race: ["NE"], random: [0] };
 const HU = { race: ["HU"], random: [0] };
 
 /**
- * The buildings after a prefix, every figure over player-games won or lost. Most played first, or
+ * The buildings after a prefix, every figure over games won or lost. Most played first, or
  * with sort=winrate rows from 10 games up first, by win share. Ties by win share, then games, then code.
  */
 async function level(request: APIRequestContext, filters: Record<string, (string | number)[]>, prefix: string[], sort = "popular"): Promise<Level> {
@@ -164,7 +164,7 @@ test.describe("openers tree", () => {
     await link.click();
     await expect(page).toHaveURL(new RegExp(`/\\?race=NE&opponent_race=OC&min=2&opened=${root[0].code}\\.${kids[0].code}$`));
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Replays");
-    // the list is POST /search's player-games of that opener: an Opened with condition on the Player side
+    // the list is POST /search's games of that opener: an Opened with condition on the Player side
     const want = await search(request, { filters: { duration_ms: { gte: 120000 } }, player: { race: ["NE"], opened_with: [root[0].code, kids[0].code] }, opponent: { race: ["OC"] } });
     expect(want.total).toBe(kids[0].games);
     expect(await strip(page)).toEqual(stripOf(want));

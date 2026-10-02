@@ -26,8 +26,8 @@ function SearchGlyph() {
 }
 
 /**
- * Named strategies of one race: each preset's player-games in scope, its share of the scope (a
- * variant's of its parent), the race's record and the average length, in one POST
+ * Named strategies of one race: each preset's games in scope, its share of the scope (a
+ * variant's of its parent), its record and the average length, in one POST
  * /strategies/stats. A row's games open Replays with the preset in the Player side.
  */
 export default async function StrategiesPage({ searchParams }: PageProps<"/strategies">) {
@@ -170,7 +170,7 @@ export default async function StrategiesPage({ searchParams }: PageProps<"/strat
             </tbody>
           </table>
         )}
-        {rows.length > 0 && <p className="border-t px-4 py-2.5 text-sm text-muted">Games: one per player, so a mirror game can count twice. A strategy under {MIN_GAMES} games is hidden.</p>}
+        {rows.length > 0 && <p className="border-t px-4 py-2.5 text-sm text-muted">A strategy under {MIN_GAMES} games is hidden.</p>}
         <details className="border-t">
           <summary className="cursor-pointer px-4 py-3 text-sm text-muted">Show SQL</summary>
           <pre className="overflow-x-auto px-4 pb-4 text-xs leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">

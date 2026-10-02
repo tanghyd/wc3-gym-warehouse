@@ -1,6 +1,6 @@
 "use client";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
-import { PICKED, RACES, RANDOM_OF } from "@/lib/races";
+import { ANY_RACE, ANY_RANDOM, PICKED, RACES, RANDOM_OF } from "@/lib/races";
 import { Chevron, fmt, RaceIcon } from "@/lib/ui";
 
 const RANDOMS = PICKED.map((r) => RANDOM_OF[r]);
@@ -8,7 +8,7 @@ const RANDOMS = PICKED.map((r) => RANDOM_OF[r]);
 
 /**
  * One race control: a button with the race's icon and name, a menu of Any race, the four races
- * and a Random submenu of the four Random races, each with its player-games in scope, and an
+ * and a Random submenu of the four Random races, each with its games in scope, and an
  * "Include Random" switch in the label line of a picked race. The value is [] (any), one race value, or
  * a race with its Random value.
  */
@@ -86,8 +86,8 @@ export function RaceMenu(props: { label: string; value: string[]; onChange: (v: 
       </button>
     </li>
   );
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  const randoms = RANDOMS.reduce((a, v) => a + (counts[v] ?? 0), 0);
+  const total = counts[ANY_RACE] ?? 0;
+  const randoms = counts[ANY_RANDOM] ?? 0;
 
   return (
     <div className="flex min-w-48 flex-1 flex-col gap-1 text-sm">

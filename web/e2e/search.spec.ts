@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { fmt, listed, q, record, rowsOf, search, strip, stripOf } from "./helpers";
 
-// The Replays list: one row per player-game of the Player side, the summary strip, the pager, the
-// sort and the swap, each compared with POST /search.
+// The Replays list: one row per game that fits both sides, the summary strip, the pager, the sort
+// and the swap, each compared with POST /search.
 const ID = "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8";
 // The spec's example: a Night Elf with Demon Hunter first and 5 Archers by 6:00, against a Blademaster-first Orc.
 const NE_STEPS = "hero:Edem#1,trained:earc*5@-360";
@@ -21,10 +21,11 @@ test.describe("replay list", () => {
     expect(await listed(page)).toEqual(rowsOf(want));
     expect(await strip(page)).toEqual(stripOf(want));
     await expect(page.getByRole("navigation", { name: "Games pages" })).toContainText(`1–25 of ${fmt(want.total)}`);
-    // nothing narrows the scope, so no "All" line
-    await expect(page.locator(".s-n", { hasText: /^All \d/ })).toHaveCount(0);
-    // the figure counts each game once per player, so the scope line says so
-    await expect(page.locator(".stat").nth(0).locator(".s-n").first()).toHaveText("All games, one per player");
+    // every game counts once, and the sides ask the same, so the strip shows no record
+    expect(want.total).toBe(want.summary.games);
+    expect([want.summary.wins, want.summary.losses]).toEqual([null, null]);
+    await expect(page.locator(".s-l", { hasText: "Player record" })).toHaveCount(0);
+    await expect(page.locator(".stat").nth(0).locator(".s-n")).toHaveText("All games");
   });
 
   test("the summary strip reads the summary and the scope of the spec's example", async ({ page, request }) => {
@@ -32,8 +33,8 @@ test.describe("replay list", () => {
     await page.goto(EXAMPLE);
     expect(await strip(page)).toEqual(stripOf(want));
     const { scope, summary } = want;
-    await expect(page.locator(".stat").nth(0)).toContainText(`${Math.round((100 * summary.games) / scope.games)}% of ${fmt(scope.games)} Night Elf v Orc games, one per player`);
-    await expect(page.locator(".stat").nth(1)).toContainText(`All ${fmt(scope.games)}: ${record(scope.wins, scope.losses)}`);
+    await expect(page.locator(".stat").nth(0)).toContainText(`${Math.round((100 * summary.games) / scope.games)}% of ${fmt(scope.games)} Night Elf v Orc games`);
+    await expect(page.locator(".stat").nth(1)).toContainText(`All ${fmt(scope.games)}: ${record(scope.wins!, scope.losses!)}`);
     // two figures: the average length is gone
     await expect(page.locator(".stat")).toHaveCount(2);
     await expect(page.locator(".s-l", { hasText: "Avg length" })).toHaveCount(0);
@@ -43,14 +44,29 @@ test.describe("replay list", () => {
     await expect(page.locator("table.games tbody tr").first().locator(".c-r")).toHaveText(first.player.won ? "Won" : "Lost");
   });
 
-  test("a mirror game where both players fit counts once per player, and says how many", async ({ page, request }) => {
+  test("a mirror game where both players fit counts once and is marked both", async ({ page, request }) => {
     const want = await search(request, { player: { race: ["NE"] }, opponent: { race: ["NE"] } });
-    expect(want.summary.both_players).toBeGreaterThan(0);
-    // every Night Elf v Night Elf game counts twice, so the record is even
-    expect(want.summary.wins).toBe(want.summary.losses);
+    // the sides ask the same, so every Night Elf v Night Elf game fits either way round: one row, marked both, no record
+    expect(want.summary.games).toBeGreaterThan(0);
+    expect(want.summary.both).toBe(want.summary.games);
+    expect([want.summary.wins, want.summary.losses]).toEqual([null, null]);
+    expect(new Set(want.replays.map((r) => r.replay_id)).size).toBe(want.replays.length);
     await page.goto(q({ race: "NE", opponent_race: "NE" }));
     expect(await strip(page)).toEqual(stripOf(want));
-    await expect(page.locator(".stat").first()).toContainText(`${fmt(want.summary.both_players)} games count for both players`);
+    await expect(page.locator(".s-l", { hasText: "Player record" })).toHaveCount(0);
+    expect(await listed(page)).toEqual(rowsOf(want));
+    // the tag sits after the Player's name, the only tag of the row
+    await expect(page.locator("table.games tbody .c-p .both")).toHaveCount(want.replays.length);
+    await expect(page.locator("table.games tbody .c-p .both").first()).toHaveText("both");
+    await expect(page.locator("table.games tbody .c-o .both")).toHaveCount(0);
+
+    // Night Elf against any race tells the sides apart: a record, and the tag only on the mirror games
+    const any = await search(request, { player: { race: ["NE"] } });
+    expect(any.summary.wins).not.toBeNull();
+    expect(any.summary.both).toBe(want.summary.games);
+    await page.goto(q({ race: "NE" }));
+    expect(await strip(page)).toEqual(stripOf(any));
+    await expect(page.locator("table.games tbody .both")).toHaveCount(any.replays.filter((r) => r.both).length);
   });
 
   test("the pager walks the pages in POST /search's order", async ({ page, request }) => {

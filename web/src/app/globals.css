@@ -284,7 +284,7 @@
   .s-l, .s-n { font-size: 0.875rem; color: var(--color-muted); }
   .s-v { font-size: 1.75rem; font-weight: 700; line-height: 1.15; font-variant-numeric: lining-nums proportional-nums; }
 
-  /* The games list: one player-game a row on one line, fixed columns, the hero icons its one bold mark;
+  /* The games list: one game a row on one line, fixed columns, the hero icons its one bold mark;
      two lines on a phone. */
   .games { --hero: 24px; width: 100%; table-layout: fixed; border-collapse: collapse; text-align: left; }
   .games th { height: 36px; padding: 0 10px; border-bottom: 1px solid var(--color-border); font-size: 0.875rem; font-weight: 700; color: var(--color-muted); white-space: nowrap; }
@@ -300,6 +300,8 @@
   .games .vs { display: none; }
   .who { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; vertical-align: middle; }
   .who .tag { font-weight: 400; color: var(--color-muted); }
+  /* a game either player fits: a quiet outlined word after the Player's name, the only tag of a row */
+  .who .both { flex-shrink: 0; padding: 0 6px; border: 1px solid var(--color-border); border-radius: 9999px; font-size: 0.75rem; line-height: 1rem; color: var(--color-muted); }
   .heroes { display: flex; gap: 10px; }
   .heroes li { position: relative; display: block; }
   .heroes img, .heroes .none { display: block; width: var(--hero); height: var(--hero); border-radius: 2px; box-shadow: 0 0 0 1px var(--tile-edge); }

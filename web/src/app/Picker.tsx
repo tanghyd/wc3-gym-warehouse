@@ -26,7 +26,7 @@ const NTH = [
 /**
  * The objects of one picker kind for a side's race, read once when the picker opens: a group
  * column (the source building, altar, camp, shop or hero) and its objects, each with the
- * player-games in scope that ordered it. A name search covers both columns. On a phone the
+ * games in scope in which a player of the side ordered it. A name search covers both columns. On a phone the
  * groups and the objects are two screens. A group can be picked whole when `groupPick` is on.
  */
 export function Picker(props: {

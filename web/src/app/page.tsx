@@ -8,7 +8,7 @@ import { GamesView } from "./GamesView";
 import { type DraftStep, type LoadPreset, Sides, type SideState } from "./Sides";
 import { SortSelect } from "./SortSelect";
 
-const LIMIT = 25; // player-games a page lists
+const LIMIT = 25; // games a page lists
 const SORTS: Record<string, string> = { "-added": "Recently added", added: "First added", "-duration": "Longest", duration: "Shortest", map: "Map" };
 const CODE = /^[A-Za-z0-9_]{1,8}$/;
 // The URL keys of each side.
@@ -18,8 +18,8 @@ const KEYS = {
 } as const;
 
 
-/** A player of a row on one line: race icon, then name, its battle tag number quiet. */
-function Who({ p }: { p: SidePlayer }) {
+/** A player of a row on one line: race icon, then name, its battle tag number quiet; `both` tags a game either player fits. */
+function Who({ p, both = false }: { p: SidePlayer; both?: boolean }) {
   const i = p.name.indexOf("#");
   return (
     <span className="who">
@@ -28,6 +28,11 @@ function Who({ p }: { p: SidePlayer }) {
         {i > 0 ? p.name.slice(0, i) : p.name}
         {i > 0 && <span className="tag">{p.name.slice(i)}</span>}
       </span>
+      {both && (
+        <span className="both" title="Either player fits the Player side">
+          both
+        </span>
+      )}
     </span>
   );
 }
@@ -244,18 +249,20 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
               <div className="stat">
                 <span className="s-l">Games</span>
                 <span className="s-v">{fmt(sum.games)}</span>
-                <span className="s-n">{narrowed && scope.games ? `${Math.round((100 * sum.games) / scope.games)}% of ${fmt(scope.games)} ${scopeWords}` : scopeWords === "games" ? "All games" : scopeWords.replace(/ games$/, "")}, one per player</span>
-                {sum.both_players > 0 && <span className="s-n">{fmt(sum.both_players)} {sum.both_players === 1 ? "game counts" : "games count"} for both players</span>}
+                <span className="s-n">{narrowed && scope.games ? `${Math.round((100 * sum.games) / scope.games)}% of ${fmt(scope.games)} ${scopeWords}` : scopeWords === "games" ? "All games" : scopeWords.replace(/ games$/, "")}</span>
               </div>
-              <div className="stat">
-                <span className="s-l">Player record</span>
-                <span className="s-v">{record(sum.wins, sum.losses)}</span>
-                {narrowed && (
-                  <span className="s-n">
-                    All {fmt(scope.games)}: {record(scope.wins, scope.losses)}
-                  </span>
-                )}
-              </div>
+              {/* a record only when something tells the Player side from the Opponent side: the API answers null otherwise */}
+              {sum.wins !== null && sum.losses !== null && (
+                <div className="stat">
+                  <span className="s-l">Player record</span>
+                  <span className="s-v">{record(sum.wins, sum.losses)}</span>
+                  {narrowed && scope.wins !== null && scope.losses !== null && (
+                    <span className="s-n">
+                      All {fmt(scope.games)}: {record(scope.wins, scope.losses)}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             {replays.length === 0 ? (
               <p className="p-8 text-center text-muted">No game matches. {steps.length ? "Drop a step or widen the filters." : "Widen the filters."}</p>
@@ -285,7 +292,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                     {replays.map((r) => (
                       <tr key={`${r.replay_id}-${r.player.name}`}>
                         <td className="c-p">
-                          <Who p={r.player} />
+                          <Who p={r.player} both={r.both} />
                         </td>
                         <td className="c-ph">
                           <Heroes p={r.player} objects={heroes} />

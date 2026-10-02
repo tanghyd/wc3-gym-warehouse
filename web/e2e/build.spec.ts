@@ -20,7 +20,7 @@ const optRows = (l: Locator) => l.locator(".opt:has(.opt-count)").evaluateAll((o
 const fmt = (n: number) => n.toLocaleString("en-US");
 
 test.describe("step editor", () => {
-  test("Trained lists the race's units by building, with the player-games of POST /objects", async ({ page, request }) => {
+  test("Trained lists the race's units by building, with the games of POST /objects", async ({ page, request }) => {
     const groups = await objects(request, "unit", ["NE"]);
     await page.goto(q({ race: "NE" }));
     const player = side(page, "Player");

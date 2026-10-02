@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cache } from "react";
 import { BINS, type Catalog, RACE_DIMS, type ValueLabel } from "./explore";
-import { RACES, raceValue } from "./races";
+import { ANY_RACE, ANY_RANDOM, RACES, raceValue } from "./races";
 import type { Preset, Stats } from "./strategies";
 import { apiStep, KINDS, type Kind } from "./steps";
 
@@ -46,23 +46,24 @@ export const getReplay = cache((id: string) => api<Replay>(`/replays/${encodeURI
 /** A dimension's allowed values, or a numeric range. */
 export type Filters = Record<string, (string | number)[] | { gte?: number; lte?: number }>;
 
-/** One player of a listed player-game: his race value, his result and his heroes in pick order. */
+/** One player of a listed game: his race value, his result and his heroes in pick order. */
 export type SidePlayer = { name: string; race: string; won: boolean | null; heroes: { code: string; level: number }[] };
-export type GameRow = { replay_id: string; map: string; duration_ms: number; player: SidePlayer; opponent: SidePlayer };
-/** Player-games counted: games, wins, losses and their summed length. */
-export type Tally = { games: number; wins: number; losses: number; duration_ms_total: number };
+/** One game: both, when either player fits the Player side and the other the Opponent side; the lower player slot shows. */
+export type GameRow = { replay_id: string; map: string; duration_ms: number; both: boolean; player: SidePlayer; opponent: SidePlayer };
+/** Games counted and their summed length; wins and losses are null when nothing tells the sides apart. */
+export type Tally = { games: number; wins: number | null; losses: number | null; duration_ms_total: number };
 export type SearchSide = { race: string[]; name: string | null; opened_with: string[]; groups: { steps: ReturnType<typeof apiStep>[] }[]; outcome?: "win" | "loss" | null };
 export type SearchRequest = { filters: Filters; player: SearchSide; opponent: SearchSide; sort: string; limit: number; offset: number };
-/** both_players: games where both players fit the Player side, so each counts once per player. */
-export type SearchAnswer = { total: number; summary: Tally & { both_players: number }; scope: Tally; replays: GameRow[]; sql: string; params: Record<string, string>; refused?: string };
+/** summary.both: the matching games that fit either way round. */
+export type SearchAnswer = { total: number; summary: Tally & { both: number }; scope: Tally; replays: GameRow[]; sql: string; params: Record<string, string>; refused?: string };
 
-/** POST /search: one page of the Player side's player-games, the summary and the scope. A refused request answers its reason. */
+/** POST /search: one page of the games that fit both sides, the summary and the scope. A refused request answers its reason. */
 export async function searchGames(body: SearchRequest): Promise<SearchAnswer> {
   try {
     return (await api<SearchAnswer>("/search", body))!;
   } catch (e) {
-    const none = { games: 0, wins: 0, losses: 0, duration_ms_total: 0 };
-    if (e instanceof Refused) return { total: 0, summary: { ...none, both_players: 0 }, scope: none, replays: [], sql: "", params: {}, refused: e.message };
+    const none = { games: 0, wins: null, losses: null, duration_ms_total: 0 };
+    if (e instanceof Refused) return { total: 0, summary: { ...none, both: 0 }, scope: none, replays: [], sql: "", params: {}, refused: e.message };
     throw e;
   }
 }
@@ -105,10 +106,18 @@ export async function getObjects(codes: string[]): Promise<Objects> {
   return Object.fromEntries(codes.map((c) => [c, { name: names.get(c) || undefined, icon: iconOf(c) }]));
 }
 
-/** Player-games per race value (HU, RN, R, ...) under the filters, for the counts of a race menu. */
+/**
+ * Games per race value (HU, RN, R, ...) under the filters, for the counts of a race menu: a game
+ * with two players of one race value counts once. ANY_RACE and ANY_RANDOM hold their own counts,
+ * because a game with two races counts under both.
+ */
 export async function raceCounts(filters: Filters): Promise<Record<string, number>> {
-  const rows = await query<{ race: string; random: number; games: number }>({ dimensions: ["race", "random"], measures: ["games"], filters, limit: 100 });
-  const counts: Record<string, number> = {};
+  const [rows, [all], [random]] = await Promise.all([
+    query<{ race: string; random: number; games: number }>({ dimensions: ["race", "random"], measures: ["games"], filters, limit: 100 }),
+    query<{ games: number }>({ measures: ["games"], filters }),
+    query<{ games: number }>({ measures: ["games"], filters: { ...filters, race: ["HU", "OC", "NE", "UD"], random: [1] } }),
+  ]);
+  const counts: Record<string, number> = { [ANY_RACE]: all?.games ?? 0, [ANY_RANDOM]: random?.games ?? 0 };
   for (const r of rows) counts[raceValue(r.race, r.random)] = (counts[raceValue(r.race, r.random)] ?? 0) + r.games;
   return counts;
 }
@@ -173,5 +182,5 @@ export const getPresets = cache(async () => (await api<{ strategies: Preset[] }>
 
 /** POST /strategies/stats: the scope's figures and each preset's of the race, and the SQL. */
 export async function strategyStats(body: { race: string[]; opponent_race: string[]; filters: Filters }) {
-  return (await api<{ scope: Stats; strategies: (Stats & { id: string })[]; sql: string; params: Record<string, string> }>("/strategies/stats", body))!;
+  return (await api<{ scope: Tally; strategies: (Stats & { id: string })[]; sql: string; params: Record<string, string> }>("/strategies/stats", body))!;
 }

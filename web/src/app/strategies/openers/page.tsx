@@ -18,33 +18,31 @@ const SORTS = { popular: "Most played", winrate: "Best win rate" };
 type Row = { code: string; games: number; wins: number; losses: number; avgMs: number; branches: number };
 
 /**
- * What players built next after `prefix`. Every figure counts one player's game won or lost, so a
- * mirror game where both players opened this way counts twice. Grouped by the building after it
- * too, so a row knows how many ways it goes on.
+ * What players built next after `prefix`. Every figure counts games won or lost in which a player
+ * opened this way, a game where both did once. The buildings after it, read apart, tell a row how
+ * many ways it goes on.
  */
 async function level(base: Filters, prefix: string[], sort: string): Promise<Row[]> {
   const d = prefix.length;
   const [next, after] = [`opener_${d + 1}`, `opener_${d + 2}`];
   const filters: Filters = { ...base, ...Object.fromEntries(prefix.map((c, i) => [`opener_${i + 1}`, [c]])) };
-  type Split = Record<string, string> & { games: number; wins: number; losses: number; minutes_total: number };
-  const split = await query<Split>({ dimensions: d + 1 < DEPTH ? [next, after] : [next], measures: ["games", "wins", "losses", "minutes_total"], filters, limit: 10000 });
-  const rows = new Map<string, Row & { minutes: number }>();
-  for (const r of split) {
-    if (!r[next]) continue; // the opener ended before this depth
-    const row = rows.get(r[next]) ?? { code: r[next], games: 0, wins: 0, losses: 0, avgMs: 0, branches: 0, minutes: 0 };
-    row.games += r.games;
-    row.wins += r.wins;
-    row.losses += r.losses;
-    row.minutes += r.minutes_total;
-    if (r[after]) row.branches += 1;
-    rows.set(r[next], row);
-  }
+  type Figures = Record<string, string> & { games: number; wins: number; losses: number; minutes_total: number };
+  const [figures, splits] = await Promise.all([
+    query<Figures>({ dimensions: [next], measures: ["games", "wins", "losses", "minutes_total"], filters, limit: 10000 }),
+    d + 1 < DEPTH ? query<Record<string, string>>({ dimensions: [next, after], filters, limit: 10000 }) : [],
+  ]);
+  const branches = new Map<string, number>();
+  for (const s of splits) if (s[after]) branches.set(s[next], (branches.get(s[next]) ?? 0) + 1);
+  // a row with no code: the opener ended before this depth
+  const rows: Row[] = figures
+    .filter((r) => r[next])
+    .map((r) => ({ code: r[next], games: r.games, wins: r.wins, losses: r.losses, avgMs: (r.minutes_total / r.games) * 60000, branches: branches.get(r[next]) ?? 0 }));
   const share = (r: Row) => r.wins / r.games;
   // best win rate: rows from FLOOR games up first, so a 1 – 0 row never leads
   const order = (a: Row, b: Row) =>
     (sort === "winrate" ? Number(b.games >= FLOOR) - Number(a.games >= FLOOR) || share(b) - share(a) || b.games - a.games : b.games - a.games || share(b) - share(a)) ||
     a.code.localeCompare(b.code);
-  return [...rows.values()].map(({ minutes, ...r }) => ({ ...r, avgMs: (minutes / r.games) * 60000 })).sort(order);
+  return rows.sort(order);
 }
 
 
@@ -74,7 +72,7 @@ export default async function OpenersPage({ searchParams }: PageProps<"/strategi
   const unique = [...new Map(paths.map((p) => [key(p), p])).values()];
   const [[{ games: total }], counts, maps, patches, players] = await Promise.all([
     query<{ games: number }>({ measures: ["games"], filters: base }),
-    // the race menus count player-games on the map and patch
+    // the race menus count games on the map and patch
     raceCounts({ ...s.filters, ...(value("patch") && { patch: [value("patch")] }) }),
     pickerValues("map"),
     pickerValues("patch"),
@@ -150,7 +148,7 @@ export default async function OpenersPage({ searchParams }: PageProps<"/strategi
             <thead>
               <tr>
                 <th title="First six building orders, farms left out">Opener</th>
-                <th className="text-right" title="Games won or lost, one per player: a mirror game counts twice">
+                <th className="text-right" title="Games won or lost in which a player opened this way">
                   Games
                 </th>
                 <th className="text-right">Record</th>

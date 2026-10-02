@@ -6,13 +6,14 @@ export const API = process.env.API_URL ?? "http://api:8000";
 export type Step = { kind: string; codes: string[]; count?: number; from_s?: number; to_s?: number; link?: "and" | "then"; within_s?: number; nth?: number; exactly?: boolean; before?: number; negate?: boolean };
 export type Side = { race?: string[]; name?: string; outcome?: "win" | "loss"; opened_with?: string[]; groups?: { steps: Step[] }[] };
 export type Search = { filters?: object; player?: Side; opponent?: Side; sort?: string; limit?: number; offset?: number };
-type Tally = { games: number; wins: number; losses: number; duration_ms_total: number };
+// wins and losses are null when nothing tells the sides apart
+type Tally = { games: number; wins: number | null; losses: number | null; duration_ms_total: number };
 type SidePlayer = { name: string; race: string; won: boolean | null; heroes: { code: string; level: number }[] };
 export type Answer = {
   total: number;
-  summary: Tally & { both_players: number };
+  summary: Tally & { both: number };
   scope: Tally;
-  replays: { replay_id: string; map: string; duration_ms: number; player: SidePlayer; opponent: SidePlayer }[];
+  replays: { replay_id: string; map: string; duration_ms: number; both: boolean; player: SidePlayer; opponent: SidePlayer }[];
 };
 
 /** POST /search with the page's page size. */
@@ -39,15 +40,17 @@ export const fmt = (n: number) => n.toLocaleString("en-US");
 export const record = (w: number, l: number) => (w + l ? `${w} – ${l}` + (w + l >= 10 ? ` (${Math.round((100 * w) / (w + l))}%)` : "") : "—");
 export const mss = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 
-/** The Games chip and the strip's two figures. */
+/** The Games chip and the strip's figures: the record is null when the strip shows none. */
 export async function strip(page: Page) {
-  const value = (label: string) => page.locator(".stat").filter({ has: page.locator(".s-l", { hasText: label }) }).locator(".s-v").textContent();
-  return { total: await page.locator(".bar .chip").textContent(), games: await value("Games"), record: await value("Player record") };
+  const value = (label: string) => page.locator(".stat").filter({ has: page.locator(".s-l", { hasText: label }) }).locator(".s-v");
+  const games = await value("Games").textContent();
+  const rec = value("Player record");
+  return { total: await page.locator(".bar .chip").textContent(), games, record: (await rec.count()) ? await rec.textContent() : null };
 }
 export const stripOf = (a: Answer) => ({
   total: fmt(a.total),
   games: fmt(a.summary.games),
-  record: record(a.summary.wins, a.summary.losses),
+  record: a.summary.wins === null || a.summary.losses === null ? null : record(a.summary.wins, a.summary.losses),
 });
 
 /** The Replays URL of a side's steps, as the page encodes them. */
