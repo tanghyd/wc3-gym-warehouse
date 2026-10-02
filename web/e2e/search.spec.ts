@@ -144,7 +144,7 @@ test.describe("replay list", () => {
     await page.goto(q({ race: "HU" }));
     const show = page.getByRole("group", { name: "Show columns" });
     const box = (name: string) => show.getByRole("checkbox", { name });
-    const head = page.locator("table.games thead th");
+    const head = page.locator("table.games thead th:visible");
     // every column shows by default
     for (const n of ["Heroes", "Result", "Length"]) await expect(box(n)).toBeChecked();
     await expect(head).toHaveCount(7);
