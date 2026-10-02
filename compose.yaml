@@ -6,8 +6,8 @@
 #   just local::ingest        # one drain pass, then dbt build when it inserted documents
 #   docker compose --profile tunnel up -d # ... plus the Cloudflare Tunnel, once a domain exists
 #
-# The always-on mem_limits sum to 5.25 GiB (ClickHouse 3g, Grafana 768m, the rest 512m),
-# plus 1 GiB for the one-shot dbt, so the box is the 8 GB size (docs/deploy.md).
+# The box is a Hetzner CX33 (8 GB): the measured local peaks sum to about 2.3 GiB, but the
+# box also builds the drain and web images while ClickHouse is live (docs/deploy.md).
 name: wc3-gym-warehouse
 
 services:
