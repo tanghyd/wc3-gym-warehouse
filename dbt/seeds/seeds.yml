@@ -11,7 +11,7 @@ seeds:
       - name: code
         description: "{{ doc('object_code') }}"
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every row has a code.
       - name: name
         description: The object's display name, such as Barracks.
@@ -37,7 +37,7 @@ seeds:
         data_tests:
           - unique:
               description: A custom code is listed once.
-          - not_null:
+          - not_empty:
               description: Every row has a code.
       - name: name
         description: The object's display name in the custom map.
@@ -54,12 +54,12 @@ seeds:
         data_tests:
           - unique:
               description: A build belongs to one patch.
-          - not_null:
+          - not_empty:
               description: Every row has a build number.
       - name: patch
         description: The patch name shown to people, such as 3.0.
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every build names its patch.
       - name: description
         description: What the patch is, in a few words.
@@ -82,7 +82,7 @@ seeds:
       - name: code
         description: "{{ doc('object_code') }}"
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every row has a code.
           - relationships:
               description: Every object has a name in mappings.
@@ -120,7 +120,7 @@ seeds:
       - name: map
         description: The map as replays.map names it, such as Echo Isles 2.2.
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every row names its map.
       - name: slot
         description: The start's number on its map. The map file's player slot of the start location, or 0 and 1 for a cluster.
