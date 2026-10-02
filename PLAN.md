@@ -71,14 +71,14 @@ A replay is about 250 bytes per game second. A season is 400 replays, 100 MB raw
 | R2 reads, Class B | 10 million a month | one per replay per load, plus downloads |
 | R2 egress | free | every download and every load |
 | Hetzner traffic | 20 TB a month | negligible |
-| Box memory | 4 GB | the stack idles at 1.2 GB |
+| Box memory | 8 GB, the CX33 | the stack idles at 937 MiB (docs/deploy.md, local `docker stats`, 2026-10-02) |
 | Vercel function body | 4.5 MB | a three-replay report is under 3 MB even for hour-long games |
 
 ## Cost
 
 | Item | Per month |
 |---|---|
-| Hetzner CX22, 2 vCPU, 4 GB, 40 GB, or CAX11 on ARM | about EUR 4, plus about EUR 0.5 for IPv4 |
+| Hetzner CX33, 4 vCPU, 8 GB, 80 GB | EUR 8.49, plus EUR 0.50 for IPv4 (docs.hetzner.com, read 2026-10-02) |
 | Cloudflare: DNS, tunnel, R2 inside the free tier, custom domain | EUR 0 |
 | GitHub Actions for the image build | EUR 0 on a public repo |
 

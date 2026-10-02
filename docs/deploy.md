@@ -11,20 +11,20 @@ ssh port forward. No public domain exists yet, so the `tunnel` profile (cloudfla
 
 CX33: 4 vCPU (x86), 8 GB, 80 GB NVMe, 20 TB traffic, EU locations only (Germany, Finland). Wait for stock.
 
-The 4 GB CX23 is too small for the caps in `compose.yaml`:
+| Service | Measured |
+|---|---|
+| clickhouse | 1.11 GiB resident, 1.68 GiB peak on 1,746 replays (`compose.yaml`); 501 MiB idle |
+| grafana | 450 MiB idle (`compose.yaml`); 281 MiB idle |
+| api, web, docs | 63, 65, 27 MiB idle |
+| **always on** | **937 MiB idle**; the peaks add up to about 2.3 GiB |
 
-| Service | mem_limit | Measured |
-|---|---|---|
-| clickhouse | 3g | 1.11 GiB resident, 1.68 GiB peak on 1,746 replays (`compose.yaml`); 501 MiB idle |
-| grafana | 768m | 450 MiB idle (`compose.yaml`); 281 MiB idle |
-| api, web, docs | 512m each | 63, 65, 27 MiB idle |
-| **always on** | **5,376 MiB (5.25 GiB)** | 937 MiB idle |
-| dbt, then the drain (one at a time) | 1g, 512m | - |
-| **with a one-shot** | **6.25 GiB** | - |
+Idle figures: `docker stats` on the local stack, 2026-10-02. Not measured (`-`): the peak memory of the Rust drain image
+build, of `next build` and of `dbt build` on the box.
 
-Idle figures: `docker stats` on the local stack, 2026-10-02. ClickHouse at 2g still sums to 4.25 GiB always on, 5.25 GiB
-with dbt. The measured peaks add up to about 2.3 GiB, but on a 4 GB box the caps would no longer stop one service from
-starving the rest, and the box also builds the drain's Rust image (memory `-`).
+Take the CX33. The box compiles the drain image and runs `next build` while ClickHouse is live, and a parser deploy
+rebuilds the drain inside an unattended cron pass. Take the 4 GB CX23 only if it is the one in stock: bootstrap adds a
+4 GB swapfile when the box has no swap, and deploys run while the cron is paused (`ssh $BOX_SSH crontab -r`, then
+`just box::deploy`, `just box::ingest`, `just box::cron`). The CX23 costs $7.09 a month (see Cost per month).
 
 ## Runbook
 
@@ -34,8 +34,9 @@ backend) keeps the only write key; ClickHouse holds no bucket key at all.
 
 1. **Order.** Hetzner Cloud, CX33, Ubuntu 24.04, your SSH public key, a public IPv4 (GitHub has no IPv6).
 2. **Bootstrap.** `just box::bootstrap <ip>` copies `infrastructure/box/bootstrap.sh` and runs it as root: Docker,
-   ufw (OpenSSH only), log rotation, the `warehouse` user with root's SSH keys, just, the clone. Safe to run again,
-   such as after an apt lock error on first boot.
+   ufw (OpenSSH only), log rotation, a 4 GB swapfile when the box has no swap, the `warehouse` user with root's SSH
+   keys, just, the clone. It finishes an interrupted dpkg install first and retries `apt-get update` three times, 10 s
+   apart. Safe to run again.
 3. **Env.** Put `BOX_SSH=warehouse@<ip>` in your `.env`. `cp .env.example .env.box`, then in `.env.box`:
    `COMPOSE_PROFILES=` (empty), the four `CLICKHOUSE_*PASSWORD`s (`openssl rand -hex 24` each),
    `W3WAREHOUSE_S3_ENDPOINT=<account id>.r2.cloudflarestorage.com`, `W3WAREHOUSE_S3_SECURE=true`, the read-only
@@ -43,11 +44,15 @@ backend) keeps the only write key; ClickHouse holds no bucket key at all.
    (mode 600). `.env.box` is git-ignored and is the only other copy, so keep the secrets in a password manager too.
 4. **Deploy.** `just box::deploy feature/dbt-prototype` until the branch merges, `just box::deploy` after. It checks
    out the branch and runs `docker compose up -d --build --remove-orphans`: clickhouse, api, web, grafana and docs.
-   MinIO (`local`) and cloudflared (`tunnel`) stay off. Run it again after every push.
+   MinIO (`local`) and cloudflared (`tunnel`) stay off. It then touches `data/dbt-build-pending`, so the next cron
+   `just ingest` rebuilds the marts, even when no new replay lands. It also runs `docker image prune -f` and
+   `docker builder prune -f --filter until=168h`, so old images and build cache do not fill the disk. Run it again after
+   every push.
 5. **Ingest.** `just box::ingest` runs `just ingest` once: it builds the drain and dbt images, parses every replay
    under `<prefix>/replays/` and runs `dbt build`.
 6. **Cron.** `just box::cron` installs one line for the `warehouse` user: `just ingest` every 10 minutes under
-   `flock -n`, so passes never overlap, appending to `~/ingest.log` (not rotated; size per pass `-`).
+   `flock -n /tmp/ingest.lock`, so passes never overlap, appending to `~/ingest.log` (not rotated; size per pass `-`).
+   `just box::ingest` and `just box::deploy` take the same lock and wait for a running pass.
 7. **Open.** `just box::open` holds an ssh forward until Ctrl-C. Stop the local stack first: the ports are the same,
    and the forward exits rather than show the local stack.
 
@@ -65,13 +70,14 @@ box. `just box::status` prints the containers, `df -h /`, the tail of `ingest.lo
 | Item | Requests per month | $ per month |
 |---|---|---|
 | Hetzner CX33 | - | 9.99 (EUR 8.49), excl. VAT and IPv4 (docs.hetzner.com price adjustment, from 2026-06-15) |
-| Hetzner primary IPv4 | - | billed apart; price not read on a Hetzner page, budget 1.00 |
+| Hetzner Cloud Primary IPv4 | - | 0.60 (EUR 0.50; docs.hetzner.com/cloud/servers/primary-ips/ pricing, read 2026-10-02) |
 | R2 class A: LIST `replays/`, 1,000 keys a call, 4,320 passes | 8,640 at 1,746 replays; 86,400 at 20,000 | 0 (1 M free) |
 | R2 class B: 1 GET per new or changed replay | new replays `-`; 1,746 or 20,000 once to rebuild | 0 (10 M free) |
 | R2 storage, `replays/` | - | 0 (390.9 MB now, 4.48 GB at 20,000; 10 GB free) |
 | Cloudflare tunnel | - | 0, off until a domain exists |
 | Domain | - | 0 until one is bought |
-| **Total** | | **10.99 at most**; 13.74 with 25% VAT |
+| VAT | - | `-`, depends on the buyer's country |
+| **Total** | | **10.59** excl. VAT (CX33 + IPv4); 7.09 with a CX23 |
 
 R2 prices: developers.cloudflare.com/r2/pricing ($4.50 per million class A, $0.36 per million class B, egress free).
 LIST stays free up to 231,000 replays at this cadence. The free tier is per Cloudflare account, shared with GNL's
@@ -89,7 +95,8 @@ other R2 use (not checked). dbt and ClickHouse read no bucket.
 | box to browser, JS and CSS on a first load | `-` | `-` |
 
 Zero: box to R2 (the drain never writes), API to browser (the API stays inside the box), Supabase (nothing reads it).
-Page bytes: `measure-1.tsv` (threads/warehouse-dbt-prototype/deploy). R2 egress is free; the box includes 20 TB.
+Page bytes: measured 2026-10-01; the raw table `measure-1.tsv` is outside this repo
+(threads/warehouse-dbt-prototype/deploy). R2 egress is free; the box includes 20 TB.
 
 ## Not backed up
 
@@ -100,8 +107,8 @@ The box's `.env` is the one thing not derived: its copy is `.env.box` on your ma
 
 ## Rebuilding a lost box
 
-Order a new box, then `just box::bootstrap <ip>`, set `BOX_SSH`, `just box::env`, `just box::deploy`,
-`just box::ingest`, `just box::cron`. The ingest re-reads every replay from R2 (1 class B GET each, 390.9 MB today).
+Order a new box, then `ssh-keygen -R <ip>` when the IP is reused (the old host key would fail the connection), then
+`just box::bootstrap <ip>`, set `BOX_SSH`, `just box::env`, `just box::deploy`, `just box::ingest`, `just box::cron`. The ingest re-reads every replay from R2 (1 class B GET each, 390.9 MB today).
 The ingest design measured a re-parse of 1,743 replays at about 4 s, locally; the image builds and `dbt build` on the
 box are `-`.
 
@@ -115,4 +122,5 @@ shared secret that Vercel sends on every request. Build these two first:
    (10 s, 2 GB) bound one query, not how many arrive.
 2. Token rotation: the API accepts two secrets at once, so a new one goes into Vercel before the old one is dropped.
 
-The API's JSON then leaves the box: 9,296 B gzip per home search (51,834 B plain, `measure-1.tsv`).
+The API's JSON then leaves the box: 9,296 B gzip per home search (51,834 B plain)
+and 1,341 B gzip per median `/replays/{id}` (11,307 B plain), measured 2026-10-01 (`measure-1.tsv`).
