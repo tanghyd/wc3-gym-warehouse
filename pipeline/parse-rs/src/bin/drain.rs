@@ -1,60 +1,78 @@
-//! drain — the parse hop. Reads `.w3g` objects from the bucket's `replays/`
-//! prefix, parses each via w3grs, and writes the parsed JSON to
-//! `parsed/v<PARSE_VERSION>/dt=<date>/<replay_id>.json`, the prefix ClickHouse
-//! reads with s3() (db/w3g/backfill.sql).
+//! drain: the parse hop. Every run is one pass (`drain --once`), started by
+//! `just local::ingest` or a host cron.
 //!
-//! Every key sits under an environment segment (production, preview or
-//! development), such as `preview/replays/goldens/w3c-20260501062910.w3g`. Set
-//! W3WAREHOUSE_S3_PREFIX to that leading segment and all three prefixes move
-//! together, which keeps one environment's parsed output out of another's.
+//! For each source bucket it LISTs the replay prefix (1,000 keys a page), compares
+//! every `.w3g` with its row in ClickHouse's `ingest.files`, GETs and parses each new
+//! or changed object, and INSERTs the parsed document into `ingest.docs` and the
+//! outcome into `ingest.files`, BATCH rows at a time, over HTTP as the `ingest` user.
+//! dbt reads `ingest.docs`.
 //!
-//! A raw object is never moved or deleted: the site's download URLs point at it.
-//! Work already done is recorded by a breadcrumb at `status/<path>.json`, the
-//! raw key's path under `replays/`, holding the raw object's ETag and the
-//! PARSE_VERSION that wrote it, so a pass processes a key only when it has no
-//! breadcrumb, the ETag has changed or the breadcrumb has another version.
+//! An object is current when its row has the same size, the same PARSE_VERSION and
+//! the same ETag (LastModified when the listing gives no ETag). So a re-upload or a
+//! parser bump re-parses on the next run. A file that fails to parse gets a row with
+//! the error and waits for such a change. A failed LIST, GET or INSERT writes no row,
+//! so the next run retries the key.
 //!
-//! Every `.w3g` under `replays/` is drained the same way. The drain writes the raw
-//! object key into the parsed document as `source_key`, and the time the bucket last
-//! wrote that object (the listing's LastModified) as `source_last_modified`. A replay
-//! header holds no date, so this is the time the replay was added.
+//! The drain never writes to a source bucket: its key may be read-only. A raw object
+//! is never moved or deleted, because download URLs point at it.
 //!
-//! Two run modes: default loops every WORKER_POLL_MS as a SINGLE instance (two
-//! instances race on the same keys); `--once` drains the bucket once and exits.
+//! Sources: the W3WAREHOUSE_S3_* set, listed at `<W3WAREHOUSE_S3_PREFIX>/replays/`,
+//! then the W3WAREHOUSE_SOURCE2_* set when W3WAREHOUSE_SOURCE2_BUCKET is set, listed
+//! at `<W3WAREHOUSE_SOURCE2_PREFIX>/`. A source's name in ClickHouse is its bucket.
 //!
-//! Within a pass, objects are processed concurrently (DRAIN_CONCURRENCY) — the
-//! per-object cost is S3 round-trips, not CPU, so concurrency is the speedup.
+//! The document is w3grs's JSON plus the raw object key as `source_key`, the
+//! listing's LastModified as `source_last_modified` (a replay header holds no date,
+//! so this is when the replay was added) and `parse_version`.
+//!
+//! Within a pass, objects are fetched and parsed DRAIN_CONCURRENCY at a time.
 use std::collections::HashMap;
-use std::time::Duration;
 
 use aws_sdk_s3::config::{BehaviorVersion, Credentials, Region};
-use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::Client;
 use aws_smithy_types::date_time::Format;
 use futures::stream::{self, StreamExt};
+use serde::{Deserialize, Serialize};
 use w3warehouse_parse::PARSE_VERSION;
 
-const RAW: &str = "replays/";
-const STATUS: &str = "status/";
+/// Rows per INSERT: 500 documents of about 8 KB each.
+const BATCH: usize = 500;
 
-struct Cfg {
+/// One bucket the drain reads.
+#[derive(Debug, PartialEq)]
+struct Source {
+    /// The bucket, also the `source` column in ClickHouse.
     bucket: String,
-    poll: Duration,
-    concurrency: usize,
-    /// Leading segment on every key, such as "preview/". Empty for a flat bucket.
+    /// Scheme, host and port, such as "http://minio:9000".
+    endpoint: String,
+    access_key: String,
+    secret_key: String,
+    /// The key prefix the drain lists, such as "preview/replays/". Empty lists the bucket.
     prefix: String,
 }
 
-impl Cfg {
-    fn raw(&self) -> String {
-        format!("{}{RAW}", self.prefix)
+/// The sources from the environment: the W3WAREHOUSE_S3_* set, then the
+/// W3WAREHOUSE_SOURCE2_* set when W3WAREHOUSE_SOURCE2_BUCKET is set.
+fn sources(env: impl Fn(&str) -> Option<String>) -> Vec<Source> {
+    let read = |set: &str, prefix: String| {
+        let var = |name: &str, default: &str| env(&format!("{set}_{name}")).unwrap_or(default.to_string());
+        let scheme = if var("SECURE", "false") == "true" { "https" } else { "http" };
+        Source {
+            bucket: var("BUCKET", "warehouse"),
+            endpoint: format!("{scheme}://{}", var("ENDPOINT", "minio:9000")),
+            access_key: var("ACCESS_KEY", "minioadmin"),
+            secret_key: var("SECRET_KEY", "minioadmin"),
+            prefix,
+        }
+    };
+    let env_prefix = |set: &str| normalise_prefix(&env(&format!("{set}_PREFIX")).unwrap_or_default());
+    let mut out = vec![read("W3WAREHOUSE_S3", format!("{}replays/", env_prefix("W3WAREHOUSE_S3")))];
+    if env("W3WAREHOUSE_SOURCE2_BUCKET").is_some_and(|b| !b.is_empty()) {
+        out.push(read("W3WAREHOUSE_SOURCE2", env_prefix("W3WAREHOUSE_SOURCE2")));
     }
-    fn status(&self) -> String {
-        format!("{}{STATUS}", self.prefix)
-    }
+    out
 }
 
-/// Normalise W3WAREHOUSE_S3_PREFIX: empty stays empty, anything else ends in "/".
+/// Normalise a key prefix: empty stays empty, anything else ends in "/".
 fn normalise_prefix(raw: &str) -> String {
     let t = raw.trim().trim_matches('/');
     if t.is_empty() {
@@ -70,203 +88,94 @@ fn env_or(key: &str, default: &str) -> String {
 
 #[tokio::main]
 async fn main() {
-    let once = std::env::args().any(|a| a == "--once");
-
-    // Endpoint is "host:port"; the scheme comes from W3WAREHOUSE_S3_SECURE.
-    let endpoint = env_or("W3WAREHOUSE_S3_ENDPOINT", "minio:9000");
-    let secure = env_or("W3WAREHOUSE_S3_SECURE", "false") == "true";
-    let scheme = if secure { "https" } else { "http" };
-    let access = env_or("W3WAREHOUSE_S3_ACCESS_KEY", "minioadmin");
-    let secret = env_or("W3WAREHOUSE_S3_SECRET_KEY", "minioadmin");
-    let cfg = Cfg {
-        bucket: env_or("W3WAREHOUSE_S3_BUCKET", "warehouse"),
-        poll: Duration::from_millis(env_or("WORKER_POLL_MS", "3000").parse().unwrap_or(3000)),
-        concurrency: env_or("DRAIN_CONCURRENCY", "16").parse().unwrap_or(16),
-        prefix: normalise_prefix(&env_or("W3WAREHOUSE_S3_PREFIX", "")),
-    };
-
-    let creds = Credentials::new(access, secret, None, None, "w3warehouse-env");
-    let conf = aws_sdk_s3::Config::builder()
-        .behavior_version(BehaviorVersion::latest())
-        .region(Region::new("us-east-1")) // dummy; MinIO ignores it
-        .endpoint_url(format!("{scheme}://{endpoint}"))
-        .force_path_style(true) // MinIO needs path-style addressing
-        .credentials_provider(creds)
-        .build();
-    let client = Client::from_conf(conf);
-
-    if once {
-        let n = drain_once(&client, &cfg).await;
-        log(&format!("drained {n} object(s), exiting (--once)"));
-        return;
+    if std::env::args().skip(1).any(|a| a != "--once") {
+        eprintln!("usage: drain [--once]   (every run is one pass)");
+        std::process::exit(2);
     }
+    let ch = ClickHouse {
+        http: reqwest::Client::new(),
+        url: env_or("CLICKHOUSE_URL", "http://clickhouse:8123"),
+        password: env_or("CLICKHOUSE_INGEST_PASSWORD", ""),
+    };
+    let concurrency = env_or("DRAIN_CONCURRENCY", "16").parse().unwrap_or(16);
+    let mut tally = Tally::default();
+    let mut failed = false;
+    for src in sources(|k| std::env::var(k).ok()) {
+        if let Err(e) = drain_source(&ch, &src, concurrency, &mut tally).await {
+            log(&format!("{}: {e}; the next run retries", src.bucket));
+            failed = true;
+        }
+    }
+    // `just local::ingest` reads this line: dbt builds when a document was inserted.
     log(&format!(
-        "watching {}/{} every {}ms (concurrency={})",
-        cfg.bucket,
-        cfg.raw(),
-        cfg.poll.as_millis(),
-        cfg.concurrency
+        "inserted {} doc(s), {} failed parse(s), {} to retry",
+        tally.docs, tally.failed, tally.retry
     ));
-    loop {
-        let _ = drain_once(&client, &cfg).await;
-        tokio::time::sleep(cfg.poll).await;
+    if failed {
+        std::process::exit(1);
     }
 }
 
-/// Every `.w3g` under `<prefix>replays/` is a replay to parse.
-fn is_replay(raw_prefix: &str, key: &str) -> bool {
-    key.starts_with(raw_prefix) && key.ends_with(".w3g")
+#[derive(Default)]
+struct Tally {
+    docs: usize,
+    failed: usize,
+    retry: usize,
 }
 
-/// The breadcrumb for a raw key: `replays/12/game2.w3g` → `status/12/game2.json`.
-fn status_key(cfg: &Cfg, raw_key: &str) -> String {
-    let rest = raw_key.strip_prefix(&cfg.raw()).unwrap_or(raw_key);
-    format!("{}{}.json", cfg.status(), rest.strip_suffix(".w3g").unwrap_or(rest))
-}
-
-/// A breadcrumb body: what happened to a raw key, at which ETag and parser version.
-fn breadcrumb(state: &str, raw_key: &str, etag: &str) -> serde_json::Value {
-    serde_json::json!({
-        "state": state, "key": raw_key, "etag": etag, "parse_version": PARSE_VERSION,
-    })
-}
-
-/// True when a breadcrumb covers this ETag under this parser version.
-fn up_to_date(crumb: &serde_json::Value, etag: &str) -> bool {
-    crumb["etag"].as_str() == Some(etag)
-        && crumb["parse_version"].as_u64() == Some(PARSE_VERSION.into())
-}
-
-/// Process every new or changed `replays/` object once, concurrently. Returns
-/// how many were handled; transient S3 errors leave the key to retry next pass.
-async fn drain_once(client: &Client, cfg: &Cfg) -> usize {
-    let done = match read_breadcrumbs(client, cfg).await {
-        Ok(m) => m,
-        Err(e) => {
-            log(&format!("status list error, will retry: {e}"));
-            return 0;
-        }
-    };
-    let raw = match list_prefix(client, &cfg.bucket, &cfg.raw()).await {
-        Ok(k) => k,
-        Err(e) => {
-            log(&format!("list error, will retry: {e}"));
-            return 0;
-        }
-    };
-    let raw_prefix = cfg.raw();
-    let todo: Vec<Listed> = raw
+/// One source: read its ingest.files rows, LIST, parse what changed, INSERT in batches.
+async fn drain_source(ch: &ClickHouse, src: &Source, concurrency: usize, tally: &mut Tally) -> Result<(), String> {
+    let seen = ch.seen(&src.bucket).await?;
+    let client = &s3_client(src);
+    let listed = list_prefix(client, &src.bucket, &src.prefix).await?;
+    let n = listed.len();
+    let todo: Vec<Listed> = listed
         .into_iter()
         .filter(|o| {
-            if !is_replay(&raw_prefix, &o.key) {
-                log(&format!("skipping {}: not a .w3g under {raw_prefix}", o.key));
+            if !o.key.ends_with(".w3g") {
+                log(&format!("skipping {}: not a .w3g", o.key));
                 return false;
             }
-            !done.get(&o.key).is_some_and(|crumb| up_to_date(crumb, &o.etag))
+            needs_parse(o, seen.get(&o.key))
         })
         .collect();
+    log(&format!(
+        "{}/{}: {n} listed, {} in ingest.files, {} to parse",
+        src.bucket,
+        src.prefix,
+        seen.len(),
+        todo.len()
+    ));
 
-    let outcomes = stream::iter(todo)
+    let mut batches = stream::iter(todo)
         .map(|o| async move {
-            match process_one(client, cfg, &o).await {
-                Ok(()) => true,
+            let outcome = process_one(client, src, &o).await;
+            (o.key, outcome)
+        })
+        .buffer_unordered(concurrency)
+        .chunks(BATCH);
+    while let Some(batch) = batches.next().await {
+        let (mut files, mut docs) = (Vec::new(), Vec::new());
+        for (key, outcome) in batch {
+            match outcome {
+                Ok((file, doc)) => {
+                    tally.failed += usize::from(!file.error.is_empty());
+                    files.push(file);
+                    docs.extend(doc);
+                }
                 Err(e) => {
-                    // Transient (network/S3): no breadcrumb written, retry next pass.
-                    log(&format!("error on {}, will retry: {e}", o.key));
-                    false
+                    log(&format!("error on {key}, the next run retries: {e}"));
+                    tally.retry += 1;
                 }
             }
-        })
-        .buffer_unordered(cfg.concurrency)
-        .collect::<Vec<_>>()
-        .await;
-    outcomes.into_iter().filter(|ok| *ok).count()
-}
-
-/// The doc the drain writes: w3grs's JSON plus `source_key`, `source_last_modified`
-/// and `parse_version`, so ClickHouse reads them out of the same s3() load as every
-/// other field. raw_replays keeps the document with the highest `parse_version` per replay.
-fn landed_doc(json: &str, raw: &Listed) -> Result<serde_json::Value, String> {
-    let mut doc: serde_json::Value = serde_json::from_str(json).map_err(|e| e.to_string())?;
-    let fields = doc.as_object_mut().ok_or("parsed doc is not a JSON object")?;
-    fields.insert("source_key".to_string(), raw.key.as_str().into());
-    fields.insert("source_last_modified".to_string(), raw.modified.as_str().into());
-    fields.insert("parse_version".to_string(), PARSE_VERSION.into());
-    Ok(doc)
-}
-
-async fn process_one(client: &Client, cfg: &Cfg, raw: &Listed) -> Result<(), String> {
-    let (raw_key, etag) = (raw.key.as_str(), raw.etag.as_str());
-    let bucket = &cfg.bucket;
-    let status_key = status_key(cfg, raw_key);
-    let bytes = get_object(client, bucket, raw_key).await?;
-
-    let parsed = match w3warehouse_parse::parse_replay(&bytes) {
-        Ok(p) => p,
-        Err(error) => {
-            // Won't parse with this parser: skip the key until its ETag or PARSE_VERSION changes.
-            let mut status = breadcrumb("failed", raw_key, etag);
-            status["error"] = error.as_str().into();
-            put_json(client, bucket, &status_key, &status).await?;
-            log(&format!("parse FAILED {raw_key}: {error}"));
-            return Ok(());
         }
-    };
-    if parsed.replay_id.is_empty() {
-        return Err("parsed doc has no id".to_string());
+        // Docs first: a failed files INSERT re-parses those keys next run, and the
+        // repeated docs collapse on (source, key).
+        ch.insert("ingest.docs", &docs).await?;
+        ch.insert("ingest.files", &files).await?;
+        tally.docs += docs.len();
     }
-
-    let doc = landed_doc(&parsed.json, raw)?;
-
-    // Land the parsed doc content-addressed by replay id under the parser-version
-    // prefix (PARSE_VERSION in lib.rs) so a parser change re-derives incrementally.
-    let date = chrono::Utc::now().format("%Y-%m-%d");
-    put_bytes(
-        client,
-        bucket,
-        &format!(
-            "{}parsed/v{}/dt={date}/{}.json",
-            cfg.prefix,
-            PARSE_VERSION,
-            parsed.replay_id
-        ),
-        serde_json::to_vec(&doc).map_err(|e| e.to_string())?,
-    )
-    .await?;
-
-    let mut status = breadcrumb("parsed", raw_key, etag);
-    status["replay_id"] = parsed.replay_id.as_str().into();
-    status["type"] = parsed.replay_type.as_str().into();
-    put_json(client, bucket, &status_key, &status).await?;
-    log(&format!(
-        "parsed {raw_key} → {} (type={})",
-        parsed.replay_id,
-        if parsed.replay_type.is_empty() { "?" } else { &parsed.replay_type }
-    ));
     Ok(())
-}
-
-/// Raw key → its breadcrumb, read from every `status/` object. A listing carries
-/// the breadcrumb's own ETag, not the replay's, so each body is fetched; the
-/// fetches run at the pass concurrency.
-async fn read_breadcrumbs(
-    client: &Client,
-    cfg: &Cfg,
-) -> Result<HashMap<String, serde_json::Value>, String> {
-    let keys = list_prefix(client, &cfg.bucket, &cfg.status()).await?;
-    let bodies = stream::iter(keys)
-        .map(|o| async move { get_object(client, &cfg.bucket, &o.key).await })
-        .buffer_unordered(cfg.concurrency)
-        .collect::<Vec<_>>()
-        .await;
-    let mut map = HashMap::new();
-    for body in bodies {
-        let doc: serde_json::Value = serde_json::from_slice(&body?).map_err(|e| e.to_string())?;
-        if let Some(k) = doc["key"].as_str().map(str::to_string) {
-            map.insert(k, doc);
-        }
-    }
-    Ok(map)
 }
 
 /// One object of a bucket listing.
@@ -276,27 +185,216 @@ struct Listed {
     etag: String,
     /// When the bucket last wrote the object, RFC 3339 in UTC, or "" when the listing gives none.
     modified: String,
+    /// The same time in Unix milliseconds, 0 when the listing gives none.
+    modified_ms: i64,
+    size: u64,
 }
 
-/// Every object under a prefix.
+/// An object's row in ingest.files, as the drain compares it.
+#[derive(Deserialize)]
+struct Seen {
+    key: String,
+    etag: String,
+    modified_ms: i64,
+    size: u64,
+    parse_version: u32,
+}
+
+/// True when a listed object has no current row: no row, another size or PARSE_VERSION,
+/// or another ETag (LastModified when the listing gives no ETag). A failed parse has a
+/// row, so it waits for such a change like any other key.
+fn needs_parse(o: &Listed, seen: Option<&Seen>) -> bool {
+    seen.is_none_or(|s| {
+        s.parse_version != PARSE_VERSION
+            || s.size != o.size
+            || if o.etag.is_empty() { s.modified_ms != o.modified_ms } else { s.etag != o.etag }
+    })
+}
+
+/// Key -> row from ingest.files JSONEachRow. A line that does not decode is logged and
+/// skipped, so its key counts as new and is parsed again.
+fn parse_seen(body: &str) -> HashMap<String, Seen> {
+    let mut map = HashMap::new();
+    for line in body.lines().filter(|l| !l.trim().is_empty()) {
+        match serde_json::from_str::<Seen>(line) {
+            Ok(s) => {
+                map.insert(s.key.clone(), s);
+            }
+            Err(e) => log(&format!("skipping a bad ingest.files row ({e}): {:.200}", line)),
+        }
+    }
+    map
+}
+
+/// An ingest.files row: what the drain did with one object.
+#[derive(Serialize)]
+struct FileRow {
+    source: String,
+    key: String,
+    etag: String,
+    source_last_modified: String,
+    size: u64,
+    parse_version: u32,
+    /// Empty when the parse failed.
+    replay_id: String,
+    /// Why the parse gave no document, empty when it gave one.
+    error: String,
+}
+
+/// An ingest.docs row: one parsed document.
+#[derive(Serialize)]
+struct DocRow {
+    source: String,
+    key: String,
+    etag: String,
+    source_last_modified: String,
+    parse_version: u32,
+    doc: String,
+}
+
+/// GET and parse one object: its ingest.files row, and its ingest.docs row when the
+/// parse gave a document. Err is a failed GET.
+async fn process_one(client: &Client, src: &Source, o: &Listed) -> Result<(FileRow, Option<DocRow>), String> {
+    let bytes = get_object(client, &src.bucket, &o.key).await?;
+    // DateTime64 cannot read "", so a listing with no time stores the epoch.
+    let modified = if o.modified.is_empty() { "1970-01-01T00:00:00Z" } else { &o.modified };
+    let mut file = FileRow {
+        source: src.bucket.clone(),
+        key: o.key.clone(),
+        etag: o.etag.clone(),
+        source_last_modified: modified.to_string(),
+        size: o.size,
+        parse_version: PARSE_VERSION,
+        replay_id: String::new(),
+        error: String::new(),
+    };
+    match parsed_doc(&bytes, o) {
+        Ok((replay_id, doc)) => {
+            log(&format!("parsed {} → {replay_id}", o.key));
+            file.replay_id = replay_id;
+            let doc = DocRow {
+                source: file.source.clone(),
+                key: file.key.clone(),
+                etag: file.etag.clone(),
+                source_last_modified: file.source_last_modified.clone(),
+                parse_version: PARSE_VERSION,
+                doc,
+            };
+            Ok((file, Some(doc)))
+        }
+        Err(error) => {
+            log(&format!("parse FAILED {}: {error}", o.key));
+            file.error = error;
+            Ok((file, None))
+        }
+    }
+}
+
+/// Parse a raw file into its replay id and document text; Err says why there is none.
+fn parsed_doc(bytes: &[u8], o: &Listed) -> Result<(String, String), String> {
+    let parsed = w3warehouse_parse::parse_replay(bytes)?;
+    if parsed.replay_id.is_empty() {
+        return Err("parsed doc has no id".to_string());
+    }
+    let doc = landed_doc(&parsed.json, o)?;
+    Ok((parsed.replay_id, doc.to_string()))
+}
+
+/// The document the drain inserts: w3grs's JSON plus `source_key`, `source_last_modified`
+/// and `parse_version`, so dbt reads them like every other field.
+fn landed_doc(json: &str, raw: &Listed) -> Result<serde_json::Value, String> {
+    let mut doc: serde_json::Value = serde_json::from_str(json).map_err(|e| e.to_string())?;
+    let fields = doc.as_object_mut().ok_or("parsed doc is not a JSON object")?;
+    fields.insert("source_key".to_string(), raw.key.as_str().into());
+    fields.insert("source_last_modified".to_string(), raw.modified.as_str().into());
+    fields.insert("parse_version".to_string(), PARSE_VERSION.into());
+    Ok(doc)
+}
+
+/// ClickHouse over HTTP as the `ingest` user, which may only SELECT and INSERT on ingest.*.
+struct ClickHouse {
+    http: reqwest::Client,
+    url: String,
+    password: String,
+}
+
+impl ClickHouse {
+    async fn post(&self, params: &[(&str, &str)], body: Vec<u8>) -> Result<String, String> {
+        let url = reqwest::Url::parse_with_params(&self.url, params).map_err(|e| e.to_string())?;
+        let resp = self
+            .http
+            .post(url)
+            .header("X-ClickHouse-User", "ingest")
+            .header("X-ClickHouse-Key", &self.password)
+            .body(body)
+            .send()
+            .await
+            .map_err(|e| format!("ClickHouse: {e}"))?;
+        let status = resp.status();
+        let text = resp.text().await.map_err(|e| format!("ClickHouse: {e}"))?;
+        if status.is_success() {
+            Ok(text)
+        } else {
+            Err(format!("ClickHouse {status}: {}", text.trim()))
+        }
+    }
+
+    /// The source's ingest.files rows, merged, keyed by object key.
+    async fn seen(&self, source: &str) -> Result<HashMap<String, Seen>, String> {
+        let query = "SELECT key, etag, toUnixTimestamp64Milli(source_last_modified) AS modified_ms, size, \
+                     parse_version FROM ingest.files FINAL WHERE source = {source:String} FORMAT JSONEachRow";
+        let params = [("param_source", source), ("output_format_json_quote_64bit_integers", "0")];
+        Ok(parse_seen(&self.post(&params, query.as_bytes().to_vec()).await?))
+    }
+
+    /// One INSERT of every row, as JSONEachRow. No rows, no request.
+    async fn insert<T: Serialize>(&self, table: &str, rows: &[T]) -> Result<(), String> {
+        if rows.is_empty() {
+            return Ok(());
+        }
+        let mut body = Vec::new();
+        for row in rows {
+            serde_json::to_writer(&mut body, row).map_err(|e| e.to_string())?;
+            body.push(b'\n');
+        }
+        let query = format!("INSERT INTO {table} FORMAT JSONEachRow");
+        // best_effort reads the listing's RFC 3339 times into DateTime64.
+        let params = [("query", query.as_str()), ("date_time_input_format", "best_effort")];
+        self.post(&params, body).await.map(|_| ())
+    }
+}
+
+fn s3_client(src: &Source) -> Client {
+    let creds = Credentials::new(&src.access_key, &src.secret_key, None, None, "w3warehouse-env");
+    let conf = aws_sdk_s3::Config::builder()
+        .behavior_version(BehaviorVersion::latest())
+        .region(Region::new("us-east-1")) // dummy; MinIO and R2 ignore it
+        .endpoint_url(&src.endpoint)
+        .force_path_style(true) // MinIO needs path-style addressing
+        .credentials_provider(creds)
+        .build();
+    Client::from_conf(conf)
+}
+
+/// Every object under a prefix, 1,000 keys a page.
 async fn list_prefix(client: &Client, bucket: &str, prefix: &str) -> Result<Vec<Listed>, String> {
     let mut keys = Vec::new();
     let mut token: Option<String> = None;
     loop {
-        let mut req = client.list_objects_v2().bucket(bucket).prefix(prefix);
+        let mut req = client.list_objects_v2().bucket(bucket).prefix(prefix).max_keys(1000);
         if let Some(t) = &token {
             req = req.continuation_token(t);
         }
-        let resp = req.send().await.map_err(|e| e.to_string())?;
+        let resp = req.send().await.map_err(|e| format!("LIST {bucket}/{prefix}: {e}"))?;
         for obj in resp.contents() {
             if let Some(k) = obj.key() {
+                let modified = obj.last_modified();
                 keys.push(Listed {
                     key: k.to_string(),
                     etag: obj.e_tag().unwrap_or_default().trim_matches('"').to_string(),
-                    modified: obj
-                        .last_modified()
-                        .and_then(|t| t.fmt(Format::DateTime).ok())
-                        .unwrap_or_default(),
+                    modified: modified.and_then(|t| t.fmt(Format::DateTime).ok()).unwrap_or_default(),
+                    modified_ms: modified.and_then(|t| t.to_millis().ok()).unwrap_or(0),
+                    size: obj.size().unwrap_or(0).max(0) as u64,
                 });
             }
         }
@@ -316,31 +414,9 @@ async fn get_object(client: &Client, bucket: &str, key: &str) -> Result<Vec<u8>,
         .key(key)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
-    let data = resp.body.collect().await.map_err(|e| e.to_string())?;
+        .map_err(|e| format!("GET: {e}"))?;
+    let data = resp.body.collect().await.map_err(|e| format!("GET: {e}"))?;
     Ok(data.into_bytes().to_vec())
-}
-
-async fn put_bytes(client: &Client, bucket: &str, key: &str, body: Vec<u8>) -> Result<(), String> {
-    client
-        .put_object()
-        .bucket(bucket)
-        .key(key)
-        .body(ByteStream::from(body))
-        .content_type("application/json")
-        .send()
-        .await
-        .map_err(|e| e.to_string())
-        .map(|_| ())
-}
-
-async fn put_json(
-    client: &Client,
-    bucket: &str,
-    key: &str,
-    value: &serde_json::Value,
-) -> Result<(), String> {
-    put_bytes(client, bucket, key, value.to_string().into_bytes()).await
 }
 
 fn log(msg: &str) {
@@ -351,64 +427,122 @@ fn log(msg: &str) {
 mod tests {
     use super::*;
 
-    fn cfg(prefix: &str) -> Cfg {
-        Cfg {
-            bucket: "b".into(),
-            poll: Duration::from_millis(1),
-            concurrency: 1,
-            prefix: normalise_prefix(prefix),
+    fn listed(key: &str, etag: &str, size: u64) -> Listed {
+        Listed {
+            key: key.into(),
+            etag: etag.into(),
+            modified: "2026-10-01T08:30:00Z".into(),
+            modified_ms: 1_791_189_000_000,
+            size,
+        }
+    }
+
+    fn seen(key: &str, etag: &str, size: u64, parse_version: u32) -> Seen {
+        Seen {
+            key: key.into(),
+            etag: etag.into(),
+            modified_ms: 1_791_189_000_000,
+            size,
+            parse_version,
         }
     }
 
     #[test]
-    fn keys_map_to_breadcrumbs() {
-        let c = cfg("");
-        assert_eq!(status_key(&c, "replays/12/game2.w3g"), "status/12/game2.json");
+    fn a_key_with_no_row_is_new() {
+        assert!(needs_parse(&listed("preview/replays/a.w3g", "e1", 10), None));
     }
 
     #[test]
-    fn any_w3g_under_replays_is_drained() {
-        let c = cfg("preview");
-        let local = "preview/replays/local/Autosaved/Multiplayer/w3c-20260922152242.w3g";
-        assert!(is_replay(&c.raw(), local));
-        assert_eq!(status_key(&c, local), "preview/status/local/Autosaved/Multiplayer/w3c-20260922152242.json");
-        assert!(is_replay(&c.raw(), "preview/replays/435/game1.w3g"));
-        assert!(!is_replay(&c.raw(), "preview/replays/local/notes.txt"));
-        assert!(!is_replay(&c.raw(), "production/replays/435/game1.w3g"));
+    fn a_key_at_the_same_etag_size_and_parser_version_is_unchanged() {
+        let o = listed("preview/replays/a.w3g", "e1", 10);
+        assert!(!needs_parse(&o, Some(&seen(&o.key, "e1", 10, PARSE_VERSION))));
     }
 
     #[test]
-    fn the_environment_prefix_moves_every_path() {
-        let c = cfg("preview");
-        assert_eq!(c.raw(), "preview/replays/");
-        assert_eq!(c.status(), "preview/status/");
+    fn another_etag_size_or_parser_version_is_changed() {
+        let o = listed("preview/replays/a.w3g", "e2", 10);
+        assert!(needs_parse(&o, Some(&seen(&o.key, "e1", 10, PARSE_VERSION))));
+        let o = listed("preview/replays/a.w3g", "e1", 11);
+        assert!(needs_parse(&o, Some(&seen(&o.key, "e1", 10, PARSE_VERSION))));
+        let o = listed("preview/replays/a.w3g", "e1", 10);
+        assert!(needs_parse(&o, Some(&seen(&o.key, "e1", 10, PARSE_VERSION - 1))));
+    }
+
+    #[test]
+    fn with_no_etag_the_last_modified_time_decides() {
+        let o = listed("preview/replays/a.w3g", "", 10);
+        assert!(!needs_parse(&o, Some(&seen(&o.key, "", 10, PARSE_VERSION))));
+        let mut moved = seen(&o.key, "", 10, PARSE_VERSION);
+        moved.modified_ms += 1000;
+        assert!(needs_parse(&o, Some(&moved)));
+    }
+
+    #[test]
+    fn a_failed_parse_waits_until_its_etag_changes() {
+        // A row with an error is a row: the same object is skipped, a re-upload is parsed.
+        let rows = parse_seen(&format!(
+            r#"{{"key":"preview/replays/bad.w3g","etag":"e1","modified_ms":1791189000000,"size":10,"parse_version":{PARSE_VERSION}}}"#
+        ));
+        let same = listed("preview/replays/bad.w3g", "e1", 10);
+        assert!(!needs_parse(&same, rows.get(&same.key)));
+        let reuploaded = listed("preview/replays/bad.w3g", "e2", 10);
+        assert!(needs_parse(&reuploaded, rows.get(&reuploaded.key)));
+    }
+
+    #[test]
+    fn a_bad_ingest_files_row_is_skipped_and_its_key_parses_again() {
+        let rows = parse_seen(&format!(
+            "{{\"key\":\"k1\",\"etag\":\"e1\",\"modified_ms\":0,\"size\":1,\"parse_version\":{PARSE_VERSION}}}\n\
+             not json\n\
+             {{\"key\":\"k2\",\"etag\":\"e1\"}}\n"
+        ));
+        assert_eq!(rows.len(), 1);
+        assert!(rows.contains_key("k1"));
+        assert!(needs_parse(&listed("k2", "e1", 1), rows.get("k2")));
+    }
+
+    #[test]
+    fn the_first_source_lists_replays_under_the_environment_prefix() {
+        let env: HashMap<&str, &str> = HashMap::from([
+            ("W3WAREHOUSE_S3_ENDPOINT", "minio:9000"),
+            ("W3WAREHOUSE_S3_BUCKET", "warehouse"),
+            ("W3WAREHOUSE_S3_PREFIX", "preview"),
+            ("W3WAREHOUSE_S3_ACCESS_KEY", "k"),
+            ("W3WAREHOUSE_S3_SECRET_KEY", "s"),
+        ]);
+        let got = sources(|k| env.get(k).map(|v| v.to_string()));
         assert_eq!(
-            status_key(&c, "preview/replays/435/game1.w3g"),
-            "preview/status/435/game1.json"
+            got,
+            vec![Source {
+                bucket: "warehouse".into(),
+                endpoint: "http://minio:9000".into(),
+                access_key: "k".into(),
+                secret_key: "s".into(),
+                prefix: "preview/replays/".into(),
+            }]
         );
     }
 
     #[test]
-    fn a_key_is_done_only_at_the_same_etag_and_parser_version() {
-        let key = "preview/replays/435/game1.w3g";
-        assert!(up_to_date(&breadcrumb("parsed", key, "e1"), "e1"));
-        assert!(up_to_date(&breadcrumb("failed", key, "e1"), "e1"));
-        assert!(!up_to_date(&breadcrumb("parsed", key, "e1"), "e2"));
-        // A breadcrumb from before parse_version, or from another version, re-parses.
-        let old = serde_json::json!({"state": "parsed", "key": key, "etag": "e1"});
-        assert!(!up_to_date(&old, "e1"));
-        let mut other = breadcrumb("parsed", key, "e1");
-        other["parse_version"] = (PARSE_VERSION - 1).into();
-        assert!(!up_to_date(&other, "e1"));
+    fn a_second_source_comes_only_with_its_bucket() {
+        let mut env: HashMap<&str, &str> = HashMap::from([
+            ("W3WAREHOUSE_S3_BUCKET", "warehouse"),
+            ("W3WAREHOUSE_SOURCE2_ENDPOINT", "w3c.example:443"),
+            ("W3WAREHOUSE_SOURCE2_SECURE", "true"),
+            ("W3WAREHOUSE_SOURCE2_PREFIX", "/replays/"),
+        ]);
+        assert_eq!(sources(|k| env.get(k).map(|v| v.to_string())).len(), 1);
+        env.insert("W3WAREHOUSE_SOURCE2_BUCKET", "w3c");
+        let got = sources(|k| env.get(k).map(|v| v.to_string()));
+        assert_eq!(got.len(), 2);
+        assert_eq!(got[1].bucket, "w3c");
+        assert_eq!(got[1].endpoint, "https://w3c.example:443");
+        assert_eq!(got[1].prefix, "replays/");
     }
 
     #[test]
     fn the_landed_doc_carries_the_raw_key_its_time_and_the_parser_version() {
-        let raw = Listed {
-            key: "preview/replays/local/w3c-1.w3g".into(),
-            etag: "e1".into(),
-            modified: "2026-10-01T08:30:00Z".into(),
-        };
+        let raw = listed("preview/replays/local/w3c-1.w3g", "e1", 10);
         let doc = landed_doc(r#"{"id":"r1"}"#, &raw).unwrap();
         assert_eq!(doc["id"], "r1");
         assert_eq!(doc["source_key"], raw.key);

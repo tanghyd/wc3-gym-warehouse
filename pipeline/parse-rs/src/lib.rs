@@ -1,17 +1,15 @@
 //! Shared replay-parse core for the w3warehouse backend tools.
 //!
 //! One w3grs parse implementation, two I/O frontends: `parse` (local .w3g →
-//! local JSON, for the host-native dev loop) and `drain` (MinIO/S3 raw → parsed,
-//! the object-store worker + batch reparse). Both call [`parse_replay`]; only the
+//! local JSON, for the host-native dev loop) and `drain` (MinIO/S3 raw → ClickHouse,
+//! one pass per run). Both call [`parse_replay`]; only the
 //! naming and storage differ.
 use w3grs::{ParserOutput, W3GReplay};
 
 /// Parser output version. Bump it on any change to what the drain writes. `drain`
-/// writes parsed docs under `parsed/v<N>/…`, stamps N into each as `parse_version`
-/// (the version raw_replays keeps the newest of) and on each status breadcrumb,
-/// so after a bump the next pass re-parses every raw replay into the new prefix.
-/// The one hand copy is W3WAREHOUSE_PARSED_URL in .env and .env.example, the
-/// prefix ClickHouse loads; change it with the bump.
+/// stamps N into each document as `parse_version` (the version raw_replays keeps the
+/// newest of) and on each `ingest.files` row, so after a bump the next run re-parses
+/// every raw replay. Nothing else names the version.
 pub const PARSE_VERSION: u32 = 5;
 
 /// A parsed replay: the canonical JSON doc the ClickHouse loader consumes, plus
