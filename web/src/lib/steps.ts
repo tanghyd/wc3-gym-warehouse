@@ -36,21 +36,23 @@ export type Step = {
   /** The step's orders come before the order that completes this step of the group, from 1. */
   before: number | null;
   negate: boolean;
+  /** A building step counts only placements under 3,000 units from the opponent's start. */
+  forward: boolean;
 };
 /** A side's steps: groups of steps, any of which may hold. */
 export type Groups = Step[][];
 
-export const newStep = (kind: Kind): Step => ({ kind, codes: [], count: 1, from: null, to: null, link: "and", within: null, nth: kind === "hero" ? 1 : null, exactly: false, before: null, negate: false });
+export const newStep = (kind: Kind): Step => ({ kind, codes: [], count: 1, from: null, to: null, link: "and", within: null, nth: kind === "hero" ? 1 : null, exactly: false, before: null, negate: false, forward: false });
 
-// [~[within]][!]kind[:codes][#nth][*count[=]][<before][@from-to]
-const TOKEN = /^(~(\d*))?(!)?([a-z]+)(?::([A-Za-z0-9_@.]+))?(?:#([1-3]))?(?:\*([1-9])(=)?)?(?:<([1-8]))?(?:@(\d*)-(\d*))?$/;
+// [~[within]][!]kind[:codes][#nth][*count[=]][^][<before][@from-to]
+const TOKEN = /^(~(\d*))?(!)?([a-z]+)(?::([A-Za-z0-9_@.]+))?(?:#([1-3]))?(?:\*([1-9])(=)?)?(\^)?(?:<([1-8]))?(?:@(\d*)-(\d*))?$/;
 const CODE = /^@?[A-Za-z0-9_]{1,8}$/;
 
 /**
  * "hero:Edem#1,trained:earc*5@-360|!expand@-540": groups split by "|", steps by ",". A step is
- * its kind and codes (split by "."), then #nth hero, *count (*1= for exactly one), <2 for before
- * step 2 and @from-to seconds of game time. A leading ~ links it to the step above with "then",
- * ~90 within 90 s; a leading ! is "did not happen".
+ * its kind and codes (split by "."), then #nth hero, *count (*1= for exactly one), ^ for forward
+ * placements of a built step, <2 for before step 2 and @from-to seconds of game time. A leading ~
+ * links it to the step above with "then", ~90 within 90 s; a leading ! is "did not happen".
  */
 export function decodeGroups(value: string): Groups {
   const n = (v?: string) => (v ? Number(v) : null);
@@ -69,14 +71,15 @@ export function decodeGroups(value: string): Groups {
             kind,
             codes,
             count: Number(m[7] ?? 1),
-            from: n(m[10]),
-            to: n(m[11]),
+            from: n(m[11]),
+            to: n(m[12]),
             link: then ? "then" : "and",
             within: then ? n(m[2]) : null,
             nth: kind === "hero" ? n(m[6]) : null,
             exactly: !!m[8] && !m[3],
-            before: then ? null : n(m[9]),
+            before: then ? null : n(m[10]),
             negate: !then && !!m[3],
+            forward: kind === "built" && !!m[9],
           },
         ];
       }),
@@ -94,7 +97,7 @@ export function encodeGroups(groups: Groups) {
           const link = i > 0 && s.link === "then" ? `~${s.within ?? ""}` : "";
           const time = s.from === null && s.to === null ? "" : `@${s.from ?? ""}-${s.to ?? ""}`;
           const count = s.count > 1 || s.exactly ? `*${s.count}${s.exactly ? "=" : ""}` : "";
-          return `${link}${s.negate ? "!" : ""}${s.kind}${s.codes.length ? `:${s.codes.join(".")}` : ""}${s.nth ? `#${s.nth}` : ""}${count}${s.before ? `<${s.before}` : ""}${time}`;
+          return `${link}${s.negate ? "!" : ""}${s.kind}${s.codes.length ? `:${s.codes.join(".")}` : ""}${s.nth ? `#${s.nth}` : ""}${count}${s.forward ? "^" : ""}${s.before ? `<${s.before}` : ""}${time}`;
         })
         .join(","),
     )
@@ -121,6 +124,7 @@ export function apiStep(s: Step, races: string[], groupCodes: Record<string, str
     exactly: s.exactly,
     before: s.before,
     negate: s.negate,
+    forward: s.kind === "built" && s.forward,
   };
 }
 

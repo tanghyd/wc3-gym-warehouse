@@ -118,6 +118,28 @@ test.describe("strategies", () => {
     expect(await strip(page)).toEqual(stripOf(want));
   });
 
+  test("the Human tower rush counts the same on Replays: its Games link and Load a strategy keep the forward step", async ({ page, request }) => {
+    const [all, answer] = await Promise.all([presets(request), stats(request, ["HU"])]);
+    const p = all.get("hu-tower-rush")!;
+    expect(p.steps.some((s) => s.forward)).toBe(true);
+    const want = answer.strategies.find((s) => s.id === p.id)!;
+    expect(want.games).toBeGreaterThanOrEqual(5);
+    await page.goto("/strategies");
+    await page.getByRole("link", { name: `List the ${fmt(want.games)} games of ${p.name}`, exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Replays");
+    await expect(page).toHaveURL(/[?&]steps=[^&]*%5E/);
+    expect((await strip(page)).games).toBe(fmt(want.games));
+    // the same preset loaded into a fresh search, games of 2 minutes or more as on Strategies
+    await page.goto("/?race=HU&min=2");
+    const player = page.getByRole("region", { name: "Player", exact: true });
+    await player.getByRole("button", { name: "Load a strategy" }).click();
+    await player.getByRole("menuitem", { name: p.name, exact: true }).click();
+    await expect(player.getByText("Forward", { exact: true })).toHaveCount(1);
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page).toHaveURL(/[?&]steps=[^&]*%5E/);
+    expect((await strip(page)).games).toBe(fmt(want.games));
+  });
+
   test("fits a phone: no sideways scroll", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     for (const url of ["/strategies?race=UD&open=ud-cl-necro-mw", "/strategies/openers?race=NE&open=eate"]) {

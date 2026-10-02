@@ -8,7 +8,7 @@
 import type { GameEvent as ApiEvent } from "./api";
 import type { apiStep } from "./steps";
 
-type ApiStep = ReturnType<typeof apiStep> & { forward?: boolean };
+type ApiStep = ReturnType<typeof apiStep>;
 /** An order of GET /replays/{id}: `forward` is 1 on a building placement a forward step keeps. */
 type GameEvent = ApiEvent & { forward?: number };
 /** One order a step matched: the step's number in its group and the event. */

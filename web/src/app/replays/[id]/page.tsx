@@ -47,7 +47,7 @@ async function searchMarks(q: string, side: string, players: ReplayPlayer[], eve
     );
     const steps = s.groups[match?.group ?? 0].map((st, i) => {
       const hits = match?.hits.filter((h) => h.n === i + 1) ?? [];
-      const words = [`${kindWord(st)} ${stepObject(st, s.race, names, groups).name}${countWords(st)}`, timeWords(st), st.before ? `before step ${st.before}` : ""].filter(Boolean).join(" ");
+      const words = [`${kindWord(st)} ${stepObject(st, s.race, names, groups).name}${countWords(st)}${st.forward ? " forward" : ""}`, timeWords(st), st.before ? `before step ${st.before}` : ""].filter(Boolean).join(" ");
       const time = hits.length ? (hits.length > 1 ? `${mss(hits[0].time_ms)} to ${mss(hits[hits.length - 1].time_ms)}` : mss(hits[0].time_ms)) : "";
       return { n: i + 1, words, time, negate: st.negate, hits };
     });

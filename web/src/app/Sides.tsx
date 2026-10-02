@@ -517,6 +517,7 @@ function StepLine(props: {
               {time}
             </span>
           )}
+          {s.forward && <span className="qual">Forward</span>}
           {s.before !== null && <span className="qual">Before step {s.before}</span>}
           {s.negate && <span className="qual">Did not happen</span>}
         </span>
@@ -577,6 +578,17 @@ function StepLine(props: {
                   <input type="checkbox" className="check" checked={s.exactly} disabled={s.negate} onChange={(e) => props.onChange({ exactly: e.target.checked })} />
                   Exactly
                 </label>
+              </span>
+            </div>
+          )}
+          {s.kind === "built" && (
+            <div className="flex flex-col gap-1 text-sm">
+              <label className="flex cursor-pointer items-center gap-2.5">
+                <input type="checkbox" className="check" checked={s.forward} aria-describedby={`${id}-forward`} onChange={(e) => props.onChange({ forward: e.target.checked })} />
+                Forward
+              </label>
+              <span id={`${id}-forward`} className="text-muted">
+                Under 3,000 units from the opponent&apos;s start
               </span>
             </div>
           )}
