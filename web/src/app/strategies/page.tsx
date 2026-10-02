@@ -104,11 +104,12 @@ export default async function StrategiesPage({ searchParams }: PageProps<"/strat
             </thead>
             <tbody>
               {rows.map(({ p, depth }) => {
-                const f = figures.get(p.id) ?? { games: 0, wins: 0, losses: 0, duration_ms_total: 0 };
+                const f = figures.get(p.id) ?? { games: 0, wins: null, losses: null, duration_ms_total: 0, both: 0 };
                 const parent = p.parent_id ? figures.get(p.parent_id) : undefined;
                 const pct = share(f, parent ? parent.games : stats.scope.games);
                 const kids = depth === 0 ? variants(p).length : 0;
-                const [score, percent] = record(f.wins, f.losses).split(" (");
+                // a game that fits both ways adds no result; null wins (every game does) prints the em dash
+                const [score, percent] = record(f.wins ?? 0, f.losses ?? 0).split(" (");
                 const first = p.steps[0];
                 const rule = (
                   <p className="rule">

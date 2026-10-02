@@ -50,20 +50,19 @@ export type Filters = Record<string, (string | number)[] | { gte?: number; lte?:
 export type SidePlayer = { name: string; race: string; won: boolean | null; heroes: { code: string; level: number }[] };
 /** One game: both, when either player fits the Player side and the other the Opponent side; the lower player slot shows. */
 export type GameRow = { replay_id: string; map: string; duration_ms: number; both: boolean; player: SidePlayer; opponent: SidePlayer };
-/** Games counted and their summed length; wins and losses are null when nothing tells the sides apart. */
-export type Tally = { games: number; wins: number | null; losses: number | null; duration_ms_total: number };
+/** Games counted, their summed length and those that fit both ways; wins and losses count the games that fit one way only, null when there is none. */
+export type Tally = { games: number; wins: number | null; losses: number | null; duration_ms_total: number; both: number };
 export type SearchSide = { race: string[]; name: string | null; opened_with: string[]; groups: { steps: ReturnType<typeof apiStep>[] }[]; outcome?: "win" | "loss" | null };
 export type SearchRequest = { filters: Filters; player: SearchSide; opponent: SearchSide; sort: string; limit: number; offset: number };
-/** summary.both: the matching games that fit either way round. */
-export type SearchAnswer = { total: number; summary: Tally & { both: number }; scope: Tally; replays: GameRow[]; sql: string; params: Record<string, string>; refused?: string };
+export type SearchAnswer = { total: number; summary: Tally; scope: Tally; replays: GameRow[]; sql: string; params: Record<string, string>; refused?: string };
 
 /** POST /search: one page of the games that fit both sides, the summary and the scope. A refused request answers its reason. */
 export async function searchGames(body: SearchRequest): Promise<SearchAnswer> {
   try {
     return (await api<SearchAnswer>("/search", body))!;
   } catch (e) {
-    const none = { games: 0, wins: null, losses: null, duration_ms_total: 0 };
-    if (e instanceof Refused) return { total: 0, summary: { ...none, both: 0 }, scope: none, replays: [], sql: "", params: {}, refused: e.message };
+    const none = { games: 0, wins: null, losses: null, duration_ms_total: 0, both: 0 };
+    if (e instanceof Refused) return { total: 0, summary: none, scope: none, replays: [], sql: "", params: {}, refused: e.message };
     throw e;
   }
 }

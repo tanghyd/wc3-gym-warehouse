@@ -6,12 +6,12 @@ export const API = process.env.API_URL ?? "http://api:8000";
 export type Step = { kind: string; codes: string[]; count?: number; from_s?: number; to_s?: number; link?: "and" | "then"; within_s?: number; nth?: number; exactly?: boolean; before?: number; negate?: boolean; forward?: boolean };
 export type Side = { race?: string[]; name?: string; outcome?: "win" | "loss"; opened_with?: string[]; groups?: { steps: Step[] }[] };
 export type Search = { filters?: object; player?: Side; opponent?: Side; sort?: string; limit?: number; offset?: number };
-// wins and losses are null when nothing tells the sides apart
-type Tally = { games: number; wins: number | null; losses: number | null; duration_ms_total: number };
+// wins and losses count the games that fit one way only, null when there is none
+type Tally = { games: number; wins: number | null; losses: number | null; duration_ms_total: number; both: number };
 type SidePlayer = { name: string; race: string; won: boolean | null; heroes: { code: string; level: number }[] };
 export type Answer = {
   total: number;
-  summary: Tally & { both: number };
+  summary: Tally;
   scope: Tally;
   replays: { replay_id: string; map: string; duration_ms: number; both: boolean; player: SidePlayer; opponent: SidePlayer }[];
 };

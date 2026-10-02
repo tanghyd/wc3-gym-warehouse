@@ -6,8 +6,8 @@ import { countWords, HALLS, KINDS, type Kind, type Step, timeWords } from "./ste
 /** A POST /search step as GET /strategies answers it, defaults left out. */
 export type ApiStep = { kind: string; codes: string[]; count?: number; from_s?: number; to_s?: number; link?: "and" | "then"; within_s?: number; nth?: number; exactly?: boolean; before?: number; negate?: boolean; forward?: boolean };
 export type Preset = { id: string; name: string; race: string; parent_id: string | null; source: string; vs_races: string[]; steps: ApiStep[] };
-/** Games, wins, losses and summed length of a preset. */
-export type Stats = { games: number; wins: number; losses: number; duration_ms_total: number };
+/** Games, wins, losses, summed length and the games that fit both ways of a preset; wins and losses are null when every game fits both ways. */
+export type Stats = { games: number; wins: number | null; losses: number | null; duration_ms_total: number; both: number };
 
 const HALL_CODES = new Set(Object.values(HALLS));
 // Every Tavern hero: a hero step of all of them is the Tavern's picker group, "@ntav".
@@ -49,13 +49,13 @@ function objectWords(s: ApiStep, names: Objects) {
 /**
  * One step in the words of a rule: "1st hero Archmage", "Town Hall by 6:00", "No Town Hall", "Rifleman ×8",
  * "Ancient of War ×1 exactly before Tree of Ages", "Watch Tower ×2 forward by 5:00". `group` is the whole
- * group a "before" step names a step of; a forward step after a step of the same objects and window reads
- * as its count, so a rule reads "Scout Tower ×3 by 4:00, 2 forward".
+ * group a "before" step names a step of; a forward step with no "before" after a step of the same objects
+ * and window, neither negated, reads as its count, so a rule reads "Scout Tower ×3 by 4:00, 2 forward".
  */
 export function stepWords(s: ApiStep, names: Objects, group: ApiStep[] = []) {
   const above = group[group.indexOf(s) - 1];
   const same = (a: ApiStep, b: ApiStep) => a.codes.join() === b.codes.join() && a.from_s === b.from_s && a.to_s === b.to_s;
-  if (s.forward && !s.negate && s.link !== "then" && above && !above.forward && same(above, s)) return `${s.count ?? 1} forward${s.exactly ? " exactly" : ""}`;
+  if (s.forward && !s.negate && !s.before && s.link !== "then" && above && !above.forward && !above.negate && same(above, s)) return `${s.count ?? 1} forward${s.exactly ? " exactly" : ""}`;
   const name = objectWords(s, names);
   const what = s.kind === "hero" && s.nth ? `${["1st", "2nd", "3rd"][s.nth - 1]} hero ${name}` : s.kind === "skill" ? `${KINDS.skill.label} ${name}` : name;
   const anchor = s.before ? group[s.before - 1] : undefined;

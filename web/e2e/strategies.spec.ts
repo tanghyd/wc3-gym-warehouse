@@ -4,7 +4,7 @@ import { API, fmt, mss, record, search, type Step, strip, stripOf } from "./help
 // The Named tab of Strategies: every preset row equals POST /strategies/stats, and its Games link
 // lands on Replays with POST /search's answer for the preset's steps. Games of 2 minutes or more.
 type Preset = { id: string; name: string; race: string; parent_id: string | null; steps: Step[] };
-type Stats = { games: number; wins: number; losses: number; duration_ms_total: number };
+type Stats = { games: number; wins: number | null; losses: number | null; duration_ms_total: number; both: number };
 type Answer = { scope: Stats; strategies: (Stats & { id: string })[] };
 const MIN2 = { duration_ms: { gte: 120000 } };
 
@@ -28,7 +28,7 @@ const rows = (page: Page) =>
     }),
   );
 const pct = (n: number, of: number) => `${(of ? (100 * n) / of : 0).toFixed(1)}%`;
-const line = (p: Preset, s: Stats, of: number) => [p.name, fmt(s.games), pct(s.games, of), record(s.wins, s.losses), s.games ? mss(s.duration_ms_total / s.games) : "—"].join(" | ");
+const line = (p: Preset, s: Stats, of: number) => [p.name, fmt(s.games), pct(s.games, of), record(s.wins ?? 0, s.losses ?? 0), s.games ? mss(s.duration_ms_total / s.games) : "—"].join(" | ");
 
 test.describe("strategies", () => {
   test("Human by default: each top preset's figures equal POST /strategies/stats, most games first", async ({ page, request }) => {

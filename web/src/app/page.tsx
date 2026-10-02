@@ -250,8 +250,10 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                 <span className="s-l">Games</span>
                 <span className="s-v">{fmt(sum.games)}</span>
                 <span className="s-n">{narrowed && scope.games ? `${Math.round((100 * sum.games) / scope.games)}% of ${fmt(scope.games)} ${scopeWords}` : scopeWords === "games" ? "All games" : scopeWords.replace(/ games$/, "")}</span>
+                {/* games either player fits add no result; said only when some games fit one way */}
+                {sum.both > 0 && sum.both < sum.games && <span className="s-n">{fmt(sum.both)} fit both ways</span>}
               </div>
-              {/* a record only when something tells the Player side from the Opponent side: the API answers null otherwise */}
+              {/* a record of the games that fit one way: the API answers null when every game fits both ways */}
               {sum.wins !== null && sum.losses !== null && (
                 <div className="stat">
                   <span className="s-l">Player record</span>
@@ -292,7 +294,8 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                     {replays.map((r) => (
                       <tr key={`${r.replay_id}-${r.player.name}`}>
                         <td className="c-p">
-                          <Who p={r.player} both={r.both} />
+                          {/* the tag only beside a record: with every game fitting both ways it says nothing */}
+                          <Who p={r.player} both={r.both && sum.wins !== null} />
                         </td>
                         <td className="c-ph">
                           <Heroes p={r.player} objects={heroes} />

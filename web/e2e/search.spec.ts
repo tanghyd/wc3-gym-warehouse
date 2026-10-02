@@ -21,7 +21,7 @@ test.describe("replay list", () => {
     expect(await listed(page)).toEqual(rowsOf(want));
     expect(await strip(page)).toEqual(stripOf(want));
     await expect(page.getByRole("navigation", { name: "Games pages" })).toContainText(`1–25 of ${fmt(want.total)}`);
-    // every game counts once, and the sides ask the same, so the strip shows no record
+    // every game counts once and fits both ways, so the strip shows no record
     expect(want.total).toBe(want.summary.games);
     expect([want.summary.wins, want.summary.losses]).toEqual([null, null]);
     await expect(page.locator(".s-l", { hasText: "Player record" })).toHaveCount(0);
@@ -35,7 +35,7 @@ test.describe("replay list", () => {
     const { scope, summary } = want;
     await expect(page.locator(".stat").nth(0)).toContainText(`${Math.round((100 * summary.games) / scope.games)}% of ${fmt(scope.games)} Night Elf v Orc games`);
     await expect(page.locator(".stat").nth(1)).toContainText(`All ${fmt(scope.games)}: ${record(scope.wins!, scope.losses!)}`);
-    // two figures: the average length is gone
+    // two figures: Games and Player record
     await expect(page.locator(".stat")).toHaveCount(2);
     await expect(page.locator(".s-l", { hasText: "Avg length" })).toHaveCount(0);
     expect(await listed(page)).toEqual(rowsOf(want));
@@ -44,9 +44,9 @@ test.describe("replay list", () => {
     await expect(page.locator("table.games tbody tr").first().locator(".c-r")).toHaveText(first.player.won ? "Won" : "Lost");
   });
 
-  test("a mirror game where both players fit counts once and is marked both", async ({ page, request }) => {
+  test("a mirror game both players fit counts once and adds no result", async ({ page, request }) => {
     const want = await search(request, { player: { race: ["NE"] }, opponent: { race: ["NE"] } });
-    // the sides ask the same, so every Night Elf v Night Elf game fits either way round: one row, marked both, no record
+    // the sides ask the same, so every Night Elf v Night Elf game fits either way round: one row, no record
     expect(want.summary.games).toBeGreaterThan(0);
     expect(want.summary.both).toBe(want.summary.games);
     expect([want.summary.wins, want.summary.losses]).toEqual([null, null]);
@@ -55,18 +55,24 @@ test.describe("replay list", () => {
     expect(await strip(page)).toEqual(stripOf(want));
     await expect(page.locator(".s-l", { hasText: "Player record" })).toHaveCount(0);
     expect(await listed(page)).toEqual(rowsOf(want));
-    // the tag sits after the Player's name, the only tag of the row
-    await expect(page.locator("table.games tbody .c-p .both")).toHaveCount(want.replays.length);
-    await expect(page.locator("table.games tbody .c-p .both").first()).toHaveText("both");
-    await expect(page.locator("table.games tbody .c-o .both")).toHaveCount(0);
+    // with no record every row fits both ways, so neither the tag nor the both line shows
+    await expect(page.locator("table.games tbody .both")).toHaveCount(0);
+    await expect(page.locator(".stat").nth(0).locator(".s-n", { hasText: "fit both ways" })).toHaveCount(0);
 
-    // Night Elf against any race tells the sides apart: a record, and the tag only on the mirror games
+    // Night Elf against any race: a record of the games that fit one way, the mirrors counted apart and tagged
     const any = await search(request, { player: { race: ["NE"] } });
     expect(any.summary.wins).not.toBeNull();
     expect(any.summary.both).toBe(want.summary.games);
+    expect(any.summary.both).toBeLessThan(any.summary.games);
     await page.goto(q({ race: "NE" }));
     expect(await strip(page)).toEqual(stripOf(any));
-    await expect(page.locator("table.games tbody .both")).toHaveCount(any.replays.filter((r) => r.both).length);
+    await expect(page.locator(".stat").nth(0).locator(".s-n", { hasText: "fit both ways" })).toHaveText(`${fmt(any.summary.both)} fit both ways`);
+    // the tag sits after the Player's name, the only tag of the row
+    const tagged = any.replays.filter((r) => r.both).length;
+    expect(tagged).toBeGreaterThan(0);
+    await expect(page.locator("table.games tbody .c-p .both")).toHaveCount(tagged);
+    await expect(page.locator("table.games tbody .c-p .both").first()).toHaveText("both");
+    await expect(page.locator("table.games tbody .c-o .both")).toHaveCount(0);
   });
 
   test("the pager walks the pages in POST /search's order", async ({ page, request }) => {
