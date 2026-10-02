@@ -7,8 +7,8 @@
   read, with the same caps.
   ingest: the drain's user. SELECT and INSERT on the ingest database only, from the
   compose network. The tables are in ingest.sql.
-  The private ranges hold Docker's address pools, so every compose container; the
-  port is published on 127.0.0.1 only, so nothing else reaches the server.
+  172.30.0.0/24 is the compose network's fixed subnet (compose.yaml), so only a compose
+  container passes; the port is published on 127.0.0.1 only. A new subnet needs both files changed.
 -->
 <clickhouse>
     <users>
@@ -16,9 +16,7 @@
             <networks replace="replace">
                 <ip>127.0.0.1</ip>
                 <ip>::1</ip>
-                <ip>10.0.0.0/8</ip>
-                <ip>172.16.0.0/12</ip>
-                <ip>192.168.0.0/16</ip>
+                <ip>172.30.0.0/24</ip>
             </networks>
         </default>
         <api>
@@ -45,9 +43,7 @@
             <password from_env="CLICKHOUSE_INGEST_PASSWORD"/>
             <quota>default</quota>
             <networks>
-                <ip>10.0.0.0/8</ip>
-                <ip>172.16.0.0/12</ip>
-                <ip>192.168.0.0/16</ip>
+                <ip>172.30.0.0/24</ip>
             </networks>
             <grants>
                 <query>GRANT SELECT, INSERT ON ingest.*</query>
