@@ -14,6 +14,7 @@ export const metadata: Metadata = { title: "Strategies" };
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 const FLOOR = 10; // games a record needs to read in full ink
+const MIN_GAMES = 5; // a preset with fewer games in scope is hidden
 
 function Chevron({ open }: { open: boolean }) {
   return (
@@ -49,7 +50,8 @@ export default async function StrategiesPage({ searchParams }: PageProps<"/strat
   ]);
   const byId = new Map(presets.map((p) => [p.id, p]));
   const figures = new Map(stats.strategies.map((f) => [f.id, f]));
-  const mine = presets.filter((p) => races.includes(p.race));
+  const named = presets.filter((p) => races.includes(p.race));
+  const mine = named.filter((p) => (figures.get(p.id)?.games ?? 0) >= MIN_GAMES);
   const names = await getObjects([...new Set(mine.flatMap((p) => p.steps.flatMap((st) => st.codes)))]);
 
   // ?open= once per parent whose variants show
@@ -85,7 +87,7 @@ export default async function StrategiesPage({ searchParams }: PageProps<"/strat
           <span className="chip bg-primary text-on-primary">{fmt(stats.scope.games)} games</span>
         </div>
         {rows.length === 0 ? (
-          <p className="p-8 text-center text-muted">No strategy is named for this race.</p>
+          <p className="p-8 text-center text-muted">{named.length ? `No strategy has ${MIN_GAMES} games here.` : "No strategy is named for this race."}</p>
         ) : (
           <table className="table named">
             <thead>
@@ -176,7 +178,7 @@ export default async function StrategiesPage({ searchParams }: PageProps<"/strat
             </tbody>
           </table>
         )}
-        {rows.length > 0 && <p className="border-t px-4 py-2.5 text-sm text-muted">Games: one per player, so a mirror game can count twice.</p>}
+        {rows.length > 0 && <p className="border-t px-4 py-2.5 text-sm text-muted">Games: one per player, so a mirror game can count twice. A strategy under {MIN_GAMES} games is hidden.</p>}
         <details className="border-t">
           <summary className="cursor-pointer px-4 py-3 text-sm text-muted">Show SQL</summary>
           <pre className="overflow-x-auto px-4 pb-4 text-xs leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">

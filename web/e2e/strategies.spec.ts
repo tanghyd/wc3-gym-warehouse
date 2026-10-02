@@ -41,7 +41,9 @@ test.describe("strategies", () => {
     await expect(page.getByRole("button", { name: "Race: Human" })).toBeVisible();
     await expect(page.getByLabel("Minutes from")).toHaveValue("2");
     await expect(page.locator("#named-title ~ .chip")).toHaveText(`${fmt(answer.scope.games)} games`);
-    const top = answer.strategies.filter((s) => !all.get(s.id)!.parent_id).sort((a, b) => b.games - a.games || all.get(a.id)!.name.localeCompare(all.get(b.id)!.name));
+    // a preset under 5 games is hidden, and Human has some
+    expect(answer.strategies.some((s) => s.games < 5)).toBe(true);
+    const top = answer.strategies.filter((s) => !all.get(s.id)!.parent_id && s.games >= 5).sort((a, b) => b.games - a.games || all.get(a.id)!.name.localeCompare(all.get(b.id)!.name));
     expect(await rows(page)).toEqual(top.map((s) => line(all.get(s.id)!, s, answer.scope.games)));
   });
 
@@ -63,14 +65,14 @@ test.describe("strategies", () => {
   });
 
   test("a parent opens its variants, each a share of its parent", async ({ page, request }) => {
-    const [all, answer] = await Promise.all([presets(request), stats(request, ["UD"], MIN2, ["NE"])]);
-    const parent = "ud-cl-necro-mw";
+    const [all, answer] = await Promise.all([presets(request), stats(request, ["HU"], MIN2, ["NE"])]);
+    const parent = "hu-am";
     const figures = new Map(answer.strategies.map((s) => [s.id, s]));
     const kids = answer.strategies.filter((s) => all.get(s.id)!.parent_id === parent).sort((a, b) => b.games - a.games || all.get(a.id)!.name.localeCompare(all.get(b.id)!.name));
-    expect(kids.length).toBe(3);
+    expect(kids.map((k) => k.games >= 5)).toEqual([true, true, true]);
     // a variant holds its parent's steps, so it never passes its parent
     for (const k of kids) expect(k.games).toBeLessThanOrEqual(figures.get(parent)!.games);
-    await page.goto("/strategies?race=UD&opponent_race=NE");
+    await page.goto("/strategies?race=HU&opponent_race=NE");
     const name = all.get(parent)!.name;
     await page.getByRole("link", { name: `Show the variants of ${name}` }).click();
     await expect(page).toHaveURL(new RegExp(`[?&]open=${parent}$`));
@@ -79,6 +81,17 @@ test.describe("strategies", () => {
     expect(got.slice(at + 1, at + 1 + kids.length)).toEqual(kids.map((k) => line(all.get(k.id)!, k, figures.get(parent)!.games)));
     await page.getByRole("link", { name: `Hide the variants of ${name}` }).click();
     await expect(page).not.toHaveURL(/open=/);
+  });
+
+  test("a guide's vs label shows only when the opponent filter is one of its races", async ({ page, request }) => {
+    const p = (await presets(request)).get("standard-human-mirror-build")!;
+    for (const [url, label] of [["/strategies?race=HU", null], ["/strategies?race=HU&opponent_race=HU", "vs Human"], ["/strategies?race=HU&opponent_race=NE", null]]) {
+      await page.goto(url!);
+      const name = page.locator("table.named tbody tr:not(.rule-row) td:first-child p").filter({ hasText: p.name });
+      await expect(name, url!).toHaveCount(1);
+      if (label) await expect(name.locator("span"), url!).toHaveText(label);
+      else await expect(name.locator("span"), url!).toHaveCount(0);
+    }
   });
 
   test("a filter change reads the stats again: map, opponent race, minutes", async ({ page, request }) => {

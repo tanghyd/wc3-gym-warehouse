@@ -32,7 +32,7 @@
             {
               "kind": "building",
               "codes": [
-                "unpl"
+                "ugol"
               ],
               "to_s": 480
             }
@@ -113,7 +113,7 @@
             {
               "kind": "building",
               "codes": [
-                "unpl"
+                "ugol"
               ],
               "to_s": 480
             }
@@ -130,7 +130,7 @@
             {
               "kind": "building",
               "codes": [
-                "unpl"
+                "ugol"
               ],
               "negate": true
             }
@@ -147,7 +147,7 @@
             {
               "kind": "building",
               "codes": [
-                "unpl"
+                "ugol"
               ],
               "from_s": 480,
               "to_s": 900
@@ -155,7 +155,7 @@
             {
               "kind": "building",
               "codes": [
-                "unpl"
+                "ugol"
               ],
               "to_s": 480,
               "negate": true
@@ -231,7 +231,7 @@
             {
               "kind": "building",
               "codes": [
-                "unpl"
+                "ugol"
               ],
               "to_s": 480
             }
@@ -1841,7 +1841,7 @@
             {
               "kind": "building",
               "codes": [
-                "unpl"
+                "ugol"
               ],
               "negate": true
             }

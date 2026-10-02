@@ -15,8 +15,8 @@ export const KINDS = {
 } as const;
 export type Kind = keyof typeof KINDS;
 
-/** Each race's town hall: an order of one is an expansion. */
-export const HALLS: Record<string, string> = { HU: "htow", OC: "ogre", NE: "etol", UD: "unpl" };
+/** Each race's expansion building: a town hall, or the Haunted Gold Mine for Undead. */
+export const HALLS: Record<string, string> = { HU: "htow", OC: "ogre", NE: "etol", UD: "ugol" };
 
 /**
  * One step as the URL holds it. `codes` are object codes, or one "@source" for every object of a

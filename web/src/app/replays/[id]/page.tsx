@@ -5,7 +5,7 @@ import { Fragment } from "react";
 import { type GameEvent, getObjects, getReplay, type ReplayPlayer, stepGroups } from "@/lib/api";
 import { type Hit, matchSide } from "@/lib/marks";
 import { parseRaces } from "@/lib/races";
-import { apiStep, countWords, decodeGroups, kindWord, played, stepObject, timeWords } from "@/lib/steps";
+import { apiStep, countWords, decodeGroups, HALLS, kindWord, played, stepObject, timeWords } from "@/lib/steps";
 import { matchup, mss, ObjIcon, PlayerName, Result, SeriesKey, SkillTrail, Timer } from "@/lib/ui";
 import { GameTimeline } from "./GameTimeline";
 
@@ -33,7 +33,7 @@ async function searchMarks(q: string, side: string, players: ReplayPlayer[], eve
   const all = sides.flatMap((s) => s.groups.flat());
   const keys = [...new Map(all.flatMap((s) => s.codes.filter((c) => c.startsWith("@")).map((c) => [`${s.kind}${c}`, { kind: s.kind, source: c.slice(1) }]))).values()];
   const groups = await stepGroups(keys);
-  const names = await getObjects([...new Set([...all.flatMap((s) => s.codes.filter((c) => !c.startsWith("@"))), "htow", "ogre", "etol", "unpl"])]);
+  const names = await getObjects([...new Set([...all.flatMap((s) => s.codes.filter((c) => !c.startsWith("@"))), ...Object.values(HALLS)])]);
   const groupCodes = Object.fromEntries(Object.entries(groups).map(([k, g]) => [k, g.codes]));
   return sides.map((s) => {
     const player = s.player!;

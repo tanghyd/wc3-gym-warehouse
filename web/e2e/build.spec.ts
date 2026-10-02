@@ -162,11 +162,11 @@ test.describe("step editor", () => {
     await settings.getByRole("textbox", { name: "To (m:ss)" }).fill("8:00");
     await settings.getByRole("checkbox", { name: "Did not happen" }).check();
     await settings.getByRole("button", { name: "Done" }).click();
-    await expect(player.getByRole("button", { name: "Step 1: Expanded Necropolis" })).toBeVisible();
+    await expect(player.getByRole("button", { name: "Step 1: Expanded Haunted Gold Mine" })).toBeVisible();
     await expect(player.locator(".qual")).toHaveText(["by 8:00", "Did not happen"]);
     await page.getByRole("button", { name: "Search" }).click();
     await expect(page).toHaveURL(/[?&]steps=%21expand%40-480(&|$)/);
-    const step = { kind: "building", codes: ["unpl"], to_s: 480 };
+    const step = { kind: "building", codes: ["ugol"], to_s: 480 };
     const [want, expanded] = await Promise.all([
       search(request, { player: { race: ["UD"], groups: [{ steps: [{ ...step, negate: true }] }] } }),
       search(request, { player: { race: ["UD"], groups: [{ steps: [step] }] } }),

@@ -20,7 +20,7 @@
 # Undead
 - {id: ud-dk, name: Death Knight first, race: UD, source: gym-replays, steps: [{kind: hero, codes: [Udea], nth: 1}]}
 - {id: ud-dk-expo, name: … fast expand, race: UD, parent_id: ud-dk, source: w3warehouse, steps: [
-    {kind: building, codes: [unpl], to_s: 480}]}
+    {kind: building, codes: [ugol], to_s: 480}]}
 - {id: ud-lich, name: Lich first, race: UD, source: w3warehouse, steps: [{kind: hero, codes: [Ulic], nth: 1}]}
 - {id: ud-dl, name: Dreadlord first, race: UD, source: w3warehouse, steps: [{kind: hero, codes: [Udre], nth: 1}]}
 - {id: ud-cl-necro-mw, name: CL — Necromancer + Meat Wagon, race: UD, source: w3warehouse, steps: [
@@ -28,17 +28,17 @@
     {kind: unit, codes: [unec], count: 2},
     {kind: unit, codes: [umtw]}]}
 - {id: ud-cl-necro-mw-fe, name: … fast expand, race: UD, parent_id: ud-cl-necro-mw, source: w3warehouse, steps: [
-    {kind: building, codes: [unpl], to_s: 480}]}
+    {kind: building, codes: [ugol], to_s: 480}]}
 - {id: ud-cl-necro-mw-onebase, name: … one-base push, race: UD, parent_id: ud-cl-necro-mw, source: w3warehouse, steps: [
-    {kind: building, codes: [unpl], negate: true}]}
+    {kind: building, codes: [ugol], negate: true}]}
 # the first expansion between the fast and the late time: one in the window and none before it
 - {id: ud-cl-necro-mw-late, name: … late expo, race: UD, parent_id: ud-cl-necro-mw, source: w3warehouse, steps: [
-    {kind: building, codes: [unpl], from_s: 480, to_s: 900},
-    {kind: building, codes: [unpl], to_s: 480, negate: true}]}
+    {kind: building, codes: [ugol], from_s: 480, to_s: 900},
+    {kind: building, codes: [ugol], to_s: 480, negate: true}]}
 - {id: ud-fiend-heavy, name: Fiend-heavy, race: UD, source: w3warehouse, steps: [{kind: unit, codes: [ucry], count: 6}]}
 - {id: ud-gargoyle, name: Gargoyle opener, race: UD, source: w3warehouse, steps: [{kind: unit, codes: [ugar], count: 4}]}
 - {id: ud-tavern, name: Tavern hero first, race: UD, source: gym-replays, steps: [{kind: hero, codes: [Nalc, Nbrn, Nbst, Nfir, Nngs, Npbm, Nplh, Ntin], nth: 1}]}
-- {id: ud-expand, name: Fast expand, race: UD, source: gym-replays, steps: [{kind: building, codes: [unpl], to_s: 480}]}
+- {id: ud-expand, name: Fast expand, race: UD, source: gym-replays, steps: [{kind: building, codes: [ugol], to_s: 480}]}
 
 # Human
 - {id: hu-am, name: Archmage first, race: HU, source: gym-replays, steps: [{kind: hero, codes: [Hamg], nth: 1}]}
@@ -617,7 +617,7 @@
     - {kind: unit, codes: [ugho], count: 4}          # Ghoul x4
     - {kind: building, codes: [unp1], link: then}
     - {kind: building, codes: [unp2], link: then}
-    - {kind: building, codes: [unpl], negate: true}  # one base: no Necropolis, as the old one-base builds
+    - {kind: building, codes: [ugol], negate: true}  # one base: no Haunted Gold Mine, as the old one-base builds
   full:
     - {kind: hero, codes: [Udea], nth: 1}
     - {kind: building, codes: [uaod]}
