@@ -1,8 +1,8 @@
 # Fixtures are SQL, not dict rows: dbt 2.0.6 casts dict rows to Nullable(<column type>),
 # which ClickHouse refuses for LowCardinality and which makes the JSON functions on
 # valid_replays.doc return Nullable(Array), an illegal type. A SQL expect compares
-# every column, so it lists them all. dbt 2.0.6 checks only the String columns: it
-# shows integer and array columns as [unsupported], and a wrong integer passes.
+# every column, so it lists them all. dbt 2.0.6 checks only the String and float columns:
+# it shows integer and array columns as [unsupported], and a wrong integer passes.
 unit_tests:
   - name: player_games_openers
     description: >-

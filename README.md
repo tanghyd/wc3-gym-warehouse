@@ -56,9 +56,11 @@ replays/<folder>/<file>.w3g  ─drain─▶ ingest.docs ─dbt─▶ raw_replays
 |---|---|
 | `raw_replays` | one parsed document per replay |
 | `replays`, `replay_players` | replay header with readable map name, patch, result and `added_at`, and `duplicate_of` for a second file of one game; player per replay with the played race and `random` |
-| `replay_events` | every order and hero skill per player in time order, with the played race, `is_repeat`, the `level` a skill point gives, and each hero at the order that trained it; build-order steps match here |
-| `player_games` | one row per player per 1v1 game, a game saved twice counted once: played races and `random` flags of both players, map, patch, `added_at`, result, heroes in pick order with their levels and the first three as `first_hero`..`third_hero`, the length in 5-minute bins (`minutes_5`), `opener_1`..`opener_6` |
+| `replay_events` | every order and hero skill per player in time order, with the played race, `is_repeat`, the `level` a skill point gives, the `x` and `y` of a building placement, and each hero at the order that trained it; build-order steps match here |
+| `player_games` | one row per player per 1v1 game, a game saved twice counted once: played races and `random` flags of both players, map, patch, `added_at`, result, heroes in pick order with their levels and the first three as `first_hero`..`third_hero`, the length in 5-minute bins (`minutes_5`), `opener_1`..`opener_6`, and the opponent's start location (`opp_start_x`, `opp_start_y`) |
 | `player_order_events` | every order a player gave; a building placement keeps its map `x` and `y` |
+| `player_starts` | the start location of each player of a 1v1 replay and the rule that named it (see [Start locations and the tower rush](#start-locations-and-the-tower-rush)) |
+| `start_locations` (seed) | the start locations of each map the replays carry, from the map files or, for 4 maps with no file, from where players build |
 | `mappings` | object codes and names: the melee seed plus the custom-map seed |
 | `patches` (seed) | the game patch of each build number, kept by hand: 6117 is 2.0, 7000 is 3.0 |
 | `object_sources` (seed), `objects` | the building, altar, camp or shop each melee object comes from, kept by hand and checked against the orders; `objects` adds each skill under its hero and each building under its race, for the step pickers |
@@ -85,10 +87,36 @@ One game can arrive as two files: they share `game_key` (random seed and sorted 
 - `raw_replays` is rebuilt from it every run with one row per `replay_id`, so a re-run adds no row. It stays a ReplacingMergeTree on `replay_id` so that `valid_replays`, which every mart reads, and Grafana can read it FINAL. The uniqueness test is on `replays.replay_id`, which checks what the readers see.
 - `OPTIMIZE TABLE ingest.docs FINAL` merges at once. It is never needed for a correct answer.
 
+### Start locations and the tower rush
+
+A replay names no start position, so `player_starts` reads it from where each player builds, against the start locations of the `start_locations` seed:
+
+1. The start within 1,500 units of the player's earliest building placement that lies within 1,500 of any start.
+2. Else, on a two-start map, the start the opponent does not hold.
+3. Else none: `start_x` and `start_y` are NULL.
+
+On the 1,706 loaded games: 3,385 player-games by rule 1 on the first building, 23 by rule 1 on a later building (18 to 96 s), 3 by rule 2 (8aac280e, e9d56e5b, a28d133b) and 1 with none (6361c666: the Undead gave no building order on a four-start map). The seed has two sources: `map file`, the 28 start locations (`sloc` units) of the 12 W3Champions map files in wc3-gnl-website `map-sources/`, as its creep-route catalogues `src/lib/creep-routes/maps/*.json` list them; and `cluster`, 8 centres of the players' first buildings for the 4 maps with no file there (Boulder Vale 1.7, Concealed Hill, Northern Isles, Springtime 1.3).
+
+A tower placement is forward when it is under 3,000 units from the opponent's start; a player-game is a tower rush when 2 or more forward towers fall in the step's window (`forward` on a building step). The presets: Human Scout Tower x3 by 4:00 with 2 of them forward (25 player-games), Orc Watch Tower x2 forward by 5:00 (6, 2 of them Random), Night Elf Ancient Protector x2 forward by 5:00 (2). No Undead preset: a Ziggurat is also the farm.
+
+The assumptions (measured in `threads/warehouse-dbt-prototype/review/start-positions.md`):
+
+1. The map name and version the replay carries fix the start locations.
+2. The map files (W3C builds of 2026-09-19) have the starts of the builds the replays used (2025-11-04 to 2026-06-15): first buildings sit p50 530 to 588 and p90 705 to 820 units from a file start on all 12 maps.
+3. Slot, colour and player id do not decide the start (player 1 at the first file start in 766 games, at the second in 740).
+4. Two players never share a start: 0 of 1,679 games.
+5. A placement within 1,500 of a start stands at the player's own start: starts are 4,172 or more apart, and every first building is 3,621 or more from its second-nearest start.
+6. On the 4 maps with no file (97 games) a start is a cluster centre; on the 12 file maps that centre lies 99 to 382 from the file start.
+7. The start stays the opponent's home when his base moves.
+8. A placement order is a building: a cancelled or blocked tower counts.
+9. 3,000 units and "2 or more" are a chosen rule, not measured; the windows are the presets'.
+
+The open guess is 7: an empty start location still counts as the opponent's home. It decides one game, 8aac280e (Springtime 1.4): the Night Elf builds only around the middle gold mine, and the Random Orc's 5 Watch Towers at 221 to 286 s stand 405 to 1,190 from the Night Elf's start but 3,821 or more from his first building. By the start it is a rush.
+
 ### dbt docs and tests
 
 - Every model, seed and column has a description in YAML. Shared terms (replay_id, race, matchup, order kinds) are doc blocks in `dbt/models/docs.md`. `+persist_docs` in `dbt_project.yml` writes them into ClickHouse as table and column comments, so `system.tables.comment` and `system.columns.comment` carry them. A description must not contain a semicolon: dbt 2.0.6 splits the comment DDL on it.
-- Tests: `unique` and `not_null` on each table's key, with composite keys as an expression such as `replay_id || ':' || toString(player_id)`. `relationships` from `replay_players`, `player_games` and `replay_events` to `replays`. `accepted_values` on race, result, order kind and event type. Singular tests in `dbt/tests/`: two `player_games` rows per 1v1 game and none for a duplicate, no event after the game's end (a warning), no gap in the openers, one copy per `game_key`, an order from every player of a game in the marts, and a patch for every build (a warning). Unit tests in `dbt/models/marts/unit_tests.yml` for the opener derivation, the `race_code` macro, and the 1v1 result, team-game result, duplicate and patch rules of `replays`. dbt 2.0.6 compares only their String columns.
+- Tests: `unique` and `not_null` on each table's key, with composite keys as an expression such as `replay_id || ':' || toString(player_id)`. `relationships` from `replay_players`, `player_games` and `replay_events` to `replays`. `accepted_values` on race, result, order kind and event type. Singular tests in `dbt/tests/`: two `player_games` rows per 1v1 game and none for a duplicate, no event after the game's end (a warning), no gap in the openers, one copy per `game_key`, an order from every player of a game in the marts, a patch for every build (a warning), 2 or 4 start locations per map and no two players of a game at one start. Unit tests in `dbt/models/marts/unit_tests.yml` for the opener derivation, the `race_code` macro, the 1v1 result, team-game result, duplicate and patch rules of `replays`, and the three rules of `player_starts`. dbt 2.0.6 compares their String and float columns, not the integer or array ones.
 - The source `ingest.docs` has freshness on `ingested_at`, when the drain inserted the document: `just dbt source freshness`.
 - Exposures in `dbt/models/exposures.yml` name the three readers: the replay inspector, the query API and Grafana.
 - dbt's docs site has no column-level lineage: dbt v2 builds it from static analysis, which is off for ClickHouse. It also lists the dbt and ClickHouse adapter macros, which dbt 2.0.6 cannot hide.
@@ -118,7 +146,7 @@ POST /search
 ```
 
 - A side takes race values (`NE` is a picked Night Elf, `RN` a Random player who rolled Night Elf, `R` a Random player with no played race), a battle tag, the openers of an Openers row, and 1 to 4 groups of up to 8 steps. A group holds when all its steps hold; the side matches when any group holds. Only the Player has an outcome, because the Opponent's is its reverse.
-- A step is at least `count` orders of any of `codes` (kind `building`, `unit`, `upgrade`, `item`, `hero` or `skill`), each inside `from_s` to `to_s`; `exactly` makes the count exact. A skill count is the skill level: one point that takes the skill to `count` or more, counted since the hero's last retraining, and `exactly` makes it the highest level. A repeat click (a tier hall, research, hero order or skill point under 1000 ms after the same one) is no order, and nor is a skill point past level 3. A hero step reads the order that trained the hero, and `nth` makes it the side's 1st, 2nd or 3rd hero (`player_games.heroes`). A `then` step comes after the order that completes the step above, all its orders within `within_s` of that order when set; each run of `then` steps is one match over the player's order times. A `before` step counts its orders before the order that completes step `before` of the group, and with `negate` holds when there is none. An `and` step is its own condition, and `negate` makes it "did not happen".
+- A step is at least `count` orders of any of `codes` (kind `building`, `unit`, `upgrade`, `item`, `hero` or `skill`), each inside `from_s` to `to_s`; `exactly` makes the count exact. A skill count is the skill level: one point that takes the skill to `count` or more, counted since the hero's last retraining, and `exactly` makes it the highest level. A repeat click (a tier hall, research, hero order or skill point under 1000 ms after the same one) is no order, and nor is a skill point past level 3. A hero step reads the order that trained the hero, and `nth` makes it the side's 1st, 2nd or 3rd hero (`player_games.heroes`). A `then` step comes after the order that completes the step above, all its orders within `within_s` of that order when set; each run of `then` steps is one match over the player's order times. A `before` step counts its orders before the order that completes step `before` of the group, and with `negate` holds when there is none. An `and` step is its own condition, and `negate` makes it "did not happen". `forward` on a building step keeps only placements under 3,000 map units from the opponent's start location (`player_games.opp_start_x`, `opp_start_y`), so its `count` counts forward placements; a player whose opponent has no start has none.
 - The scope is the replay filters, both sides' races and names; `summary` adds the outcome, the openers and the steps. Both count player-games: a mirror game where both players fit the Player side counts once for each, a win and a loss, so it pulls the record toward 50%. `summary.both_players` says how many games count twice, and the page prints it.
 - `sort` is `added` (when the bucket got the replay), `duration` or `map`, with `-` for descending. The answer holds the two statements it ran in `sql`.
 
@@ -137,7 +165,7 @@ POST /strategies/stats
 { "race": ["HU"], "opponent_race": ["NE"], "filters": { "map": ["Echo Isles 2.2"], "duration_ms": { "gte": 120000 } } }
 ```
 
-A preset in `api/strategies.yaml` is a named Player side: one group of `POST /search` steps, for one race. A variant (`parent_id`) holds its parent's steps, then its own, so its games never pass its parent's. The API checks the file at start: unique ids, a parent of the same race, and every group one that `POST /search` takes. The stats statement holds one `countIf` set per preset of the race over the race's player-games in scope, each condition compiled as the Player side of a search, so a preset's `games` equal `POST /search`'s `summary.games` for its steps. Sources: the 24 builds of w3warehouse with their expansion times (`w3warehouse`), the Human tower rush (`gym-replays`), and the 32 build orders of the wc3-gnl-website as the steps every player who follows the guide does (`wc3-gnl-website`, with the guide's full order kept as a note).
+A preset in `api/strategies.yaml` is a named Player side: one group of `POST /search` steps, for one race. A variant (`parent_id`) holds its parent's steps, then its own, so its games never pass its parent's. The API checks the file at start: unique ids, a parent of the same race, and every group one that `POST /search` takes. The stats statement holds one `countIf` set per preset of the race over the race's player-games in scope, each condition compiled as the Player side of a search, so a preset's `games` equal `POST /search`'s `summary.games` for its steps. Sources: the 24 builds of w3warehouse with their expansion times (`w3warehouse`), presets added here, such as the Human, Orc and Night Elf tower rushes (`gym-replays`), and the 32 build orders of the wc3-gnl-website as the steps every player who follows the guide does (`wc3-gnl-website`, with the guide's full order kept as a note).
 
 `api/tests/cases/*.json` are request and response pairs against the 3 goldens. They are plain JSON so a later Rust port of the API can run the same cases. `api/tests/oracles/*.json` are hand-labelled searches: each names about 10 loaded games and the player-games its steps must match there, chosen and labelled by the SQL beside it (`<name>.sql`) on the order tables, not through the compiler. No recipe rewrites them.
 
@@ -168,4 +196,5 @@ Grafana is at http://localhost:3001, anonymous admin by default (the `GF_AUTH_*`
 - Creep routes. A replay holds commands, and a creep death alone cannot say whether the player cleared the camp or an enemy stole it. That waits for stat-events maps.
 - Stat-events. A future parser output adds a section to the parsed document, and dbt gets a staging model for it.
 - `replays.source_key` (design S5).
+- `forward` in the inspector's steps. The URL codec and the step editor (`web/src/lib/steps.ts`) and the preset loader (`web/src/lib/strategies.ts` `urlStep`) drop it, so `/strategies` counts a tower-rush preset with it (Human 25) while its link to `/` and "Load a strategy" search without it (Human 60). The replay marks already read it.
 - Hosting. No box runs the stack yet. The `prod` profile's tunnel publishes the inspector only.
