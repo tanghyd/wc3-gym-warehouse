@@ -111,17 +111,18 @@ test.describe("step editor", () => {
   });
 
   test("and finds the steps in any order, then only in order: fewer games", async ({ page, request }) => {
-    const steps = [{ kind: "hero", codes: ["Edem"], nth: 1 }, { kind: "unit", codes: ["earc"], count: 5, to_s: 360 }];
+    // a hero is timed by his training order: Wisps ordered before it count for "and", not for "then"
+    const steps = [{ kind: "hero", codes: ["Edem"], nth: 1 }, { kind: "unit", codes: ["ewsp"], count: 5, to_s: 360 }];
     const body = (link: "and" | "then") => ({ player: { race: ["NE"], groups: [{ steps: [steps[0], { ...steps[1], link }] }] }, opponent: { race: ["OC"] } });
     const [and, then] = await Promise.all([search(request, body("and")), search(request, body("then"))]);
     expect(then.total).toBeLessThan(and.total);
-    await page.goto(q({ race: "NE", steps: "hero:Edem#1,trained:earc*5@-360", opponent_race: "OC" }));
+    await page.goto(q({ race: "NE", steps: "hero:Edem#1,trained:ewsp*5@-360", opponent_race: "OC" }));
     expect(await strip(page)).toEqual(stripOf(and));
     const link = side(page, "Player").getByRole("group", { name: "Link of step 2" });
     await expect(link.getByRole("button", { name: "and" })).toHaveAttribute("aria-pressed", "true");
     await link.getByRole("button", { name: "then" }).click();
     await page.getByRole("button", { name: "Search" }).click();
-    await expect(page).toHaveURL(/steps=hero%3AEdem%231%2C%7Etrained%3Aearc\*5%40-360/);
+    await expect(page).toHaveURL(/steps=hero%3AEdem%231%2C%7Etrained%3Aewsp\*5%40-360/);
     expect(await strip(page)).toEqual(stripOf(then));
     expect(await listed(page)).toEqual(rowsOf(then));
   });
@@ -203,8 +204,9 @@ test.describe("step editor", () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 
-  test("a chain past 32 orders shows the API's text, not an outage", async ({ page }) => {
-    await page.goto(q({ steps: "trained:earc*9,~trained:esen*9,~trained:edry*9,~trained:edoc*9" }));
-    await expect(page.locator('p[role="alert"]')).toContainText("a then chain counts at most 32 orders");
+  test("a step the API refuses shows its text, not an outage", async ({ page }) => {
+    // a "before" step that names itself
+    await page.goto(q({ steps: "trained:earc<1" }));
+    await expect(page.locator('p[role="alert"]')).toContainText("before names another step of the group, one that happened");
   });
 });

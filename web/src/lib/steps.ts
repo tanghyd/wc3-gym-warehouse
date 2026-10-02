@@ -31,21 +31,26 @@ export type Step = {
   link: "and" | "then";
   within: number | null;
   nth: number | null;
+  /** The count is exact: no more orders than `count`. */
+  exactly: boolean;
+  /** The step's orders come before the order that completes this step of the group, from 1. */
+  before: number | null;
   negate: boolean;
 };
 /** A side's steps: groups of steps, any of which may hold. */
 export type Groups = Step[][];
 
-export const newStep = (kind: Kind): Step => ({ kind, codes: [], count: 1, from: null, to: null, link: "and", within: null, nth: kind === "hero" ? 1 : null, negate: false });
+export const newStep = (kind: Kind): Step => ({ kind, codes: [], count: 1, from: null, to: null, link: "and", within: null, nth: kind === "hero" ? 1 : null, exactly: false, before: null, negate: false });
 
-// [~[within]][!]kind[:codes][#nth][*count][@from-to]
-const TOKEN = /^(~(\d*))?(!)?([a-z]+)(?::([A-Za-z0-9_@.]+))?(?:#([1-3]))?(?:\*([1-9]))?(?:@(\d*)-(\d*))?$/;
+// [~[within]][!]kind[:codes][#nth][*count[=]][<before][@from-to]
+const TOKEN = /^(~(\d*))?(!)?([a-z]+)(?::([A-Za-z0-9_@.]+))?(?:#([1-3]))?(?:\*([1-9])(=)?)?(?:<([1-8]))?(?:@(\d*)-(\d*))?$/;
 const CODE = /^@?[A-Za-z0-9_]{1,8}$/;
 
 /**
  * "hero:Edem#1,trained:earc*5@-360|!expand@-540": groups split by "|", steps by ",". A step is
- * its kind and codes (split by "."), then #nth hero, *count and @from-to seconds of game time.
- * A leading ~ links it to the step above with "then", ~90 within 90 s; a leading ! is "did not happen".
+ * its kind and codes (split by "."), then #nth hero, *count (*1= for exactly one), <2 for before
+ * step 2 and @from-to seconds of game time. A leading ~ links it to the step above with "then",
+ * ~90 within 90 s; a leading ! is "did not happen".
  */
 export function decodeGroups(value: string): Groups {
   const n = (v?: string) => (v ? Number(v) : null);
@@ -59,7 +64,21 @@ export function decodeGroups(value: string): Groups {
         const codes = (m[5] ?? "").split(".").filter((c) => CODE.test(c));
         if (!codes.length && kind !== "expand") return [];
         const then = m[1] !== undefined && i > 0;
-        return [{ kind, codes, count: Number(m[7] ?? 1), from: n(m[8]), to: n(m[9]), link: then ? "then" : "and", within: then ? n(m[2]) : null, nth: kind === "hero" ? n(m[6]) : null, negate: !then && !!m[3] }];
+        return [
+          {
+            kind,
+            codes,
+            count: Number(m[7] ?? 1),
+            from: n(m[10]),
+            to: n(m[11]),
+            link: then ? "then" : "and",
+            within: then ? n(m[2]) : null,
+            nth: kind === "hero" ? n(m[6]) : null,
+            exactly: !!m[8] && !m[3],
+            before: then ? null : n(m[9]),
+            negate: !then && !!m[3],
+          },
+        ];
       }),
     )
     .filter((g) => g.length)
@@ -74,7 +93,8 @@ export function encodeGroups(groups: Groups) {
         .map((s, i) => {
           const link = i > 0 && s.link === "then" ? `~${s.within ?? ""}` : "";
           const time = s.from === null && s.to === null ? "" : `@${s.from ?? ""}-${s.to ?? ""}`;
-          return `${link}${s.negate ? "!" : ""}${s.kind}${s.codes.length ? `:${s.codes.join(".")}` : ""}${s.nth ? `#${s.nth}` : ""}${s.count > 1 ? `*${s.count}` : ""}${time}`;
+          const count = s.count > 1 || s.exactly ? `*${s.count}${s.exactly ? "=" : ""}` : "";
+          return `${link}${s.negate ? "!" : ""}${s.kind}${s.codes.length ? `:${s.codes.join(".")}` : ""}${s.nth ? `#${s.nth}` : ""}${count}${s.before ? `<${s.before}` : ""}${time}`;
         })
         .join(","),
     )
@@ -98,6 +118,8 @@ export function apiStep(s: Step, races: string[], groupCodes: Record<string, str
     link: s.link,
     within_s: s.link === "then" ? s.within : null,
     nth: s.nth,
+    exactly: s.exactly,
+    before: s.before,
     negate: s.negate,
   };
 }
@@ -105,10 +127,9 @@ export function apiStep(s: Step, races: string[], groupCodes: Record<string, str
 // The API's bounds: a then gap of at most 7200 s, game time inside the first 600 minutes.
 export const MAX_WITHIN = 7200;
 const MAX_TIME = 36000;
-/** Steps in one group, groups on one side, and counted orders in one then chain. */
+/** Steps in one group and groups on one side. */
 export const MAX_STEPS = 8;
 export const MAX_GROUPS = 4;
-export const MAX_CHAIN_ORDERS = 32;
 
 /** "5" (minutes) or "5:30" as whole seconds; null when blank, not a time or past 600:00. */
 export function parseMss(v: string): number | null {
@@ -125,6 +146,9 @@ export function timeWords(s: Pick<Step, "from" | "to">) {
   if (s.to !== null) return `by ${t(s.to)}`;
   return s.from !== null ? `from ${t(s.from)}` : "";
 }
+
+/** A step's count in words: " ×3", " ×1 exactly", or "". */
+export const countWords = (s: Pick<Step, "count" | "exactly">) => (s.count > 1 || s.exactly ? ` ×${s.count}${s.exactly ? " exactly" : ""}` : "");
 
 /** "1st hero" for a hero step with nth, else the kind's word. */
 export const kindWord = (s: Pick<Step, "kind" | "nth">) => (s.kind === "hero" && s.nth ? `${["1st", "2nd", "3rd"][s.nth - 1]} hero` : KINDS[s.kind].label);

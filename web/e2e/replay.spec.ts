@@ -135,7 +135,7 @@ test.describe("replay detail", () => {
     await expect(lanes(page, OC).getByRole("img", { name: "Peon ×4. Ordered at 0:02, 0:19, 0:34, 0:58" })).toContainText("×4");
     // the second Tree of Ages order came 155 ms after the first: a repeat click, left out
     await expect(lanes(page, NE).getByRole("img", { name: "Tree of Ages. Ordered at 2:44" })).toBeVisible();
-    await expect(lanes(page, NE).getByRole("img", { name: "Demon Hunter. Trained by 2:22" })).toBeVisible();
+    await expect(lanes(page, NE).getByRole("img", { name: "Demon Hunter. Ordered at 1:10" })).toBeVisible();
     await expect(lanes(page, NE).getByRole("img", { name: "Immolation. Demon Hunter skill at 2:22" })).toBeVisible();
   });
 
@@ -349,11 +349,12 @@ for (const id of [LONG, "d43bf84a43237df9ac301e8a3a883371d8068da2dabf2f76cdaa499
 }
 
 // no replay in the data holds a hero_retrained event, so the Retrained chip has no case here
-test("the list marks a hero's arrival", async ({ page }) => {
+test("the list shows a hero at the order that trained it, one with no code at its first skill point", async ({ page }) => {
   await page.goto(`/replays/${FADING}`);
   await timeline(page).getByRole("button", { name: "List" }).click();
   const rows = list(page, UD).locator(":scope > li > div");
-  await expect(rows.filter({ hasText: /^\d+:\d\dLich/ }).first()).toHaveText(/^\d+:\d\dLichTrained by$/);
+  await expect(rows.filter({ hasText: /^\d+:\d\dLich/ }).first()).toHaveText("1:15Lich");
+  await expect(rows.filter({ hasText: /^\d+:\d\dUnknown hero/ }).first()).toHaveText("29:06Unknown heroTrained by");
 });
 
 test("a hero and skills in no mappings row read Unknown, on a ? tile", async ({ page }) => {

@@ -65,7 +65,8 @@ const nameOf = (objects: Objects, code: string | null, type: string) => objects[
 export function describe(m: Mark, objects: Objects): [string, string] {
   const name = nameOf(objects, m.code, m.event_type) + (m.times.length > 1 ? ` ×${m.times.length}` : "");
   const at = m.times.map(mss).join(", ");
-  if (m.event_type === "hero_trained") return [name, `Trained by ${at}`];
+  // a hero shows at the order that trained it; one with no code at its first skill point
+  if (m.event_type === "hero_trained" && !m.code) return [name, `Trained by ${at}`];
   if (m.event_type === "hero_retrained") return [name, `Retrained at ${at}`];
   if (m.event_type === "hero_skill") return [name, `${nameOf(objects, m.hero_code, "hero_trained")} skill at ${at}`];
   return [name, `Ordered at ${at}`];

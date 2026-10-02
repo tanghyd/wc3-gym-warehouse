@@ -16,7 +16,7 @@ export type GameEvent = { player_id: number; time_ms: number; event_type: string
 export type Chat = { time_ms: number; player_id: number; mode: string; message: string };
 type Header = { replay_id: string; map: string; matchup: string; duration_ms: number; winning_team_id: number; download_url: string | null };
 /** patch: the game patch from the build number, such as "3.0"; "" for a build with no patch row. */
-export type Replay = Header & { patch: string; players: ReplayPlayer[]; events: GameEvent[]; repeats: GameEvent[]; chat: Chat[] };
+export type Replay = Header & { patch: string; players: ReplayPlayer[]; events: GameEvent[]; chat: Chat[] };
 /** Name and icon path per object code; a code in no mappings row has no name. */
 export type Objects = Record<string, { name?: string; icon: string | null }>;
 

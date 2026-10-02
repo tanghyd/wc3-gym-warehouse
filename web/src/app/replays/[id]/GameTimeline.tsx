@@ -29,8 +29,8 @@ function rowsFor(b: Block, events: GameEvent[]): Row[] {
     .sort((x, y) => x.times[0] - y.times[0]);
 }
 
-// Rows whose time is not an order: a hero's first skill point, a retrain
-const CHIPS: Record<string, string> = { hero_trained: "Trained by", hero_retrained: "Retrained" };
+// Rows whose time is not an order: a retrain, and the first skill point of a hero with no code
+const chip = (r: Row) => (r.event_type === "hero_retrained" ? "Retrained" : r.event_type === "hero_trained" && !r.code ? "Trained by" : null);
 
 /** The column head over a list's times. */
 function OrdersHead() {
@@ -52,7 +52,7 @@ function Orders({ rows, objects, label, hits }: { rows: Row[]; objects: Objects;
               </span>
             ))}
             {r.tier && <span className="chip border">T{r.tier}</span>}
-            {CHIPS[r.event_type] && <span className="chip border">{CHIPS[r.event_type]}</span>}
+            {chip(r) && <span className="chip border">{chip(r)}</span>}
           </div>
           {r.times.length > 1 && <p className="pl-[92px] text-xs text-muted">{r.times.map(mss).join(", ")}</p>}
           <SkillTrail skills={r.skills} objects={objects} className="pt-1 pl-[92px]" />

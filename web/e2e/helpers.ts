@@ -3,7 +3,7 @@ import type { APIRequestContext, Page } from "@playwright/test";
 // What the Replays page and POST /search share: the request, the answer and the page's reading of it.
 export const API = process.env.API_URL ?? "http://api:8000";
 
-export type Step = { kind: string; codes: string[]; count?: number; from_s?: number; to_s?: number; link?: "and" | "then"; within_s?: number; nth?: number; negate?: boolean };
+export type Step = { kind: string; codes: string[]; count?: number; from_s?: number; to_s?: number; link?: "and" | "then"; within_s?: number; nth?: number; exactly?: boolean; before?: number; negate?: boolean };
 export type Side = { race?: string[]; name?: string; outcome?: "win" | "loss"; opened_with?: string[]; groups?: { steps: Step[] }[] };
 export type Search = { filters?: object; player?: Side; opponent?: Side; sort?: string; limit?: number; offset?: number };
 type Tally = { games: number; wins: number; losses: number; duration_ms_total: number };

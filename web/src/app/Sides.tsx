@@ -7,8 +7,8 @@ import {
   HALLS,
   KINDS,
   type Kind,
+  countWords,
   kindWord,
-  MAX_CHAIN_ORDERS,
   MAX_GROUPS,
   MAX_STEPS,
   MAX_WITHIN,
@@ -70,21 +70,29 @@ function Glyph({ d, size = 18 }: { d: string; size?: number }) {
 
 const mss = (s: number | null) => (s === null ? "" : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`);
 
-/** A group with its links made sound: the first step and a step under "did not happen" follow nothing. */
+/** Whether a step may be the step a "before" step names: another step of the group that happened. */
+const anchorable = (group: Step[], i: number, before: number) => before !== i + 1 && before <= group.length && !group[before - 1].negate && group[before - 1].before === null;
+
+/**
+ * A group made sound: "before" names another step that happened, a negated step has no exact
+ * count, and the first step and a step under "did not happen" or "before" follow nothing.
+ */
 function sound(group: DraftStep[]) {
-  return group.map((s, i) => {
-    const then = s.link === "then" && i > 0 && !group[i - 1].negate && !s.negate;
+  const named = group.map((s, i) => ({ ...s, before: s.before !== null && anchorable(group, i, s.before) ? s.before : null, exactly: s.exactly && !s.negate }));
+  return named.map((s, i) => {
+    const free = (x: DraftStep) => !x.negate && x.before === null;
+    const then = s.link === "then" && i > 0 && free(named[i - 1]) && free(s);
     return { ...s, link: then ? "then" : "and", within: then ? s.within : null } as DraftStep;
   });
 }
 
-/** The counted orders of the then chain a step belongs to. */
-function chainOrders(group: DraftStep[], i: number) {
-  let start = i;
-  while (start > 0 && group[start].link === "then") start--;
-  let end = i;
-  while (end + 1 < group.length && group[end + 1].link === "then") end++;
-  return group.slice(start, end + 1).reduce((n, s) => n + s.count, 0);
+/** The group with step i moved to j, or removed when j is null, its "before" numbers following the steps they name. */
+function renumber(group: DraftStep[], i: number, j: number | null) {
+  const order = group.map((_, k) => k);
+  order.splice(i, 1);
+  if (j !== null) order.splice(j, 0, i);
+  const at = new Map(order.map((k, n) => [k + 1, n + 1]));
+  return order.map((k) => ({ ...group[k], before: group[k].before === null ? null : (at.get(group[k].before!) ?? null) }));
 }
 
 /**
@@ -169,15 +177,14 @@ function Side(props: {
     else setPicking(key);
   };
   const remove = (key: number) => {
-    setGroups(groups.map((g) => g.filter((s) => s.key !== key)).filter((g, i, all) => g.length || all.length === 1));
+    const at = (g: DraftStep[]) => g.findIndex((s) => s.key === key);
+    setGroups(groups.map((g) => (at(g) < 0 ? g : renumber(g, at(g), null))).filter((g, i, all) => g.length || all.length === 1));
     setEditing(null);
     setPicking(null);
     focus(`${id}-add`);
   };
   const move = (gi: number, i: number, by: -1 | 1) => {
-    const g = [...groups[gi]];
-    [g[i], g[i + by]] = [g[i + by], g[i]];
-    setGroups(groups.map((x, j) => (j === gi ? g : x)));
+    setGroups(groups.map((x, j) => (j === gi ? renumber(x, i, i + by) : x)));
   };
   const pick = (key: number, p: Pick) => {
     change(key, { codes: p.source ? [`@${p.source}`] : p.codes, name: p.name, icon: p.icon });
@@ -394,10 +401,12 @@ function StepLine(props: {
   const { s, i, group } = props;
   const n = i + 1;
   const time = timeWords(s);
-  const name = (s.name || "Pick an object") + (s.count > 1 ? ` ×${s.count}` : "");
+  const name = (s.name || "Pick an object") + countWords(s);
   const aboveNegated = i > 0 && group[i - 1].negate;
+  // a step that did not happen or comes before another step links to no other step
+  const unlinked = aboveNegated || s.negate || (i > 0 && group[i - 1].before !== null) || s.before !== null;
+  const unlinkedWhy = aboveNegated || s.negate ? "A step that did not happen has no order" : "A step before another step links to no other step";
   const belowThen = i + 1 < group.length && group[i + 1].link === "then";
-  const orders = chainOrders(group, i);
   const id = useId();
   return (
     <>
@@ -407,7 +416,7 @@ function StepLine(props: {
             <button type="button" aria-pressed={s.link === "and"} onClick={() => props.onLink("and")}>
               and
             </button>
-            <button type="button" aria-pressed={s.link === "then"} disabled={aboveNegated || s.negate} title={aboveNegated || s.negate ? "A step that did not happen has no order" : undefined} onClick={() => props.onLink("then")}>
+            <button type="button" aria-pressed={s.link === "then"} disabled={unlinked} title={unlinked ? unlinkedWhy : undefined} onClick={() => props.onLink("then")}>
               {s.link === "then" && s.within !== null ? `then within ${mss(s.within)}` : "then"}
             </button>
           </span>
@@ -433,6 +442,7 @@ function StepLine(props: {
               {time}
             </span>
           )}
+          {s.before !== null && <span className="qual">Before step {s.before}</span>}
           {s.negate && <span className="qual">Did not happen</span>}
         </span>
         <span className="tools">
@@ -478,7 +488,7 @@ function StepLine(props: {
           {s.kind !== "hero" && (
             <div className="flex flex-col gap-1 text-sm">
               <span id={`${id}-count`} className="text-muted">
-                {s.kind === "skill" ? "Skill level at least" : "At least"}
+                {s.kind === "skill" ? `Skill level ${s.exactly ? "exactly" : "at least"}` : s.exactly ? "Exactly" : "At least"}
               </span>
               <span className="flex items-center gap-1" role="group" aria-labelledby={`${id}-count`}>
                 <button type="button" className="icon-btn" aria-label="Fewer" disabled={s.count <= 1} onClick={() => props.onChange({ count: s.count - 1 })}>
@@ -487,9 +497,13 @@ function StepLine(props: {
                 <output className="field inline-flex w-14 items-center justify-center" aria-live="polite">
                   {s.count}
                 </output>
-                <button type="button" className="icon-btn" aria-label="More" disabled={s.count >= 9 || (orders >= MAX_CHAIN_ORDERS && (s.link === "then" || belowThen))} onClick={() => props.onChange({ count: s.count + 1 })}>
+                <button type="button" className="icon-btn" aria-label="More" disabled={s.count >= 9} onClick={() => props.onChange({ count: s.count + 1 })}>
                   <Glyph d={G.plus} size={16} />
                 </button>
+                <label className={`ml-2 flex items-center gap-2 ${s.negate ? "opacity-50" : "cursor-pointer"}`}>
+                  <input type="checkbox" className="check" checked={s.exactly} disabled={s.negate} onChange={(e) => props.onChange({ exactly: e.target.checked })} />
+                  Exactly
+                </label>
               </span>
             </div>
           )}
@@ -505,6 +519,29 @@ function StepLine(props: {
               <input className="field w-20" placeholder="to" aria-label="To (m:ss)" defaultValue={mss(s.to)} onChange={(e) => props.onChange({ to: parseMss(e.target.value) })} />
             </span>
           </div>
+          {group.length > 1 && (
+            <div className="flex flex-col gap-1 text-sm">
+              <label htmlFor={`${id}-before`} className="text-muted">
+                Before step
+              </label>
+              <select
+                id={`${id}-before`}
+                className="field w-fit"
+                value={s.before ?? ""}
+                disabled={s.link === "then" || belowThen}
+                onChange={(e) => props.onChange({ before: e.target.value ? Number(e.target.value) : null })}
+              >
+                <option value="">Any time</option>
+                {group.map((x, j) =>
+                  anchorable(group, i, j + 1) ? (
+                    <option key={x.key} value={j + 1}>
+                      {`Step ${j + 1}: ${x.name}`}
+                    </option>
+                  ) : null,
+                )}
+              </select>
+            </div>
+          )}
           {i > 0 && (
             <div className="flex flex-col gap-1 text-sm">
               <span id={`${id}-after`} className="text-muted">
@@ -519,12 +556,12 @@ function StepLine(props: {
                       ["within", "Then within"],
                     ] as const
                   ).map(([v, label]) => (
-                    <label key={v} className={`seg ${(aboveNegated || s.negate) && v !== "and" ? "pointer-events-none opacity-40" : ""}`}>
+                    <label key={v} className={`seg ${unlinked && v !== "and" ? "pointer-events-none opacity-40" : ""}`}>
                       <input
                         type="radio"
                         name={`${id}-after`}
                         className="sr-only"
-                        disabled={(aboveNegated || s.negate) && v !== "and"}
+                        disabled={unlinked && v !== "and"}
                         checked={v === "and" ? s.link === "and" : v === "then" ? s.link === "then" && s.within === null : s.link === "then" && s.within !== null}
                         onChange={() => props.onChange(v === "and" ? { link: "and", within: null } : { link: "then", within: v === "within" ? (s.within ?? 30) : null })}
                       />

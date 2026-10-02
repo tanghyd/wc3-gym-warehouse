@@ -119,7 +119,7 @@ export default async function StrategiesPage({ searchParams }: PageProps<"/strat
                 const rule = (
                   <p className="rule">
                     {first.kind !== "hero" || first.codes.length === 1 ? <ObjIcon code={first.codes[0]} objects={names} size={18} alt="" /> : null}
-                    <span>{ruleWords(p.steps, names)}</span>
+                    <span>{ruleWords(p.steps, names, presetSteps(p, byId))}</span>
                   </p>
                 );
                 return (

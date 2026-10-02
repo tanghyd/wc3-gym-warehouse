@@ -54,8 +54,13 @@ test.describe("step marks", () => {
   const CASES: { steps: string; body: Step[] }[] = [
     // the first Archer mostly comes too early for the Ancient of Wind
     { steps: "trained:earc,~30built:eaow", body: [{ kind: "unit", codes: ["earc"] }, { kind: "building", codes: ["eaow"], link: "then", within_s: 30 }] },
-    // the second order is mostly a repeat click
+    // two real orders: a repeat click under a second counts for neither the search nor the marks
     { steps: "built:etoa*2", body: [{ kind: "building", codes: ["etoa"], count: 2 }] },
+    // all three Archers inside the 1:30 after one Ancient of War order
+    { steps: "built:eaom,~90trained:earc*3", body: [{ kind: "building", codes: ["eaom"] }, { kind: "unit", codes: ["earc"], count: 3, link: "then", within_s: 90 }] },
+    // exactly one Ancient of War before a Tree of Ages, and none before one
+    { steps: "built:etoa,built:eaom*1=<1", body: [{ kind: "building", codes: ["etoa"] }, { kind: "building", codes: ["eaom"], exactly: true, before: 1 }] },
+    { steps: "built:etoa,!built:eaom<1", body: [{ kind: "building", codes: ["etoa"] }, { kind: "building", codes: ["eaom"], negate: true, before: 1 }] },
   ];
   for (const c of CASES)
     test(`every game listed for ${c.steps} is found on its page`, async ({ page, request }) => {
@@ -67,7 +72,8 @@ test.describe("step marks", () => {
         await expect(page.getByRole("list", { name: "Steps of the player" })).toBeVisible();
         await expect(page.getByText("Not found in this game"), row.replay_id).toHaveCount(0);
         const lanes = page.getByRole("group", { name: `Orders of ${row.player.name}` });
-        for (let n = 1; n <= c.body.length; n++) await expect(lanes.getByRole("img", { name: new RegExp(`Step ${n} of the search$`) }), row.replay_id).not.toHaveCount(0);
+        // a step that did not happen or comes before another step marks no order
+        for (let n = 1; n <= c.body.length; n++) if (!c.body[n - 1].negate && c.body[n - 1].before == null) await expect(lanes.getByRole("img", { name: new RegExp(`Step ${n} of the search$`) }), row.replay_id).not.toHaveCount(0);
       }
     });
 
