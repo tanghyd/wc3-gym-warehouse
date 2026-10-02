@@ -31,6 +31,7 @@ from compile import (
     compile_search,
     compile_strategies,
     race_value,
+    records,
     tuples,
 )
 
@@ -147,8 +148,16 @@ def _won(team_id: int, winning_team_id: int) -> bool | None:
     return None if winning_team_id < 0 else team_id == winning_team_id
 
 
+def _tally(s: dict[str, Any], prefix: str, record: bool) -> dict[str, Any]:
+    """Games and summed length, and wins and losses when the sides have a record, else null."""
+    return {
+        "games": s[f"{prefix}games"], "wins": s[f"{prefix}wins"] if record else None,
+        "losses": s[f"{prefix}losses"] if record else None, "duration_ms_total": s[f"{prefix}duration_ms_total"],
+    }
+
+
 def _side(r: dict[str, Any]) -> dict[str, Any]:
-    """One player of a listed player-game: name, race value, result and heroes in pick order."""
+    """One player of a listed game: name, race value, result and heroes in pick order."""
     return {
         "name": r["player"], "race": race_value(r["race"], r["random"]),
         "won": None if r["result"] == "unknown" else r["result"] == "win",
@@ -158,8 +167,8 @@ def _side(r: dict[str, Any]) -> dict[str, Any]:
 
 @app.post("/search")
 def search(req: SearchRequest) -> dict[str, Any]:
-    """Player-games of the Player side: the summary and the scope counted in one statement,
-    one page of the list in another, and each listed game's opponent row."""
+    """Games that fit both sides: the summary and the scope counted in one statement, one page of
+    the list in another, and each listed game's opponent row."""
     try:
         stats_sql, rows_sql, params = compile_search(req, model("player_games"))
     except BadRequest as e:
@@ -168,14 +177,15 @@ def search(req: SearchRequest) -> dict[str, Any]:
     rows = run(rows_sql, params)
     pairs = tuples((r["replay_id"], r["opponent_id"]) for r in rows)
     opponents = {(o["replay_id"], o["player_id"]): o for o in run(OPPONENTS_SQL, {"pairs": pairs})} if rows else {}
+    summary_record, scope_record = records(req)
     return {
         "total": s["games"],
-        # both_players: games where both players fit the Player side, so each counts twice
-        "summary": {k: s[k] for k in ("games", "wins", "losses", "duration_ms_total")} | {"both_players": s["games"] - s["replays"]},
-        "scope": {k: s[f"scope_{k}"] for k in ("games", "wins", "losses", "duration_ms_total")},
+        # both: games where either player fits the Player side and the other the Opponent side
+        "summary": _tally(s, "", summary_record) | {"both": s["both_sides"]},
+        "scope": _tally(s, "scope_", scope_record),
         "replays": [
             {
-                "replay_id": r["replay_id"], "map": r["map"], "duration_ms": r["duration_ms"],
+                "replay_id": r["replay_id"], "map": r["map"], "duration_ms": r["duration_ms"], "both": bool(r["both_sides"]),
                 "player": _side(r), "opponent": _side(opponents[(r["replay_id"], r["opponent_id"])]),
             }
             for r in rows
@@ -222,17 +232,16 @@ def strategies() -> dict[str, Any]:
 
 @app.post("/strategies/stats")
 def strategy_stats(req: StrategiesRequest) -> dict[str, Any]:
-    """Games, wins, losses and summed length of the race's player-games in scope, and of each of
-    its presets, in one statement."""
+    """Games, wins, losses and summed length of the games in scope with a player of the race, and
+    of each of its presets, in one statement. The scope has no record when both races are the same."""
     try:
         sql, ids, params = compile_strategies(req, PRESETS, model("player_games"))
     except BadRequest as e:
         raise HTTPException(400, str(e)) from e
     s = run(sql, params)[0]
-    figures = ("games", "wins", "losses", "duration_ms_total")
     return {
-        "scope": {k: s[k] for k in figures},
-        "strategies": [{"id": i} | {k: s[f"s{n}_{k}"] for k in figures} for n, i in enumerate(ids)],
+        "scope": _tally(s, "", sorted(req.race) != sorted(req.opponent_race)),
+        "strategies": [{"id": i} | _tally(s, f"s{n}_", True) for n, i in enumerate(ids)],
         "sql": sql,
         "params": params,
     }

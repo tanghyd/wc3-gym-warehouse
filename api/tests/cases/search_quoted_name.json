@@ -21,7 +21,7 @@
         "wins": 0,
         "losses": 0,
         "duration_ms_total": 0,
-        "both_players": 0
+        "both": 0
       },
       "scope": {
         "games": 0,

@@ -183,9 +183,9 @@ class ObjectsRequest(BaseModel):
 
 
 def compile_objects(req: ObjectsRequest, model: Model) -> tuple[str, dict[str, str]]:
-    """The objects of a picker kind for a side's race, each with the player-games in scope (the
-    race values and the replay filters) that ordered it at least once. A race's own sources
-    come before the neutral ones (an altar before the Tavern), each most ordered first."""
+    """The objects of a picker kind for a side's race, each with the games in scope (the race
+    values and the replay filters) in which a player of the side ordered it at least once. A
+    race's own sources come before the neutral ones (an altar before the Tavern), each most ordered first."""
     params = Params()
     scope = replay_filters(model, req.filters, params) + race_condition(req.race, params)
     races = sorted({race_pair(v)[0] for v in req.race})
@@ -199,7 +199,7 @@ def compile_objects(req: ObjectsRequest, model: Model) -> tuple[str, dict[str, s
     sql = f"""SELECT o.source_code AS source_code, o.source_name AS source_name, o.code AS code, o.name AS name, c.games AS games
 FROM w3g.objects AS o
 LEFT JOIN (
-    SELECT subject_code, uniqExact(replay_id, player_id) AS games
+    SELECT subject_code, uniqExact(replay_id) AS games
     FROM {EVENTS}
     WHERE {' AND '.join(events)}
     GROUP BY subject_code
@@ -273,9 +273,13 @@ def compile_query(req: QueryRequest, model: Model) -> tuple[str, dict[str, str]]
             raise BadRequest(f"unknown measure {m!r}")
     params = Params()
     select = req.dimensions + [f"{model.measures[m]} AS {m}" for m in req.measures]
-    sql = f"SELECT {'DISTINCT ' if not req.measures else ''}{', '.join(select)} FROM {model.table}"
-    if conds := _row_conditions(model, req.filters, req.steps, params):
-        sql += " WHERE " + " AND ".join(conds)
+    conds = _row_conditions(model, req.filters, req.steps, params)
+    source = model.table + (" WHERE " + " AND ".join(conds) if conds else "")
+    if req.measures and model.takes_steps:
+        # shown is 1 on the lower player slot of each game in a result row, so a game whose two players fall in one row counts once there
+        part = ", ".join([*req.dimensions, "replay_id"])
+        source = f"(SELECT *, row_number() OVER (PARTITION BY {part} ORDER BY player_id) = 1 AS shown FROM {source})"
+    sql = f"SELECT {'DISTINCT ' if not req.measures else ''}{', '.join(select)} FROM {source}"
     if req.measures and req.dimensions:
         sql += " GROUP BY " + ", ".join(req.dimensions)
     order = []
@@ -424,7 +428,7 @@ def _chain_sql(steps: list[SearchStep], chain: list[int], races: list[str], para
     bounds = {k: [b for b, s in enumerate(steps) if s.before == k + 1] for k in chain}
     used = chain + [b for k in chain for b in bounds[k]]
     events = EVENTS
-    if any(steps[i].forward for i in used):  # each order row gets its player-game's opponent start
+    if any(steps[i].forward for i in used):  # each order row gets its player_games row's opponent start
         events += f" INNER JOIN (SELECT replay_id, player_id, opp_start_x, opp_start_y FROM {PLAYER_GAMES}) AS g USING (replay_id, player_id)"
     where = [f"has({params.add('Array(String)', array(races))}, race)"] if races else []  # race leads the sort key
     first = steps[chain[0]]
@@ -494,13 +498,28 @@ def _own_conditions(side: Side, params: Params) -> list[str]:
     return out
 
 
-def compile_search(req: SearchRequest, model: Model) -> tuple[str, str, dict[str, str]]:
-    """Two statements over player_games, one row per player-game of the Player side.
+def _side_terms(side: Side) -> tuple[object, ...]:
+    """What a side asks of its player, for comparing two sides."""
+    return sorted(side.race), side.name or None, side.opened_with, [g.model_dump() for g in side.groups]
 
-    `scope` holds the replay filters, both sides' races and names. `match` adds the Player's
+
+def records(req: SearchRequest) -> tuple[bool, bool]:
+    """Whether the matches and the scope have a record: only when something tells the Player side
+    from the Opponent side. The scope's sides differ by race values or name; the matches' also by
+    openers, steps or the outcome. With equal sides a game's two seatings both fit, so a record says nothing."""
+    p, o = _side_terms(req.player), _side_terms(req.opponent)
+    return req.player.outcome is not None or p != o, p[:2] != o[:2]
+
+
+def compile_search(req: SearchRequest, model: Model) -> tuple[str, str, dict[str, str]]:
+    """Two statements over player_games, one result row per game.
+
+    A player_games row seats one player of a game on the Player side and the other on the Opponent
+    side. `scope` holds the replay filters, both sides' races and names. `match` adds the Player's
     outcome, openers and steps, and the Opponent's openers and steps through his own row
-    (opponent_id). The stats statement counts the scope and the matches in one pass; the rows
-    statement lists one page of the matches."""
+    (opponent_id). A game matches when one of its two rows does; when both do it is still one game,
+    shown from its lower player slot and marked `both_sides`. The stats statement counts the scope
+    and the matches in one pass; the rows statement lists one page of the matches."""
     params = Params()
     scope = replay_filters(model, req.filters, params)
     scope += race_condition(req.player.race, params)
@@ -516,22 +535,33 @@ def compile_search(req: SearchRequest, model: Model) -> tuple[str, str, dict[str
 
     where = f" WHERE {' AND '.join(scope)}" if scope else ""
     m = " AND ".join(match) or "1"
+    # per game: its seatings in scope (seated) and the matching ones (hits), each result read from the lower player slot
     stats = f"""SELECT
-    countIf(m) AS games, countIf(m AND result = 'win') AS wins, countIf(m AND result = 'loss') AS losses,
-    sumIf(duration_ms, m) AS duration_ms_total, uniqExactIf(replay_id, m) AS replays,
-    count() AS scope_games, countIf(result = 'win') AS scope_wins, countIf(result = 'loss') AS scope_losses,
-    sum(duration_ms) AS scope_duration_ms_total
-FROM (SELECT replay_id, result, duration_ms, {m} AS m FROM {PLAYER_GAMES}{where})"""
+    countIf(hits > 0) AS games, countIf(hits > 0 AND hit_result = 'win') AS wins, countIf(hits > 0 AND hit_result = 'loss') AS losses,
+    sumIf(game_ms, hits > 0) AS duration_ms_total, countIf(hits = 2) AS both_sides,
+    count() AS scope_games, countIf(seated_result = 'win') AS scope_wins, countIf(seated_result = 'loss') AS scope_losses,
+    sum(game_ms) AS scope_duration_ms_total
+FROM (
+    SELECT replay_id, any(duration_ms) AS game_ms, argMin(result, player_id) AS seated_result,
+           countIf(m) AS hits, argMinIf(result, player_id, m) AS hit_result
+    FROM (SELECT replay_id, player_id, result, duration_ms, {m} AS m FROM {PLAYER_GAMES}{where})
+    GROUP BY replay_id
+)"""
     column = SORTS[req.sort.removeprefix("-")]
-    rows = f"""SELECT replay_id, player_id, opponent_id, map, duration_ms, player, race, random, result, heroes, hero_levels
-FROM {PLAYER_GAMES}
-WHERE {' AND '.join([*scope, *match]) or '1'}
-ORDER BY {column}{' DESC' if req.sort.startswith('-') else ''}, replay_id, player_id
+    rows = f"""SELECT replay_id, player_id, opponent_id, map, duration_ms, player, race, random, result, heroes, hero_levels, both_sides
+FROM (
+    SELECT replay_id, player_id, opponent_id, map, duration_ms, added_at, player, race, random, result, heroes, hero_levels,
+           count() OVER (PARTITION BY replay_id) = 2 AS both_sides, row_number() OVER (PARTITION BY replay_id ORDER BY player_id) AS seat
+    FROM {PLAYER_GAMES}
+    WHERE {' AND '.join([*scope, *match]) or '1'}
+)
+WHERE seat = 1
+ORDER BY {column}{' DESC' if req.sort.startswith('-') else ''}, replay_id
 LIMIT {req.limit} OFFSET {req.offset}"""
     return stats, rows, params.values
 
 
-# The opponent row of each listed player-game.
+# The opponent row of each listed game.
 OPPONENTS_SQL = """SELECT replay_id, player_id, player, race, random, result, heroes, hero_levels
 FROM w3g.player_games
 WHERE has({pairs:Array(Tuple(String, UInt8))}, (replay_id, player_id))"""
@@ -617,9 +647,10 @@ class StrategiesRequest(BaseModel):
 
 
 def compile_strategies(req: StrategiesRequest, presets: dict[str, Preset], model: Model) -> tuple[str, list[str], dict[str, str]]:
-    """One statement over the race's player-games in scope: games, wins, losses and length, for the
-    scope and for each preset of the race. A preset's condition is its whole group, as a Player
-    side of POST /search reads it, so its games are the search's summary.games."""
+    """One statement over the games in scope with a player of the race: games, wins, losses and
+    length, for the scope and for each preset of the race. A preset's condition is its whole group,
+    as a Player side of POST /search reads it, and a game counts once with its result read as the
+    search reads it, so a preset's figures are the search's summary."""
     races = sorted({race_pair(v)[0] for v in req.race})
     if len(races) != 1 or races[0] not in RANDOM_OF:
         raise BadRequest("race takes one race: HU, OC, NE or UD, alone or with its Random value")
@@ -629,13 +660,19 @@ def compile_strategies(req: StrategiesRequest, presets: dict[str, Preset], model
     scope += race_condition(req.opponent_race, params, "opponent_race", "opponent_random")
     ids = [i for i, p in presets.items() if p.race == races[0]]
     conds = [f"({_group_condition(Group(steps=preset_steps(presets[i], presets)), races, params)}) AS s{n}" for n, i in enumerate(ids)]
-    figures = ["count() AS games", "countIf(result = 'win') AS wins", "countIf(result = 'loss') AS losses", "sum(duration_ms) AS duration_ms_total"]
+    # per game: whether a seating holds each preset (gN) and its result from the lower such player slot (rN)
+    games = ["any(duration_ms) AS game_ms", "argMin(result, player_id) AS seated_result"]
+    figures = ["count() AS games", "countIf(seated_result = 'win') AS wins", "countIf(seated_result = 'loss') AS losses", "sum(game_ms) AS duration_ms_total"]
     for n in range(len(ids)):
+        games += [f"max(s{n}) AS g{n}", f"argMinIf(result, player_id, s{n}) AS r{n}"]
         figures += [
-            f"countIf(s{n}) AS s{n}_games", f"countIf(s{n} AND result = 'win') AS s{n}_wins",
-            f"countIf(s{n} AND result = 'loss') AS s{n}_losses", f"sumIf(duration_ms, s{n}) AS s{n}_duration_ms_total",
+            f"countIf(g{n}) AS s{n}_games", f"countIf(g{n} AND r{n} = 'win') AS s{n}_wins",
+            f"countIf(g{n} AND r{n} = 'loss') AS s{n}_losses", f"sumIf(game_ms, g{n}) AS s{n}_duration_ms_total",
         ]
-    inner = ", ".join(["result", "duration_ms", *conds])
+    inner = ", ".join(["replay_id", "player_id", "result", "duration_ms", *conds])
     rows = ",\n    ".join(figures)
-    sql = f"SELECT\n    {rows}\nFROM (SELECT {inner} FROM {PLAYER_GAMES} WHERE {' AND '.join(scope)})"
+    sql = (
+        f"SELECT\n    {rows}\nFROM (\n    SELECT {', '.join(games)}\n"
+        f"    FROM (SELECT {inner} FROM {PLAYER_GAMES} WHERE {' AND '.join(scope)})\n    GROUP BY replay_id\n)"
+    )
     return sql, ids, params.values

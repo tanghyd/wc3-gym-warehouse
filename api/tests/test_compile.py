@@ -23,6 +23,7 @@ from compile import (
     compile_search,
     compile_strategies,
     race_pair,
+    records,
     sequence_pattern,
 )
 
@@ -50,13 +51,14 @@ def test_query_groups_filters_and_matches_steps() -> None:
                        steps=[step("eaom"), step("edob", within_prev_s=30, to_min=4)])
     sql, params = compile_query(req, PG)
     assert sql == (
-        "SELECT race, count() AS games, countIf(result = 'win') AS wins FROM w3g.player_games"
+        "SELECT race, count() AS games, countIf(result = 'win') AS wins"
+        " FROM (SELECT *, row_number() OVER (PARTITION BY race, replay_id ORDER BY player_id) = 1 AS shown FROM w3g.player_games"
         " WHERE has({p0:Array(String)}, map) AND minutes >= {p1:Float64} AND has({p2:Array(UInt32)}, apm)"
         " AND (replay_id, player_id) IN (SELECT replay_id, player_id FROM w3g.replay_events"
         " WHERE has({p3:Array(String)}, event_type) AND has({p4:Array(String)}, subject_code) AND is_repeat = 0"
         " GROUP BY replay_id, player_id HAVING sequenceMatch('(?1)(?t<=30000)(?2)')(time_ms,"
         " event_type = {p5:String} AND subject_code = {p6:String},"
-        " event_type = {p7:String} AND subject_code = {p8:String} AND time_ms <= 240000))"
+        " event_type = {p7:String} AND subject_code = {p8:String} AND time_ms <= 240000)))"
         " GROUP BY race ORDER BY games DESC LIMIT 100"
     )
     assert params == {"p0": "['Springtime']", "p1": "5.0", "p2": "[435]", "p3": "['building']",
@@ -158,7 +160,10 @@ def test_search_counts_the_scope_and_matches_any_group() -> None:
     stats, rows, params = compile_search(req, PG)
     scope = "has({p0:Array(String)}, map) AND has({p1:Array(Tuple(String, UInt8))}, (race, random)) AND has({p2:Array(Tuple(String, UInt8))}, (opponent_race, opponent_random))"
     assert f"FROM w3g.player_games WHERE {scope})" in stats
-    assert "countIf(m) AS games" in stats and "count() AS scope_games" in stats
+    # one result per game: a game matches when one of its two seatings does, and counts once
+    assert "GROUP BY replay_id" in stats and "countIf(hits > 0) AS games" in stats and "countIf(hits = 2) AS both_sides" in stats
+    assert "argMinIf(result, player_id, m) AS hit_result" in stats and "count() AS scope_games" in stats
+    assert "WHERE seat = 1" in rows and "count() OVER (PARTITION BY replay_id) = 2 AS both_sides" in rows
     assert params["p1"] == "[('NE',0),('NE',1)]" and params["p2"] == "[('OC',0)]"
     # group 1: a 1st hero alone reads the heroes array; Archer x5 by 6:00 counts orders
     assert "(has({p4:Array(String)}, heroes[1]) AND (replay_id, player_id) IN (SELECT replay_id, player_id FROM w3g.replay_events WHERE has({p5:Array(String)}, race) AND has({p6:Array(String)}, event_type) AND has({p7:Array(String)}, subject_code) AND time_ms <= 360000 AND is_repeat = 0 GROUP BY replay_id, player_id HAVING count() >= 5))" in rows
@@ -166,8 +171,24 @@ def test_search_counts_the_scope_and_matches_any_group() -> None:
     assert ") OR (NOT ((replay_id, player_id) IN (SELECT replay_id, player_id FROM w3g.replay_events WHERE " in rows
     # the opponent's steps hold on his own row
     assert "(replay_id, opponent_id) IN (SELECT replay_id, player_id FROM w3g.player_games WHERE ((has({p" in rows
-    assert rows.endswith("ORDER BY duration_ms, replay_id, player_id\nLIMIT 25 OFFSET 25")
+    assert rows.endswith("ORDER BY duration_ms, replay_id\nLIMIT 25 OFFSET 25")
     assert params["p3"] == "win"
+
+
+@pytest.mark.parametrize(("player", "opponent", "want"), [
+    ({}, {}, (False, False)),  # every game fits both ways round
+    ({"race": ["NE"]}, {"race": ["NE"]}, (False, False)),  # a mirror
+    ({"race": ["NE", "RN"]}, {"race": ["RN", "NE"]}, (False, False)),  # the same race values in another order
+    ({"race": ["NE", "RN"]}, {"race": ["NE"]}, (True, True)),  # Include Random on one side only
+    ({"race": ["NE"]}, {}, (True, True)),
+    ({"name": "Medusa#31315"}, {}, (True, True)),
+    ({"outcome": "win"}, {}, (True, False)),  # the outcome tells the matches apart, not the scope
+    ({"groups": [{"steps": [ss("hero", "Edem", nth=1)]}]}, {}, (True, False)),
+    ({"groups": [{"steps": [ss("hero", "Edem", nth=1)]}]}, {"groups": [{"steps": [ss("hero", "Edem", nth=1)]}]}, (False, False)),
+    ({"opened_with": ["eate"]}, {}, (True, False)),
+])
+def test_a_record_needs_sides_that_differ(player: dict[str, object], opponent: dict[str, object], want: tuple[bool, bool]) -> None:
+    assert records(SearchRequest(player=player, opponent=opponent)) == want
 
 
 @pytest.mark.parametrize("steps", [
@@ -208,7 +229,9 @@ def test_strategy_stats_count_each_preset_of_the_race_in_one_statement() -> None
     req = StrategiesRequest(race=["UD", "RU"], opponent_race=["NE"], filters={"minutes": {"gte": 2}})
     sql, ids, params = compile_strategies(req, PRESETS, PG)
     assert ids == [i for i, p in PRESETS.items() if p.race == "UD"]
-    assert sql.count("countIf(s") == 3 * len(ids) and sql.count("sumIf(duration_ms, s") == len(ids)
+    assert sql.count("countIf(g") == 3 * len(ids) and sql.count("sumIf(game_ms, g") == len(ids)
+    # per game: a preset holds when a seating holds it, its result from the lower such player slot
+    assert sql.count("max(s") == len(ids) and sql.count("argMinIf(result, player_id, s") == len(ids) and "GROUP BY replay_id" in sql
     assert "FROM w3g.player_games WHERE minutes >= {p0:Float64} AND has({p1:Array(Tuple(String, UInt8))}, (race, random))" in sql
     assert params["p1"] == "[('UD',0),('UD',1)]" and params["p2"] == "[('NE',0)]"
     # the late expo: the Crypt Lord first of its parent, an expansion 8:00 to 15:00 and none by 8:00

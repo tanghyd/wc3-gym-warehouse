@@ -37,25 +37,26 @@
   "response": {
     "status": 200,
     "body": {
-      "total": 2,
+      "total": 1,
       "summary": {
-        "games": 2,
+        "games": 1,
         "wins": 1,
-        "losses": 1,
-        "duration_ms_total": 1874438,
-        "both_players": 1
+        "losses": 0,
+        "duration_ms_total": 937219,
+        "both": 1
       },
       "scope": {
-        "games": 6,
-        "wins": 3,
-        "losses": 3,
-        "duration_ms_total": 3494238
+        "games": 3,
+        "wins": null,
+        "losses": null,
+        "duration_ms_total": 1747119
       },
       "replays": [
         {
           "replay_id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
           "map": "Concealed Hill",
           "duration_ms": 937219,
+          "both": true,
           "player": {
             "name": "thanks#11187",
             "race": "NE",
@@ -87,45 +88,6 @@
               {
                 "code": "Otch",
                 "level": 1
-              }
-            ]
-          }
-        },
-        {
-          "replay_id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
-          "map": "Concealed Hill",
-          "duration_ms": 937219,
-          "player": {
-            "name": "Okeanos#22605",
-            "race": "OC",
-            "won": false,
-            "heroes": [
-              {
-                "code": "Ofar",
-                "level": 3
-              },
-              {
-                "code": "Oshd",
-                "level": 2
-              },
-              {
-                "code": "Otch",
-                "level": 1
-              }
-            ]
-          },
-          "opponent": {
-            "name": "thanks#11187",
-            "race": "NE",
-            "won": true,
-            "heroes": [
-              {
-                "code": "Edem",
-                "level": 4
-              },
-              {
-                "code": "Ekee",
-                "level": 4
               }
             ]
           }

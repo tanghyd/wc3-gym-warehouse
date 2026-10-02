@@ -54,7 +54,7 @@
         "wins": 1,
         "losses": 0,
         "duration_ms_total": 937219,
-        "both_players": 0
+        "both": 0
       },
       "scope": {
         "games": 3,
@@ -67,6 +67,7 @@
           "replay_id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
           "map": "Concealed Hill",
           "duration_ms": 937219,
+          "both": false,
           "player": {
             "name": "thanks#11187",
             "race": "NE",

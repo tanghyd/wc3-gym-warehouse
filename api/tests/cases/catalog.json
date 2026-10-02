@@ -77,9 +77,9 @@
           "avg_minutes",
           "avg_apm",
           "players",
-          "replays",
           "minutes_total",
-          "apm_total"
+          "apm_total",
+          "apm_players"
         ],
         "steps": true,
         "labels": {
@@ -106,7 +106,6 @@
           "avg_minutes": "Avg length",
           "avg_apm": "Avg APM",
           "players": "Players",
-          "replays": "Replays",
           "minutes_total": "Total minutes"
         },
         "types": {
@@ -115,7 +114,6 @@
           "avg_minutes": "average",
           "avg_apm": "average",
           "players": "distinct",
-          "replays": "distinct",
           "minutes_total": "count"
         },
         "parts": {
@@ -129,12 +127,10 @@
           ],
           "avg_apm": [
             "apm_total",
-            "games"
+            "apm_players"
           ]
         },
-        "notes": {
-          "games": "One per player, so a mirror game can count twice"
-        }
+        "notes": {}
       }
     }
   }
