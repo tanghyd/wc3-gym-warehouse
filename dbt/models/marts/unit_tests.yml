@@ -67,6 +67,12 @@ unit_tests:
              winning_team_id Int8, duplicate_of String',
             ('r1', '1on1', 'Echo Isles', '3.0', '2026-10-01 08:00:00', 600000, 0, ''),
             ('r2', '1on1', 'Echo Isles', '3.0', '2026-10-01 08:00:00', 600000, 0, 'r1'))
+      - input: ref('player_starts')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, player_id UInt8, start_x Nullable(Float64), start_y Nullable(Float64)',
+            ('r1', 1, -4000, -4000), ('r1', 2, 4000, 4000))
     expect:
       format: sql
       rows: |
@@ -76,13 +82,13 @@ unit_tests:
            added_at DateTime, duration_ms UInt32, minutes Float64, minutes_5 UInt16, result String, apm UInt32,
            heroes Array(String), hero_levels Array(UInt8), first_hero String, second_hero String, third_hero String,
            opener Array(String), opener_1 String, opener_2 String, opener_3 String, opener_4 String,
-           opener_5 String, opener_6 String',
+           opener_5 String, opener_6 String, opp_start_x Nullable(Float64), opp_start_y Nullable(Float64)',
           ('r1', 1, 'Alice', 'HU', 0, 2, 'Bob', 'OC', 1, 'HvO', 'Echo Isles', '3.0', '2026-10-01 08:00:00', 600000, 10, 10,
            'win', 100, ['Hamg'], [3], 'Hamg', '', '',
-           ['halt', 'hbar', 'hlum', 'htow', 'hvlt', 'hgra'], 'halt', 'hbar', 'hlum', 'htow', 'hvlt', 'hgra'),
+           ['halt', 'hbar', 'hlum', 'htow', 'hvlt', 'hgra'], 'halt', 'hbar', 'hlum', 'htow', 'hvlt', 'hgra', 4000, 4000),
           ('r1', 2, 'Bob', 'OC', 1, 1, 'Alice', 'HU', 0, 'HvO', 'Echo Isles', '3.0', '2026-10-01 08:00:00', 600000, 10, 10,
            'loss', 120, ['Ofar', 'Obla'], [2, 1], 'Ofar', 'Obla', '',
-           ['obar'], 'obar', '', '', '', '', ''))
+           ['obar'], 'obar', '', '', '', '', '', -4000, -4000))
 
   - name: race_code_maps_parser_letters
     description: >-
@@ -291,3 +297,58 @@ unit_tests:
            0, -1, '', 3, '3:A,B,C,D', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
           ('t4', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
            0, -1, '', 4, '4:A,B,C,D', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0))
+
+  - name: player_starts_rules
+    description: >-
+      player_starts names a start by the three rules in order. r1 player 1 builds first beside
+      start 0 (first building). r1 player 2 builds first off every start, then beside start 1
+      (later building). r2 player 2 builds only mid-map on a two-start map, so he gets the start
+      player 1 does not hold (opponent). r3 player 2 has only a placement with no x on a four-start
+      map, so he has none. Orders with no x, such as a unit or a hall upgrade, never anchor a
+      start. dbt 2.0.6 compares start_x, start_y and start_source (measured), not player_id.
+    model: player_starts
+    given:
+      - input: ref('start_locations')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'map String, slot UInt8, x Float64, y Float64, source String',
+            ('M2', 0, -4000, -4000, 'map file'), ('M2', 1, 4000, 4000, 'map file'),
+            ('M4', 0, -4000, -4000, 'map file'), ('M4', 1, 4000, 4000, 'map file'),
+            ('M4', 2, -4000, 4000, 'map file'), ('M4', 3, 4000, -4000, 'map file'))
+      - input: ref('replays')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, type String, map String',
+            ('r1', '1on1', 'M2'), ('r2', '1on1', 'M2'), ('r3', '1on1', 'M4'))
+      - input: ref('replay_players')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, player_id UInt8, team_id Int8',
+            ('r1', 1, 0), ('r1', 2, 1), ('r2', 1, 0), ('r2', 2, 1), ('r3', 1, 0), ('r3', 2, 1))
+      - input: ref('player_order_events')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, player_id UInt8, kind String, x Nullable(Float32), y Nullable(Float32), time_ms UInt32, seq UInt32',
+            ('r1', 1, 'unit',     NULL,  NULL,  1000,  1),
+            ('r1', 1, 'building', -3500, -3600, 5000,  1),
+            ('r1', 2, 'building', 1000,  1500,  15000, 1),
+            ('r1', 2, 'building', 3300,  3500,  20000, 2),
+            ('r2', 1, 'building', -3400, -3400, 6000,  1),
+            ('r2', 2, 'building', 300,   200,   27000, 1),
+            ('r3', 1, 'building', -3600, 3500,  6000,  1),
+            ('r3', 2, 'building', NULL,  NULL,  90000, 1))
+    expect:
+      format: sql
+      rows: |
+        SELECT * FROM VALUES(
+          'replay_id String, player_id UInt8, start_x Nullable(Float64), start_y Nullable(Float64), start_source String',
+          ('r1', 1, -4000, -4000, 'first building'),
+          ('r1', 2, 4000,  4000,  'later building'),
+          ('r2', 1, -4000, -4000, 'first building'),
+          ('r2', 2, 4000,  4000,  'opponent'),
+          ('r3', 1, -4000, 4000,  'first building'),
+          ('r3', 2, NULL,  NULL,  'none'))

@@ -7,7 +7,8 @@
 -- first_hero to third_hero are heroes[1] to heroes[3], and minutes_5 is the
 -- game length in 5-minute bins. opener_1..opener_6 are the first six non-supply buildings
 -- in order, back-to-back repeats dropped, '' past the end, so the opener tree is a
--- GROUP BY over them.
+-- GROUP BY over them. opp_start_x and opp_start_y are the opponent's start location
+-- (player_starts), NULL when no rule names it: a forward step measures from there.
 {{ config(order_by='(race, opponent_race, map, replay_id, player_id)') }}
 
 WITH
@@ -60,7 +61,9 @@ SELECT
     o.opener                                          AS opener,
     toLowCardinality(o.opener[1]) AS opener_1, toLowCardinality(o.opener[2]) AS opener_2,
     toLowCardinality(o.opener[3]) AS opener_3, toLowCardinality(o.opener[4]) AS opener_4,
-    toLowCardinality(o.opener[5]) AS opener_5, toLowCardinality(o.opener[6]) AS opener_6
+    toLowCardinality(o.opener[5]) AS opener_5, toLowCardinality(o.opener[6]) AS opener_6,
+    os.start_x                                        AS opp_start_x,
+    os.start_y                                        AS opp_start_y
 FROM {{ ref('replay_players') }} AS rp
 INNER JOIN {{ ref('replays') }} AS r ON r.replay_id = rp.replay_id
 -- Any two distinct teams count as opponents; lobbies allow arbitrary team slots.
@@ -68,5 +71,6 @@ INNER JOIN {{ ref('replay_players') }} AS opp
     ON opp.replay_id = rp.replay_id AND opp.team_id != rp.team_id
 LEFT JOIN openers AS o ON o.replay_id = rp.replay_id AND o.player_id = rp.player_id
 LEFT JOIN hero_lists AS hs ON hs.replay_id = rp.replay_id AND hs.player_id = rp.player_id
+LEFT JOIN {{ ref('player_starts') }} AS os ON os.replay_id = opp.replay_id AND os.player_id = opp.player_id
 -- A game that arrived as two files counts once, through the copy replays picks.
 WHERE r.type = '1on1' AND r.duplicate_of = ''

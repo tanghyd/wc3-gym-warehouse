@@ -152,6 +152,10 @@ models:
         description: The fifth building in opener, or '' past its end.
       - name: opener_6
         description: The sixth building in opener, or '' past its end.
+      - name: opp_start_x
+        description: The opponent's start location x (player_starts.start_x), NULL when no rule names it. A forward step measures a placement's distance from here.
+      - name: opp_start_y
+        description: The opponent's start location y (player_starts.start_y), NULL when no rule names it.
 
   - name: mappings
     description: >-
@@ -573,3 +577,45 @@ models:
         description: The source's display name, such as Ancient of War, Demon Hunter or Night Elf.
       - name: race
         description: The race whose players use the object (HU, OC, NE, UD), or '' for a neutral source that every race uses.
+
+  - name: player_starts
+    description: >-
+      One row per player of every 1on1 replay, duplicates included: the start location he began
+      at, from the start_locations seed. A replay names no start, so it is read from where the
+      player builds. 1. The start within 1,500 of his earliest building placement that lies within
+      1,500 of any start. 2. Else, on a two-start map, the start his opponent does not hold by
+      rule 1. 3. Else none, with start_x and start_y NULL. player_games carries the opponent's
+      start as opp_start_x and opp_start_y for the forward step option.
+    data_tests:
+      - unique:
+          name: player_starts_one_row_per_player
+          description: A player has one start per replay.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every start row names its replay.
+          - relationships:
+              description: Every start row belongs to a replay in replays.
+              arguments:
+                to: ref('replays')
+                field: replay_id
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+      - name: start_x
+        description: The start's map x from start_locations, NULL when no rule names a start.
+      - name: start_y
+        description: The start's map y from start_locations, NULL when no rule names a start.
+      - name: start_source
+        description: >-
+          Which rule named the start. first building and later building are rule 1 (the earliest
+          placement within 1,500 of a start is the player's first placement, or a later one),
+          opponent is rule 2 and none is rule 3.
+        data_tests:
+          - accepted_values:
+              description: The start comes from one of the three rules.
+              arguments:
+                values: [first building, later building, opponent, none]
