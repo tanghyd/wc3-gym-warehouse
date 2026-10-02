@@ -286,10 +286,11 @@ type Code = Annotated[str, Field(pattern=r"^[A-Za-z0-9_]{1,8}$")]
 
 class SearchStep(BaseModel):
     """One step of a side: at least `count` orders of any of `codes`, each inside the game time
-    window; `exactly` makes the count exact. A `then` step comes after the step above, all its
-    orders within `within_s` of it when set. `nth` asks a hero step for the side's 1st, 2nd or
-    3rd hero. `before` keeps the orders before the order that completes step `before` of the
-    group. `negate` turns an `and` step into "did not happen"."""
+    window; `exactly` makes the count exact. A skill step's count is a level: one point that takes
+    the skill to level `count` or more, and with `exactly` the skill's highest level. A `then` step
+    comes after the step above, all its orders within `within_s` of it when set. `nth` asks a hero
+    step for the side's 1st, 2nd or 3rd hero. `before` keeps the orders before the order that
+    completes step `before` of the group. `negate` turns an `and` step into "did not happen"."""
 
     kind: Literal["building", "unit", "upgrade", "item", "hero", "skill"]
     codes: Annotated[list[Code], Field(min_length=1, max_length=40)]
@@ -370,11 +371,19 @@ def chains(group: Group) -> list[list[int]]:
     return out
 
 
-def _event_condition(s: SearchStep, params: Params) -> str:
+def _need(s: SearchStep) -> int:
+    """The orders that complete a step: `count`, or for a skill step the one point that takes the skill to level `count`."""
+    return 1 if s.kind == "skill" else s.count
+
+
+def _event_condition(s: SearchStep, params: Params, level: int | None = None) -> str:
+    """The rows of a step's orders. A skill step reads its points at level `count` or more, or at `level` or more when set."""
     parts = [
         f"has({params.add('Array(String)', array(EVENT_TYPES[s.kind]))}, event_type)",
         f"has({params.add('Array(String)', array(s.codes))}, subject_code)",
     ]
+    if s.kind == "skill":
+        parts.append(f"level >= {level or s.count}")
     if s.nth is not None:  # a hero_trained row's seq is the hero's place in player_games.heroes
         parts.append(f"seq = {s.nth}")
     if s.from_s is not None:
@@ -385,9 +394,14 @@ def _event_condition(s: SearchStep, params: Params) -> str:
 
 
 def _before_condition(s: SearchStep, i: int) -> str:
-    """The condition that step i, a `before` step, holds before `e`, the time the step it names is complete."""
+    """The condition that step i, a `before` step, holds before `e`, the time the step it names is complete.
+    An exact skill step holds when the skill is at level `count` and no higher (`x`, its points past it)."""
     n = f"arrayCount(y -> y < e, t{i})"
-    return f"{n} = 0" if s.negate else f"{n} = {s.count}" if s.exactly else f"{n} >= {s.count}"
+    if s.negate:
+        return f"{n} = 0"
+    if s.exactly and s.kind == "skill":
+        return f"{n} >= 1 AND arrayCount(y -> y < e, x{i}) = 0"
+    return f"{n} = {s.count}" if s.exactly else f"{n} >= {_need(s)}"
 
 
 def _chain_sql(steps: list[SearchStep], chain: list[int], races: list[str], params: Params) -> str:
@@ -399,38 +413,40 @@ def _chain_sql(steps: list[SearchStep], chain: list[int], races: list[str], para
     first = steps[chain[0]]
     if len(chain) == 1 and not bounds[chain[0]]:  # one block of orders: a count
         sql = f"SELECT replay_id, player_id FROM {EVENTS} WHERE {' AND '.join([*where, _event_condition(first, params), 'is_repeat = 0'])} GROUP BY replay_id, player_id"
-        if first.exactly:
-            return sql + f" HAVING count() = {first.count}"
-        return sql + (f" HAVING count() >= {first.count}" if first.count > 1 else "")
+        if first.exactly:  # a skill step names the highest level, any other step the number of orders
+            return sql + (f" HAVING max(level) = {first.count}" if first.kind == "skill" else f" HAVING count() = {first.count}")
+        return sql + (f" HAVING count() >= {first.count}" if _need(first) > 1 else "")
     used = chain + [b for k in chain for b in bounds[k]]
     where += [
         f"has({params.add('Array(String)', array(sorted({t for i in used for t in EVENT_TYPES[steps[i].kind]})))}, event_type)",
         f"has({params.add('Array(String)', array(sorted({c for i in used for c in steps[i].codes})))}, subject_code)",
         "is_repeat = 0",
     ]
-    # Per player: t, the sorted times of each step's orders. f, the times at which each chain step
-    # can be complete: a block of `count` orders after the earliest f above, or after any f above
+    # Per player: t, the sorted times of each step's orders, and x, those of an exact skill step's
+    # points past its level. f, the times at which each chain step can be complete: a block of
+    # `count` orders (one point for a skill step) after the earliest f above, or after any f above
     # and within `within_s` of it, where c counts this step's orders up to each f above.
     cols = [f"arraySort(groupArrayIf(time_ms, {_event_condition(steps[i], params)})) AS t{i}" for i in used]
+    cols += [f"groupArrayIf(time_ms, {_event_condition(steps[i], params, steps[i].count + 1)}) AS x{i}" for i in used if steps[i].exactly and steps[i].kind == "skill"]
     holds = []
     above = None
     for k in chain:
         s = steps[k]
         if above is None:
-            ends = f"arraySlice(t{k}, {s.count})"
+            ends = f"arraySlice(t{k}, {_need(s)})"
         elif s.within_s is None:
-            ends = f"arraySlice(arrayFilter(x -> x > if(empty(f{above}), {NEVER_MS}, f{above}[1]), t{k}), {s.count})"
+            ends = f"arraySlice(arrayFilter(x -> x > if(empty(f{above}), {NEVER_MS}, f{above}[1]), t{k}), {_need(s)})"
         else:
             cols.append(f"arrayMap(e -> arrayCount(y -> y <= e, t{k}), f{above}) AS c{k}")
             ends = (
-                f"arrayFilter((x, i) -> arrayExists((e, c) -> x > e AND x <= e + {s.within_s * 1000} AND i >= c + {s.count},"
+                f"arrayFilter((x, i) -> arrayExists((e, c) -> x > e AND x <= e + {s.within_s * 1000} AND i >= c + {_need(s)},"
                 f" f{above}, c{k}), t{k}, arrayEnumerate(t{k}))"
             )
         if bounds[k]:
             ends = f"arrayFilter(e -> {' AND '.join(_before_condition(steps[b], b) for b in bounds[k])}, {ends})"
         cols.append(f"{ends} AS f{k}")
         if s.exactly:
-            holds.append(f"length(t{k}) <= {s.count}")
+            holds.append(f"empty(x{k})" if s.kind == "skill" else f"length(t{k}) <= {s.count}")
         above = k
     holds.append(f"notEmpty(f{above})")
     return (
@@ -521,15 +537,16 @@ ORDER BY p.player_id""",
     # The timeline: orders (custom-map `unknown` codes and repeat clicks left out), skill
     # points under their hero (repeat clicks left out), retrains, and each hero at the order
     # that trained it, as replay_events times it. seq 0 sorts hero_trained before a skill at the same ms.
-    "events": """SELECT player_id, time_ms, event_type, code, hero_code FROM (
-    SELECT player_id, time_ms, kind AS event_type, object_code AS code, CAST(NULL, 'Nullable(String)') AS hero_code, seq
+    # level is the skill level a skill point gives, 0 on every other row.
+    "events": """SELECT player_id, time_ms, event_type, code, hero_code, level FROM (
+    SELECT player_id, time_ms, kind AS event_type, object_code AS code, CAST(NULL, 'Nullable(String)') AS hero_code, toUInt8(0) AS level, seq
     FROM w3g.player_order_events WHERE replay_id = {id:String} AND kind != 'unknown' AND is_repeat = 0
     UNION ALL
     SELECT player_id, time_ms, if(event_type = 'retraining', 'hero_retrained', 'hero_skill'),
-           if(event_type = 'retraining', hero_id, ability_id), hero_id, seq
+           if(event_type = 'retraining', hero_id, ability_id), hero_id, level, seq
     FROM w3g.hero_ability_events WHERE replay_id = {id:String} AND is_repeat = 0
     UNION ALL
-    SELECT player_id, trained_ms, 'hero_trained', hero_id, NULL, 0
+    SELECT player_id, trained_ms, 'hero_trained', hero_id, NULL, 0, 0
     FROM w3g.player_heroes WHERE replay_id = {id:String}
 )
 ORDER BY time_ms, player_id, seq""",

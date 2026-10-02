@@ -1,0 +1,14 @@
+{
+  "operator": "a skill count is the skill level",
+  "picked_by": "skill_level.sql",
+  "request": {
+    "filters": {"replay_id": ["00541507accd83427c31531f7191b231cdb127dfcb9c06bcf8e4ab14b315f874","15db0f39e45a324370f7c9ca68603c114bb1488f860eab730a0cd1fa8a5d2b61","25885417fb41d78491b2697be50d2456cfc33839c79b0eac12d3b00c26b5668e","3da49f4bae7b9fd038e8b79bc06730cdbfabac3ee0169c672f56a0742b28e12a","6d015cab7faedd8e53d130c1185e1b3848bfa5e450bfa4ae75efc4b82681db36","ad9e11cdf59a5065d4b280256037c00d660f1f49ce1243de6073fa4749db3d84","afe7b7e2cf721fa3054be99859e87a95d56a07fee05bb2e8358179997609836e","c82420f9e9a6c44fa3fe433afbb2f7e057ebf0a8fd659d465b5ced63d91d755d","cef2058e22cb2393ad733bdda282ddc3ba931b261b37efa8ae3c4a59d62cc5b5","f30e0494fcdc157b4637ae81d9c1e6354d895c472e2d0af633436c520e2d43d5"]},
+    "player": {"groups": [{"steps": [{"kind": "skill", "codes": ["AUsl"], "count": 3}]},
+                          {"steps": [{"kind": "skill", "codes": ["AEsh"], "count": 3, "exactly": true}]}]},
+    "limit": 100
+  },
+  "expected": {
+    "games": 6,
+    "matches": [["3da49f4bae7b9fd038e8b79bc06730cdbfabac3ee0169c672f56a0742b28e12a","LuckyPants#253888"],["6d015cab7faedd8e53d130c1185e1b3848bfa5e450bfa4ae75efc4b82681db36","ObnoxiousDMG#1727"],["afe7b7e2cf721fa3054be99859e87a95d56a07fee05bb2e8358179997609836e","Arcadeus#2897"],["c82420f9e9a6c44fa3fe433afbb2f7e057ebf0a8fd659d465b5ced63d91d755d","DoofDoof#11366"],["cef2058e22cb2393ad733bdda282ddc3ba931b261b37efa8ae3c4a59d62cc5b5","Xmpel#11825"],["f30e0494fcdc157b4637ae81d9c1e6354d895c472e2d0af633436c520e2d43d5","Lucifer#28147"]]
+  }
+}

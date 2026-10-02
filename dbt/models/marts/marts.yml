@@ -334,6 +334,8 @@ models:
           player_games.heroes (1 for the first hero), or 0 for a hero with no code.
       - name: is_repeat
         description: The is_repeat flag of the order or skill point, 0 on hero_trained. Searches read only rows with 0.
+      - name: level
+        description: The skill level a hero_skill point gives, from hero_ability_events.level, 0 on every other row. A skill step of count N matches a point with level N or more.
 
   - name: replay_players
     description: One row per player per replay, with the player's slot, team, race, APM and action counts. Observers are not players and never appear.
@@ -475,7 +477,9 @@ models:
       - name: seq
         description: "{{ doc('seq') }} Numbered within the hero's skill list."
       - name: is_repeat
-        description: 1 on a skill point under 1000 ms after the same hero's previous point in that skill, else 0, the rule of player_order_events.is_repeat.
+        description: 1 on a skill point the game did not take, else 0. That is a point under 1000 ms after the same hero's previous point in that skill (the rule of player_order_events.is_repeat), or a point past level 3, the most a normal skill has.
+      - name: level
+        description: The skill's level after the point, the hero's points in that skill since his last retraining with repeat clicks left out. A repeat click keeps the level of the point before it. 0 on a retraining.
 
   - name: player_heroes
     description: One row per hero a player spent a skill point on, with its level at the end of the game.

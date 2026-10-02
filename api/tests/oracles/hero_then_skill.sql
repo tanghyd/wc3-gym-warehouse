@@ -16,19 +16,23 @@ trained AS (
            arrayMax(arrayFilter(x -> x <= s.first_ms, arrayFilter((x, i) -> i = 1 OR x - t[i - 1] >= 1000, t, arrayEnumerate(t)))) AS order_ms, arrayMin(t) AS first_order_ms
     FROM first_skill AS s INNER JOIN hero_orders AS o USING (replay_id, player_id, hero_id)
 ),
-mb AS (SELECT replay_id, player_id, arraySort(groupArray(time_ms)) AS t FROM w3g.hero_ability_events
-       WHERE event_type = 'ability' AND ability_id = 'AEmb' GROUP BY replay_id, player_id),
+-- the real Mana Burn points: a point under 1000 ms after the one before it is a repeat click
+mb AS (SELECT replay_id, player_id, arrayFilter((x, i) -> i = 1 OR x - a[i - 1] >= 1000, a, arrayEnumerate(a)) AS t
+       FROM (SELECT replay_id, player_id, arraySort(groupArray(time_ms)) AS a FROM w3g.hero_ability_events
+             WHERE event_type = 'ability' AND ability_id = 'AEmb' GROUP BY replay_id, player_id)),
+-- "Mana Burn first and only" is one real point, his first skill point: it holds only when the hero is timed by his training order
 facts AS (
     SELECT ok.replay_id AS replay_id, ok.player AS player,
            h.hero_id != '' AND arrayExists(x -> x > h.order_ms, mb.t) AS holds,
-           multiIf(h.hero_id = '', 'no Demon Hunter', empty(mb.t), 'no Mana Burn', mb.t[1] = h.first_ms, 'Mana Burn first', 'Mana Burn later') AS kind
+           multiIf(h.hero_id = '', 'no Demon Hunter', empty(mb.t), 'no Mana Burn', mb.t[1] = h.first_ms AND length(mb.t) = 1, 'Mana Burn first and only',
+                   mb.t[1] = h.first_ms, 'Mana Burn first', 'Mana Burn later') AS kind
     FROM ok LEFT JOIN (SELECT * FROM trained WHERE hero_id = 'Edem') AS h USING (replay_id, player_id)
     LEFT JOIN mb USING (replay_id, player_id)
 ),
 chosen AS (
     SELECT replay_id FROM (
         SELECT replay_id, kind, row_number() OVER (PARTITION BY kind ORDER BY cityHash64(replay_id)) AS n FROM facts)
-    WHERE n <= if(kind = 'Mana Burn first', 4, 2)
+    WHERE n <= if(kind = 'Mana Burn first and only', 4, 2)
 )
 SELECT toJSONString(arraySort(groupUniqArray(replay_id))) AS replay_ids,
        toJSONString(arraySort(groupArrayIf((replay_id, player), holds))) AS matches,
