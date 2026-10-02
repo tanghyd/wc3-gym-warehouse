@@ -159,7 +159,7 @@ without=eden                      no Ancient of Wonders ordered, up to 3 codes (
 - The step token grammar, including `~` on step 0 (passed through, the API rejects it), `@-300`, `*5` and `^` (PR 16).
 - `[{}, {...}]` when only slot 2 is set, `[]` when nothing is set.
 - Code to `event_type` for `eate`, `ankh`, `Recb`, `Edem`, `AEmb` (api.md 3.2).
-- `m:ss` parsing: `5` gives 300 s, `5:30` gives 330 s, blank gives none.
+- Time parsing (`parseMss` in `web/src/lib/steps.ts`): `2:30` and `02:30` give 150 s, `150` gives 150 s, blank gives none, `2:5` and `6 min` are no time.
 - `sel=a.b.c` with no `open` decodes to `open` = `a`, `a.b`.
 - `kinds=building,unit` round trips to the two chips; absent decodes to every kind.
 - `WIN_RATE_FLOOR` equals 10 (section 13).
@@ -562,7 +562,7 @@ Rejected:
 - Steps show as a numbered list, because the order is the query.
 - A step reads as an order: the timing row says "ordered within 30 s", "ordered by 5:00".
 - Reorder: remove and add again. Drag-to-reorder is skipped until players ask.
-- Decided: timing entry is `m:ss` ("5" is 5:00). Why: opener timings are under a minute.
+- Decided (Daniel 2026-10-02): a time field takes `m:ss`, `mm:ss` or whole seconds ("150" is 2:30). Its placeholder is "m:ss" and one muted line under it reads "m:ss, such as 2:30, or seconds". On blur it reads back as `m:ss`; other text stays in the field, is not applied, and the line under it turns to ink: "Not a time. Type m:ss, such as 2:30, or seconds." Why: "5" as 5:00 was a format nobody could guess. The same field takes the "Then within" gap.
 
 ### 9.3 Object picker (`ObjectPicker.vue`)
 
@@ -598,7 +598,7 @@ PR 15 adds the API fields (api.md 3.4). PR 16 adds these controls. The codec is 
 
 | Form | Control | Label on screen | Review (stories.md story 1) |
 |---|---|---|---|
-| Minimum count | "At least" number field in the step's timing row, minimum 2; blank clears the token (api.md bounds it 2-100) | "at least 5 Archer orders by 5:00" | Night Elf, `earc` at least 5 by 5:00: fixtures 1, dev set 1,100 |
+| Minimum count | "At least" field between a minus and a plus button: a typed whole number (`inputmode="numeric"`), the first click selects it so a digit replaces it; blank or 0 is 1 again on blur, past 9 is 9 (the API bounds it 1-9) | "at least 5 Archer orders by 5:00" | Night Elf, `earc` at least 5 by 5:00: fixtures 1, dev set 1,100 |
 | Without | "Without" chips under the steps, up to 3 codes, each from the picker. Button hidden at 3. | "no Ancient of Wonders ordered" | Night Elf, `eate`, without `eden`: 1, 573 |
 | First hero | "First hero" switch on a hero step. Shown only for the `hero_trained` kind. | "first hero Demon Hunter" | Night Elf, first hero `Edem`: 3, 1,430 |
 

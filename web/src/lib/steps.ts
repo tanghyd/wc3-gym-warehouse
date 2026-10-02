@@ -131,11 +131,11 @@ const MAX_TIME = 36000;
 export const MAX_STEPS = 8;
 export const MAX_GROUPS = 4;
 
-/** "5" (minutes) or "5:30" as whole seconds; null when blank, not a time or past 600:00. */
+/** "2:30", "02:30" or "150" (seconds) as whole seconds; null when blank, not a time or past 600:00. */
 export function parseMss(v: string): number | null {
-  const m = /^\s*(\d+(?:\.\d+)?)(?::([0-5]?\d))?\s*$/.exec(v);
-  if (!m || (m[2] !== undefined && m[1].includes("."))) return null;
-  const s = Math.round(Number(m[1]) * 60 + Number(m[2] ?? 0));
+  const m = /^\s*(?:(\d+):([0-5]\d)|(\d+))\s*$/.exec(v);
+  if (!m) return null;
+  const s = m[3] !== undefined ? Number(m[3]) : Number(m[1]) * 60 + Number(m[2]);
   return s <= MAX_TIME ? s : null;
 }
 

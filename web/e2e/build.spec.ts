@@ -47,6 +47,57 @@ test.describe("step editor", () => {
     expect(await listed(page)).toEqual(rowsOf(want));
   });
 
+  test("the count takes a typed number, and a game time takes m:ss or seconds", async ({ page, request }) => {
+    await page.goto(q({ race: "NE" }));
+    const player = side(page, "Player");
+    await addStep(player, "Trained");
+    const p = picker(player);
+    await p.getByRole("button", { name: "Ancient of War", exact: true }).click();
+    await p.getByRole("button", { name: /^Archer/ }).click();
+    const settings = player.getByRole("group", { name: "Settings of step 1" });
+    const count = settings.getByRole("textbox", { name: "At least" });
+    await expect(count).toHaveAttribute("inputmode", "numeric");
+    // a click selects the count, so a typed digit replaces it; the buttons still step it
+    await count.click();
+    await page.keyboard.type("4");
+    await expect(count).toHaveValue("4");
+    await settings.getByRole("button", { name: "More" }).click();
+    await expect(count).toHaveValue("5");
+    // blank or 0 is 1 again on blur, past 9 is 9
+    for (const [typed, shown] of [["", "1"], ["0", "1"], ["12", "9"]]) {
+      await count.fill(typed);
+      await count.blur();
+      await expect(count).toHaveValue(shown);
+    }
+    await count.fill("5");
+    // the format line under the game time, and m:ss in the empty fields
+    await expect(settings.getByText("m:ss, such as 2:30, or seconds")).toBeVisible();
+    const from = settings.getByRole("textbox", { name: "From (m:ss)" });
+    const to = settings.getByRole("textbox", { name: "To (m:ss)" });
+    await expect(from).toHaveAttribute("placeholder", "m:ss");
+    // seconds and mm:ss read back as m:ss
+    await from.fill("150");
+    await from.blur();
+    await expect(from).toHaveValue("2:30");
+    await to.fill("06:00");
+    await to.blur();
+    await expect(to).toHaveValue("6:00");
+    // other text is refused with one line under the fields, and the step keeps its last time
+    await to.fill("6 min");
+    await to.blur();
+    await expect(settings.getByText("Not a time. Type m:ss, such as 2:30, or seconds.")).toBeVisible();
+    await expect(to).toHaveAttribute("aria-invalid", "true");
+    await to.fill("6:00");
+    await expect(settings.getByText("m:ss, such as 2:30, or seconds")).toBeVisible();
+    await settings.getByRole("button", { name: "Done" }).click();
+    await expect(player.getByRole("button", { name: "Step 1: Trained Archer ×5" })).toBeVisible();
+    await expect(player.locator(".qual")).toHaveText("2:30 to 6:00");
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page).toHaveURL(/[?&]steps=trained%3Aearc\*5%40150-360(&|$)/);
+    const want = await search(request, { player: { race: ["NE"], groups: [{ steps: [{ kind: "unit", codes: ["earc"], count: 5, from_s: 150, to_s: 360 }] }] } });
+    expect(await strip(page)).toEqual(stripOf(want));
+  });
+
   test("Hired lists mercenaries by camp, apart from Trained", async ({ page, request }) => {
     const groups = await objects(request, "hired", ["OC"]);
     expect(groups.map((g) => g.source.name).sort()).toEqual(["Goblin Laboratory", "Mercenary Camp"]);
