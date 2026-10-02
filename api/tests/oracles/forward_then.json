@@ -1,0 +1,13 @@
+{
+  "operator": "forward in a then-chain: 2 forward Scout Towers by 5:00 after the first Barracks",
+  "picked_by": "forward_then.sql",
+  "request": {
+    "filters": {"replay_id": ["3bb24a488c8d46246d5d175b875786865886246b4f8151f7558c1bac9a806bc7","499de5f7a35191e5398f83dd5c2776b28787d43d471ae51bde3095d97c618759","64a9ad4d80d606c2e76e2f0d07966d68eabe9c468e6e4ac64482b4bfdbf497b3","88ca880b93e84625380aa8bcc86fc044255cc53b9d1939d243f87f2bd244b3ae","8f1c14c32736bf93ce8ee76a75a612c98c27dd26d525af3e9854caedb5ca50cf","a7398b6e4ceab74aa3f1c3987660376cf04a2c3c11337ecd4fd205d85db0dc02","c5b2d8af298ac0277eaea9d9a4d0f2582d66df3e69d77b80723f5d7d10c42763","e5e85dd1af554251c1ac0345c997edda7b9ed735e2279968d82df980343afd4b","ea4043be7d883997c8f82ce20efadae10fc819b1b22e5aa76641374a2846e975","fb9b69ca47f87f0b01606c2a73284a750853f0a5ebd1103b21cf0a36f7d94e9d"]},
+    "player": {"groups": [{"steps": [{"kind": "building", "codes": ["hbar"]}, {"kind": "building", "codes": ["hwtw"], "count": 2, "to_s": 300, "link": "then", "forward": true}]}]},
+    "limit": 100
+  },
+  "expected": {
+    "games": 3,
+    "matches": [["88ca880b93e84625380aa8bcc86fc044255cc53b9d1939d243f87f2bd244b3ae","TWESEH#1305"],["e5e85dd1af554251c1ac0345c997edda7b9ed735e2279968d82df980343afd4b","Curunir#21273"],["fb9b69ca47f87f0b01606c2a73284a750853f0a5ebd1103b21cf0a36f7d94e9d","tikknee#3238"]]
+  }
+}
