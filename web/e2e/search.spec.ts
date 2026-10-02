@@ -193,6 +193,8 @@ test.describe("replay list", () => {
     // one line: a 24 px hero icon and its padding set the height
     const hero = row.locator(".c-ph .heroes img").first();
     expect((await hero.boundingBox())!.width).toBe(24);
+    // the classic art W3Champions uses: the Demon Hunter the search asks for first
+    await expect(hero).toHaveAttribute("src", "/icons-classic/herodemonhunter.webp");
     expect((await row.boundingBox())!.height).toBeLessThanOrEqual(40);
     // every column starts at the same x on every row, and the length is right-aligned
     const lefts = await rows.evaluateAll((trs) => trs.map((tr) => [...tr.children].map((td) => Math.round(td.getBoundingClientRect().left)).join(",")));

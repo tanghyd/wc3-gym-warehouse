@@ -419,7 +419,7 @@ html, body { font-family: var(--font-body); font-variant-numeric: lining-nums ta
 | Focus | 2 px `primary` outline, 2 px offset |
 | Tooltip | Vuetify's default: `surface-variant`, `on-surface-variant` text, 13 px. Light on dark in the light theme, dark on light in the dark theme. |
 
-- Command-card icons are 64 x 64 PNGs (`file frontend/icons/btn3m1-result.png`). Sizes: 40 px in the picker and opener path tiles, 28 px in step lists and opener trails, 24 px in the timeline, skill trails and the games list (8.2), 20 px on phones. `rounded="sm"`, no border.
+- Command-card icons are the classic (pre-Reforged) art that W3Champions uses (Daniel 2026-10-02): 64 x 64 webp in `web/public/icons-classic/`, mapped code to file by `web/public/icons-classic.json` (606 of the 648 codes of `icons.json`, 496 files; source and terms in that folder's README). A code with no classic file keeps its Reforged 64 x 64 PNG from `web/public/icons/` through `icons.json`: 42 codes, mostly items and summons (`iconOf` in `web/src/lib/api.ts`). Sizes: 40 px in the picker and opener path tiles, 28 px in step lists and opener trails, 24 px in the timeline, skill trails and the games list (8.2), 20 px on phones. `rounded="sm"`, no border.
 - Decided: `ObjectIcon.vue` falls back to `mdi-help-box-outline` at the same size, name in the tooltip. Why: 3 of 649 named codes have no icon (`orbr` Reinforced Orc Burrow, `uzg1` Spirit Tower, `nits` Ice Troll Berserker).
 - Race marks: `RaceIcon.vue` from gnl, 1.4 em square with a tooltip (gnl: `RaceIcon.vue:2-14, 21`).
 - Player names: the GNL app standard is `{flag} {name} {race} {mmr}`. The warehouse has no country and no MMR until the dims loader, so `PlayerName` shows `{name} {race}` and has no flag or MMR slot (section 7).
