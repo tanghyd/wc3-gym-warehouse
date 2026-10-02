@@ -3,6 +3,7 @@
 set dotenv-load
 
 mod local 'just/local.just'
+mod box 'just/box.just'
 
 alias up := local::up
 alias down := local::down
