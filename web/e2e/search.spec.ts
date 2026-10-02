@@ -34,7 +34,7 @@ test.describe("replay list", () => {
     expect(await strip(page)).toEqual(stripOf(want));
     const { scope, summary } = want;
     await expect(page.locator(".stat").nth(0)).toContainText(`${Math.round((100 * summary.games) / scope.games)}% of ${fmt(scope.games)} Night Elf v Orc games`);
-    await expect(page.locator(".stat").nth(1)).toContainText(`All ${fmt(scope.games)}: ${record(scope.wins!, scope.losses!)}`);
+    await expect(page.locator(".stat").nth(1)).toContainText(`Of ${fmt(scope.games - scope.both)} one way: ${record(scope.wins!, scope.losses!)}`);
     // two figures: Games and Player record
     await expect(page.locator(".stat")).toHaveCount(2);
     await expect(page.locator(".s-l", { hasText: "Avg length" })).toHaveCount(0);

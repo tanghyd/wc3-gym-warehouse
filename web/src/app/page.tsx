@@ -260,7 +260,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                   <span className="s-v">{record(sum.wins, sum.losses)}</span>
                   {narrowed && scope.wins !== null && scope.losses !== null && (
                     <span className="s-n">
-                      All {fmt(scope.games)}: {record(scope.wins, scope.losses)}
+                      Of {fmt(scope.games - scope.both)} one way: {record(scope.wins, scope.losses)}
                     </span>
                   )}
                 </div>
