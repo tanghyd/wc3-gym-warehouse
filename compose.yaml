@@ -1,9 +1,9 @@
 # The warehouse: ClickHouse, the parse drain, dbt, the query API, the page and Grafana.
 # Replays live in an S3 bucket (R2 in production, MinIO under the `local`
-# profile), never on the box.
+# profile), never on the box. The drain and dbt only read the bucket.
 #
 #   just up                   # every long-running service (COMPOSE_PROFILES in .env)
-#   just dbt build            # load new parsed docs and rebuild the marts
+#   just local::ingest        # one drain pass, then dbt build when it inserted documents
 #   docker compose --profile prod up -d   # ... plus the Cloudflare Tunnel
 name: wc3-gym-warehouse
 
@@ -14,15 +14,12 @@ services:
       CLICKHOUSE_PASSWORD: "${CLICKHOUSE_PASSWORD:-}"
       CLICKHOUSE_API_PASSWORD: "${CLICKHOUSE_API_PASSWORD:-}"
       CLICKHOUSE_GRAFANA_PASSWORD: "${CLICKHOUSE_GRAFANA_PASSWORD:-}"
-      # The parsed docs dbt loads, read through the parsed_docs named collection.
-      W3WAREHOUSE_PARSED_URL: "${W3WAREHOUSE_PARSED_URL}"
-      W3WAREHOUSE_S3_ACCESS_KEY: "${W3WAREHOUSE_S3_ACCESS_KEY}"
-      W3WAREHOUSE_S3_SECRET_KEY: "${W3WAREHOUSE_S3_SECRET_KEY}"
+      CLICKHOUSE_INGEST_PASSWORD: "${CLICKHOUSE_INGEST_PASSWORD:-}"
     restart: unless-stopped
     stop_grace_period: 60s          # the 10s default SIGKILL truncates the flush
     # Measured resident 1.11 GiB, peak 1.68 GiB on 1,746 replays. tuning.xml caps the server at 2.5 GiB.
     mem_limit: 3g
-    # Loopback only. The tunnel reaches ClickHouse over the compose network.
+    # Loopback only. Nothing outside the box reaches ClickHouse.
     ports:
       - "127.0.0.1:${CLICKHOUSE_HTTP_PORT:-8123}:8123"
     volumes:
@@ -45,11 +42,13 @@ services:
       retries: 30
       start_period: 5s
 
-  # Lists replays/, parses each new or changed .w3g, writes parsed/v<PARSE_VERSION>/…json.
+  # One-shot: `just local::ingest` or `just local::drain-once`. Lists each source's replay
+  # prefix, parses each new or changed .w3g and inserts it into ingest.docs as the ingest user.
   drain:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.drain
+    profiles: ["tools"]
     environment:
       W3WAREHOUSE_S3_ENDPOINT: "${W3WAREHOUSE_S3_ENDPOINT}"
       W3WAREHOUSE_S3_SECURE: "${W3WAREHOUSE_S3_SECURE:-false}"
@@ -57,11 +56,18 @@ services:
       W3WAREHOUSE_S3_SECRET_KEY: "${W3WAREHOUSE_S3_SECRET_KEY}"
       W3WAREHOUSE_S3_BUCKET: "${W3WAREHOUSE_S3_BUCKET}"
       W3WAREHOUSE_S3_PREFIX: "${W3WAREHOUSE_S3_PREFIX:-}"
-      WORKER_POLL_MS: "${WORKER_POLL_MS:-60000}"
-    restart: unless-stopped
+      # A second read-only source, on when its bucket is set.
+      W3WAREHOUSE_SOURCE2_ENDPOINT: "${W3WAREHOUSE_SOURCE2_ENDPOINT:-}"
+      W3WAREHOUSE_SOURCE2_SECURE: "${W3WAREHOUSE_SOURCE2_SECURE:-true}"
+      W3WAREHOUSE_SOURCE2_ACCESS_KEY: "${W3WAREHOUSE_SOURCE2_ACCESS_KEY:-}"
+      W3WAREHOUSE_SOURCE2_SECRET_KEY: "${W3WAREHOUSE_SOURCE2_SECRET_KEY:-}"
+      W3WAREHOUSE_SOURCE2_BUCKET: "${W3WAREHOUSE_SOURCE2_BUCKET:-}"
+      W3WAREHOUSE_SOURCE2_PREFIX: "${W3WAREHOUSE_SOURCE2_PREFIX:-}"
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_INGEST_PASSWORD: "${CLICKHOUSE_INGEST_PASSWORD:-}"
     mem_limit: 512m
 
-  # One-shot: `just dbt <args>`. Loads new parsed docs and builds the marts.
+  # One-shot: `just dbt <args>`. Reads ingest.docs and builds the marts.
   dbt:
     build:
       context: .
@@ -213,8 +219,8 @@ services:
         condition: service_healthy
     restart: "no"
 
-  # Outbound-only connections to Cloudflare, forwarded to clickhouse:8123
-  # (infrastructure/cloudflared/config.yml.example).
+  # Outbound-only connections to Cloudflare, forwarded to the inspector at web:3000
+  # (infrastructure/cloudflared/config.yml.example). The API and ClickHouse stay private.
   cloudflared:
     image: cloudflare/cloudflared
     profiles: ["prod"]
@@ -224,12 +230,9 @@ services:
       # guard here would fail `up` on any machine with no tunnel. cloudflared
       # rejects an empty token itself, and only under the prod profile.
       TUNNEL_TOKEN: "${TUNNEL_TOKEN:-}"
-    network_mode: "service:clickhouse"
     restart: unless-stopped
     mem_limit: 512m
-    depends_on:
-      clickhouse:
-        condition: service_healthy
+    depends_on: [web]
 
 volumes:
   ch_store:

@@ -9,6 +9,7 @@ alias down := local::down
 alias ch := local::ch
 alias dbt := local::dbt
 alias drain-once := local::drain-once
+alias ingest := local::ingest
 
 manifest := 'pipeline/parse-rs/Cargo.toml'
 

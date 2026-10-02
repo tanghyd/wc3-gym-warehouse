@@ -1,4 +1,4 @@
-# The local compose project: ClickHouse on 127.0.0.1:8123, MinIO with the goldens, the drain,
+# The local compose project: ClickHouse on 127.0.0.1:8123, MinIO with the goldens, the drain (run once),
 # the API on http://localhost:8000, the replay inspector on http://localhost:3000 and Grafana on http://localhost:3001.
 set working-directory := '..'
 
@@ -42,9 +42,18 @@ docs:
     # --no-deps: never start or recreate clickhouse; `just up` runs it
     docker compose run --rm --no-deps --build dbt docs generate
 
-# parse every new or changed replay in the bucket once, with the drain image
+# one drain pass: parse every new or changed replay of each source into ingest.docs
 drain-once:
     docker compose run --rm --build drain drain --once
+
+# one drain pass, then `dbt build` when the drain inserted a document; the host cron runs this
+ingest:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    out=$(mktemp); trap 'rm -f "$out"' EXIT
+    docker compose run --rm --build -T drain drain --once | tee "$out"; status=$?
+    if grep -q '^\[drain\] inserted [1-9]' "$out"; then {{ just_executable() }} local::dbt build || exit; fi
+    exit $status
 
 # the parser's melee object tables as JSONEachRow on stdout
 export-mappings:
