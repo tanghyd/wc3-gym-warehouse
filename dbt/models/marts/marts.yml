@@ -1,0 +1,626 @@
+# `meta.semantic` is the query API's catalog (api/app.py reads it from
+# target/manifest.json): `dimensions` are the columns a caller may group or filter
+# on, `measures` are named aggregate expressions, and `labels` name what a page shows. A model whose dimensions include
+# replay_id and player_id also takes a build-order `steps` filter.
+# Shared column descriptions are doc blocks in models/docs.md.
+models:
+  - name: player_games
+    description: >-
+      One row per player per 1v1 game (type 1on1): who played whom with which played race,
+      on which map and patch, the result, the heroes in pick order and the first six
+      buildings. A game that arrived as two files counts once, so a replay with a
+      duplicate_of has no rows. The query API's main semantic model.
+    config:
+      meta:
+        semantic:
+          dimensions: [replay_id, player_id, player, race, random, opponent, opponent_race,
+                       opponent_random, matchup, map, patch, added_at, duration_ms, minutes, minutes_5,
+                       result, apm, first_hero, second_hero, third_hero,
+                       opener_1, opener_2, opener_3, opener_4, opener_5, opener_6]
+          # The names a page shows, for the dimensions and measures the explorer offers.
+          labels:
+            race: Race
+            opponent_race: Opponent race
+            matchup: Matchup
+            map: Map
+            patch: Patch
+            player: Player
+            opponent: Opponent
+            result: Result
+            first_hero: First hero
+            second_hero: Second hero
+            third_hero: Third hero
+            opener_1: First building
+            opener_2: Second building
+            opener_3: Third building
+            opener_4: Fourth building
+            opener_5: Fifth building
+            opener_6: Sixth building
+            minutes_5: Minutes
+          # A measure is its SQL, or a map with its SQL, label and type. A type says how a page
+          # reads it: count (adds up across rows), distinct (does not add up), record or average.
+          # parts names the summed measures a record or an average is made of, so a page can
+          # combine rows and still print it exactly. A record has no SQL of its own.
+          # The API adds two columns per game in a result row: shown, 1 on one of its players there (the
+          # lower player slot when both fall in it), so the game measures count each game once per row;
+          # and seats, its players there. A mirror (seats = 2) adds no win or loss: either player could
+          # be the row's. wins and losses are null when every game of a row is a mirror.
+          measures:
+            games: {sql: countIf(shown), label: Games, type: count}
+            mirrors: {sql: "countIf(shown AND seats = 2)", label: Mirrors, type: count}
+            wins: if(countIf(seats = 1) = 0, NULL, countIf(seats = 1 AND result = 'win'))
+            losses: if(countIf(seats = 1) = 0, NULL, countIf(seats = 1 AND result = 'loss'))
+            record: {label: Record, type: record, parts: [wins, losses]}
+            win_rate: round(countIf(seats = 1 AND result = 'win') / nullIf(countIf(seats = 1 AND result != 'unknown'), 0), 3)
+            avg_minutes: {sql: "round(avgIf(duration_ms, shown) / 60000, 1)", label: Avg length, type: average, parts: [minutes_total, games]}
+            avg_apm: {sql: "round(avg(apm))", label: Avg APM, type: average, parts: [apm_total, apm_players]}
+            players: {sql: "uniqExact(player)", label: Players, type: distinct}
+            minutes_total: {sql: "sumIf(duration_ms, shown) / 60000", label: Total minutes, type: count}
+            apm_total: sum(apm)
+            apm_players: count()
+    data_tests:
+      - unique:
+          name: player_games_one_row_per_player
+          description: A player appears once per replay.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every row names its replay.
+          - relationships:
+              description: Every row belongs to a replay in replays.
+              arguments:
+                to: ref('replays')
+                field: replay_id
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+        data_tests:
+          - not_null:
+              description: Every row names its player.
+      - name: player
+        description: "{{ doc('player_name') }}"
+      - name: race
+        description: "{{ doc('race') }}"
+        data_tests:
+          - accepted_values:
+              description: Race is a race code.
+              arguments:
+                values: [HU, OC, NE, UD, RANDOM]
+      - name: random
+        description: "{{ doc('random') }}"
+      - name: opponent_id
+        description: The opponent's player_id in the replay, the player on the other team.
+      - name: opponent
+        description: The opponent's battle tag.
+      - name: opponent_race
+        description: The opponent's played race code (HU, OC, NE, UD, RANDOM), as race.
+        data_tests:
+          - accepted_values:
+              description: Opponent race is a race code.
+              arguments:
+                values: [HU, OC, NE, UD, RANDOM]
+      - name: opponent_random
+        description: 1 when the opponent picked Random in the lobby, else 0.
+      - name: matchup
+        description: The two played race letters (H, O, N, U, R for no played race), sorted and joined by v, such as NvO.
+      - name: map
+        description: "{{ doc('map') }}"
+      - name: patch
+        description: "{{ doc('patch') }}"
+      - name: added_at
+        description: "{{ doc('added_at') }}"
+      - name: duration_ms
+        description: "{{ doc('duration_ms') }}"
+      - name: minutes
+        description: Game length in minutes, rounded to one decimal.
+      - name: minutes_5
+        description: Game length in 5-minute bins, as the bin's first minute, so 0 is under 5 minutes and 5 is 5 to under 10.
+      - name: result
+        description: win or loss for this player against replays.winning_team_id, or unknown when the replay names no winner.
+        data_tests:
+          - accepted_values:
+              description: Result is win, loss or unknown.
+              arguments:
+                values: [win, loss, unknown]
+      - name: apm
+        description: The player's actions per minute over the time they were in the game, from the parser.
+      - name: heroes
+        description: The object codes of the player's heroes in pick order (the order of their first skill point), [] when the player spent none.
+      - name: hero_levels
+        description: The level of each hero in heroes at the end of the game, in the same order.
+      - name: first_hero
+        description: Object code of the player's first hero, heroes[1], or '' when the player spent no skill point.
+      - name: second_hero
+        description: Object code of the player's second hero, heroes[2], or '' when the player had fewer heroes.
+      - name: third_hero
+        description: Object code of the player's third hero, heroes[3], or '' when the player had fewer heroes.
+      - name: opener
+        description: >-
+          The first six non-supply buildings the player ordered, by time then seq, with
+          back-to-back repeats of one building dropped. {{ doc('order_is_a_command') }}
+      - name: opener_1
+        description: The first building in opener, or '' when the player ordered no non-supply building.
+      - name: opener_2
+        description: The second building in opener, or '' past its end.
+      - name: opener_3
+        description: The third building in opener, or '' past its end.
+      - name: opener_4
+        description: The fourth building in opener, or '' past its end.
+      - name: opener_5
+        description: The fifth building in opener, or '' past its end.
+      - name: opener_6
+        description: The sixth building in opener, or '' past its end.
+      - name: opp_start_x
+        description: The opponent's start location x (player_starts.start_x), NULL when no rule names it. A forward step measures a placement's distance from here.
+      - name: opp_start_y
+        description: The opponent's start location y (player_starts.start_y), NULL when no rule names it.
+
+  - name: mappings
+    description: >-
+      WC3 object codes and their names: the parser's melee tables (seed mappings_melee)
+      plus the hand-kept custom-map codes (seed mappings_custom). A code can appear
+      under more than one kind, so join on code and kind.
+    config:
+      meta:
+        semantic:
+          dimensions: [code, name, kind, race, hero, category, is_supply_building]
+          measures:
+            objects: count()
+    data_tests:
+      - unique:
+          name: mappings_one_row_per_code_and_kind
+          description: A code has one name per kind.
+          arguments:
+            column_name: "code || ':' || kind"
+    columns:
+      - name: code
+        description: "{{ doc('object_code') }}"
+        data_tests:
+          - not_null:
+              description: Every row has a code.
+      - name: name
+        description: The object's display name, such as Barracks.
+      - name: kind
+        description: building, unit, item, upgrade, hero, hero_skill, or unknown for a custom-map code.
+        data_tests:
+          - accepted_values:
+              description: Kind is one of the parser's object kinds.
+              arguments:
+                values: [building, unit, item, upgrade, hero, hero_skill, unknown]
+      - name: race
+        description: The object's race in the parser's tables (human, orc, night_elf, undead, neutral), or '' when it has none or the code is custom.
+      - name: hero
+        description: For a hero_skill, the name of the hero that learns it, or '' otherwise.
+      - name: is_supply_building
+        description: 1 for a building the parser flags as supply (Farm, Moon Well and Ziggurat, not Orc Burrow), else 0. player_games' openers skip these.
+      - name: category
+        description: For a custom-map code, its group (ui-menu, builder, tower, upgrade, item, other), or '' for a melee code.
+
+  - name: replays
+    description: One row per replay of a valid game (valid_replays), the header and the lobby settings, with a readable map name.
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - unique:
+              description: One row per replay, however many copies of it raw_replays holds before a merge.
+          - not_null:
+              description: Every replay has an id.
+      - name: map
+        description: "{{ doc('map') }}"
+      - name: map_json
+        description: The parser's map object as JSON text, with the map's file, path, checksum and checksumSha1.
+      - name: gamename
+        description: The lobby's game name, such as w3c-20-6ClLsLbjhr.
+      - name: creator
+        description: The host that created the game, such as a battle tag or FLO.
+      - name: type
+        description: The team sizes, sorted and joined by on, such as 1on1 or 4on4. A game with one team gives a single number.
+      - name: matchup
+        description: "{{ doc('matchup') }}"
+      - name: duration_ms
+        description: "{{ doc('duration_ms') }}"
+      - name: build_number
+        description: The game's build number from the replay header, such as 6117.
+      - name: version
+        description: The replay file format version from the header, such as 2.00. Not the game patch, see patch.
+      - name: patch
+        description: "{{ doc('patch') }}"
+      - name: expansion
+        description: True when the replay is a The Frozen Throne game.
+      - name: parse_time_ms
+        description: How long the parser took on this replay, in milliseconds.
+      - name: source_key
+        description: The raw replay's object key in the bucket, such as preview/replays/goldens/w3c-20260501062910.w3g, written into the parsed document by the drain.
+      - name: added_at
+        description: "{{ doc('added_at') }}"
+      - name: winning_team_id
+        description: >-
+          From the parser's leaves (observers skipped). A player leave marked victory (result
+          09000000) names the winning team, because the winner can leave before the loser's
+          leave is logged. Otherwise, in 1v1, the player opposite the first to quit won: the
+          first player leave, or the saver (saverPlayerId) when no player leave is recorded,
+          because a FLO player-saved w3c- file drops the saver's own leave. In a team game the
+          other team won when every player of one team left before any player of the other.
+          -1 (no winner) otherwise, and unless the game has exactly two teams. The parser's
+          own winningTeamId is not read. The result matches the parser's leave-based pick,
+          which reads the same leaves. The saver fallback is untested until the w3grs saver
+          id is fixed: saverPlayerId is 1 in every loaded file.
+      - name: winner_names
+        description: The names of the players on the winning team, sorted and joined by commas, or '' when winning_team_id is -1.
+      - name: random_seed
+        description: The game's random seed from the replay header.
+      - name: game_key
+        description: >-
+          The game's random seed and its players' sorted names, such as
+          2907768841:Solstice2183#1401,thanks#11187. Two files of one game share it, such as
+          the replay-service copy and a copy a player saved.
+      - name: duplicate_of
+        description: >-
+          For a second file of a game, the replay_id of the copy that stands for the game, or
+          '' on that copy itself. The copy is the most complete one: the longest, then the
+          one with the most events (valid_replays.events), then the lowest replay_id.
+          player_games leaves duplicates out.
+      - name: start_spots
+        description: The number of start spots in the lobby.
+      - name: observers
+        description: Battle tags of the observers and referees, who are not players.
+      - name: speed
+        description: The lobby's game speed, 0 slow, 1 normal, 2 fast.
+      - name: fixed_teams
+        description: Lobby setting, teams are locked.
+      - name: teams_together
+        description: Lobby setting, allies start next to each other.
+      - name: full_shared_unit_control
+        description: Lobby setting, allies share full control of their units.
+      - name: always_visible
+        description: Lobby setting, the whole map is always visible.
+      - name: map_explored
+        description: Lobby setting, the map starts explored.
+      - name: referees
+        description: Lobby setting, referees are allowed.
+      - name: observer_mode
+        description: Lobby observer setting, NONE, ON_DEFEAT, FULL or REFEREES.
+      - name: random_hero
+        description: Lobby setting, each player gets a random hero.
+      - name: random_races
+        description: Lobby setting, each player gets a random race.
+      - name: hide_terrain
+        description: Lobby setting, terrain is hidden.
+
+  - name: replay_events
+    description: >-
+      Every order and hero skill per player as one time-ordered stream, the table
+      build-order steps match against. It unions player_order_events,
+      hero_ability_events and one hero_trained row per hero, timed by its training order. {{ doc('order_is_a_command') }}
+    data_tests:
+      - unique:
+          name: replay_events_one_row_per_event
+          description: An event is one row, keyed by replay, player, type, hero, object and seq.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id) || ':' || event_type || ':' || detail || ':' || subject_code || ':' || toString(seq)"
+    columns:
+      - name: race
+        description: "{{ doc('race') }}"
+        data_tests:
+          - accepted_values:
+              description: Race is a race code.
+              arguments:
+                values: [HU, OC, NE, UD, RANDOM]
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every event names its replay.
+          - relationships:
+              description: Every event belongs to a replay in replays.
+              arguments:
+                to: ref('replays')
+                field: replay_id
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+      - name: time_ms
+        description: "{{ doc('time_ms') }}"
+      - name: event_type
+        description: "{{ doc('event_type') }}"
+        data_tests:
+          - accepted_values:
+              description: Event type is an order kind, hero_skill or hero_trained.
+              arguments:
+                values: [building, unit, item, upgrade, unknown, hero_skill, hero_trained]
+      - name: subject_code
+        description: The object code of the order, the ability for hero_skill, or the hero for hero_trained.
+      - name: subject_name
+        description: The display name of subject_code from mappings, or the code itself when mappings has no name for it.
+      - name: detail
+        description: For hero_skill, the name of the hero that learned the skill, or '' otherwise.
+      - name: seq
+        description: >-
+          {{ doc('seq') }} For an order, its position within the player's list of that
+          kind. For hero_skill, within the hero's skill list. For hero_trained, the hero's place in
+          player_games.heroes (1 for the first hero), or 0 for a hero with no code.
+      - name: is_repeat
+        description: The is_repeat flag of the order or skill point, 0 on hero_trained. Searches read only rows with 0.
+      - name: level
+        description: The skill level a hero_skill point gives, from hero_ability_events.level, 0 on every other row. A skill step of count N matches a point with level N or more.
+      - name: x
+        description: The map x of a building placement (player_order_events.x), NULL on every other row. A forward step reads it.
+      - name: y
+        description: The map y of a building placement (player_order_events.y), NULL on every other row.
+
+  - name: replay_players
+    description: One row per player per replay, with the player's slot, team, race, APM and action counts. Observers are not players and never appear.
+    data_tests:
+      - unique:
+          name: replay_players_one_row_per_player
+          description: A player appears once per replay.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every player row names its replay.
+          - relationships:
+              description: Every player row belongs to a replay in replays.
+              arguments:
+                to: ref('replays')
+                field: replay_id
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+        data_tests:
+          - not_null:
+              description: Every player row has a slot id.
+      - name: name
+        description: "{{ doc('player_name') }}"
+      - name: color
+        description: "The player's color as a hex code, such as #ff0303 for red."
+      - name: team_id
+        description: The player's team id from the lobby, from 0. -1 when the parser gave none.
+      - name: race
+        description: "{{ doc('race') }}"
+        data_tests:
+          - accepted_values:
+              description: Race is a race code.
+              arguments:
+                values: [HU, OC, NE, UD, RANDOM]
+      - name: random
+        description: "{{ doc('random') }}"
+      - name: race_detected
+        description: The race letter (H, O, N, U) the parser read from the player's first train or research order, or '' when none was seen. The parser reads no race from a building placement.
+      - name: apm
+        description: Actions per minute over the time the player was in the game, from the parser.
+      - name: actions_rightclick
+        description: Count of right-click actions (move, attack, smart orders).
+      - name: actions_basic
+        description: Count of basic commands such as stop, hold position and attack-move.
+      - name: actions_buildtrain
+        description: Count of build and train orders.
+      - name: actions_ability
+        description: Count of ability uses.
+      - name: actions_item
+        description: Count of item actions (use, drop, give).
+      - name: actions_select
+        description: Count of selection changes by clicking or dragging.
+      - name: actions_removeunit
+        description: Count of units removed from the selection.
+      - name: actions_subgroup
+        description: Count of subgroup changes (tab through a selection).
+      - name: actions_selecthotkey
+        description: Count of control group recalls.
+      - name: actions_assigngroup
+        description: Count of control group assignments.
+      - name: actions_esc
+        description: Count of Escape key presses.
+      - name: apm_timed
+        description: Actions per game minute, one element per minute. The last, partial minute is scaled to a full minute, or dropped when under 30 s.
+
+  - name: player_order_events
+    description: >-
+      Every order a player gave, one row each: buildings, units, items, upgrades, and
+      the parser's unknown bucket. {{ doc('order_is_a_command') }} The replay page reads it.
+    data_tests:
+      - unique:
+          name: player_order_events_one_row_per_order
+          description: An order is one row, keyed by replay, player, kind and seq.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id) || ':' || kind || ':' || toString(seq)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every order names its replay.
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+      - name: kind
+        description: "{{ doc('order_kind') }}"
+        data_tests:
+          - accepted_values:
+              description: Kind is one of the parser's order lists.
+              arguments:
+                values: [building, unit, item, upgrade, unknown]
+      - name: object_code
+        description: "{{ doc('object_code') }}"
+      - name: time_ms
+        description: "{{ doc('time_ms') }}"
+      - name: seq
+        description: "{{ doc('seq') }} Numbered within one (replay, player, kind)."
+      - name: x
+        description: The map x of a building placement order, the point the player targeted. NULL for every other order, a hall upgrade among them.
+      - name: y
+        description: The map y of a building placement order. NULL for every other order.
+      - name: is_repeat
+        description: 1 on a tier hall, research or hero order under 1000 ms after the same player's previous order of that code, else 0. The replay page leaves these out.
+
+  - name: hero_ability_events
+    description: Every hero skill point spent and every retraining, one row each, keyed by replay, player and hero.
+    data_tests:
+      - unique:
+          name: hero_ability_events_one_row_per_event
+          description: A skill event is one row, keyed by replay, player, hero slot and seq.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id) || ':' || toString(hero_slot) || ':' || toString(seq)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every skill event names its replay.
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+      - name: hero_slot
+        description: "{{ doc('hero_slot') }}"
+      - name: hero_id
+        description: "{{ doc('hero_id') }}"
+      - name: event_type
+        description: ability for a skill point spent, retraining for a Tome of Retraining use.
+        data_tests:
+          - accepted_values:
+              description: A skill event is ability or retraining.
+              arguments:
+                values: [ability, retraining]
+      - name: ability_id
+        description: The object code of the skill learned, or '' for retraining.
+      - name: time_ms
+        description: "{{ doc('time_ms') }}"
+      - name: seq
+        description: "{{ doc('seq') }} Numbered within the hero's skill list."
+      - name: is_repeat
+        description: 1 on a skill point the game did not take, else 0. That is a point under 1000 ms after the same hero's previous point in that skill (the rule of player_order_events.is_repeat), or a point past level 3, the most a normal skill has.
+      - name: level
+        description: The skill's level after the point, the hero's points in that skill since his last retraining with repeat clicks left out. A repeat click keeps the level of the point before it. 0 on a retraining.
+
+  - name: player_heroes
+    description: One row per hero a player spent a skill point on, with its level at the end of the game.
+    data_tests:
+      - unique:
+          name: player_heroes_one_row_per_hero
+          description: A hero slot is one row per player and replay.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id) || ':' || toString(hero_slot)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every hero row names its replay.
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+      - name: hero_slot
+        description: "{{ doc('hero_slot') }}"
+      - name: hero_id
+        description: "{{ doc('hero_id') }}"
+      - name: final_level
+        description: The hero's level at the end of the game, the sum of its skill levels after any retraining.
+      - name: trained_ms
+        description: Game time of the order that trained the hero, the player's last order of its code at or before its first skill point. The first skill point when no such order exists.
+
+  - name: chat
+    description: In-game chat, one row per message. Two players can talk on the same millisecond, so seq keeps the order.
+    data_tests:
+      - unique:
+          name: chat_one_row_per_message
+          description: A message is one row per replay and seq.
+          arguments:
+            column_name: "replay_id || ':' || toString(seq)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every message names its replay.
+      - name: player_id
+        description: The sender's slot id. An observer can send chat, so it need not be in replay_players.
+      - name: player_name
+        description: The sender's battle tag.
+      - name: mode
+        description: Who the message went to, All, Team, Obervers (the parser's spelling) or Private.
+      - name: message
+        description: The message text.
+      - name: time_ms
+        description: "{{ doc('time_ms') }}"
+      - name: seq
+        description: "{{ doc('seq') }} Numbered within the replay's chat."
+
+  - name: objects
+    description: >-
+      One row per object a step picker lists, with the source it comes from: units, mercenaries,
+      upgrades, heroes and items from the object_sources seed, each skill under the hero that
+      learns it, each building under its race. The query API's POST /objects reads it.
+    config:
+      meta:
+        semantic:
+          dimensions: [kind, code, name, source_code, source_name, race]
+          measures:
+            objects: count()
+    data_tests:
+      - unique:
+          name: objects_one_row_per_source
+          description: An object is listed once per picker kind and source.
+          arguments:
+            column_name: "kind || ':' || code || ':' || source_code"
+    columns:
+      - name: kind
+        description: The picker kind, building, unit, hired, upgrade, hero, skill or item.
+        data_tests:
+          - accepted_values:
+              description: Kind is a picker kind.
+              arguments:
+                values: [building, unit, hired, upgrade, hero, skill, item]
+      - name: code
+        description: "{{ doc('object_code') }}"
+      - name: name
+        description: The object's display name from mappings.
+      - name: source_code
+        description: The source's code, such as eaom, a hero code for a skill, or a race code (HU, OC, NE, UD) for a building.
+      - name: source_name
+        description: The source's display name, such as Ancient of War, Demon Hunter or Night Elf.
+      - name: race
+        description: The race whose players use the object (HU, OC, NE, UD), or '' for a neutral source that every race uses.
+
+  - name: player_starts
+    description: >-
+      One row per player of every 1on1 replay, duplicates included: the start location he began
+      at, from the start_locations seed. A replay names no start, so it is read from where the
+      player builds. 1. The start within 1,500 of his earliest building placement that lies within
+      1,500 of any start. 2. Else, on a two-start map, the start his opponent does not hold by
+      rule 1. 3. Else none, with start_x and start_y NULL. player_games carries the opponent's
+      start as opp_start_x and opp_start_y for the forward step option.
+    data_tests:
+      - unique:
+          name: player_starts_one_row_per_player
+          description: A player has one start per replay.
+          arguments:
+            column_name: "replay_id || ':' || toString(player_id)"
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - not_null:
+              description: Every start row names its replay.
+          - relationships:
+              description: Every start row belongs to a replay in replays.
+              arguments:
+                to: ref('replays')
+                field: replay_id
+      - name: player_id
+        description: "{{ doc('player_id') }}"
+      - name: start_x
+        description: The start's map x from start_locations, NULL when no rule names a start.
+      - name: start_y
+        description: The start's map y from start_locations, NULL when no rule names a start.
+      - name: start_source
+        description: >-
+          Which rule named the start. first building and later building are rule 1 (the earliest
+          placement within 1,500 of a start is the player's first placement, or a later one),
+          opponent is rule 2 and none is rule 3.
+        data_tests:
+          - accepted_values:
+              description: The start comes from one of the three rules.
+              arguments:
+                values: [first building, later building, opponent, none]

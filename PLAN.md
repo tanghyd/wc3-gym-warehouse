@@ -15,7 +15,7 @@ GNL players open a page on the site, pick a build order and see every GNL game t
 | ClickHouse on Daniel's laptop | $0 | a tool for one person, not a service |
 | Replay tables in the app's Postgres | $0 | needs a second Search compiler for a dialect without `sequenceMatch`, and every route must page to keep Supabase egress inside 5 GB |
 | ClickHouse Cloud Basic | USD 66 and up | ten times the price for the same SQL |
-| **w3warehouse's stack on a Hetzner box, data in R2** | **EUR 4** | reuses every query, no egress rule to police, one box to keep alive |
+| **w3warehouse's stack on a Hetzner box, data in R2** | **EUR 8.49 + 0.50 IPv4 (CX33, 2026-10-02)** | reuses every query, no egress rule to police, one box to keep alive |
 
 The clone at `~/code/warcraft/w3warehouse` already has everything but the hosting: the Rust parser and drain worker (`pipeline/parse-rs`), the ClickHouse schema and loaders (`db/w3g/tables.sql`, `views.sql`, `backfill.sql`, `stream.sql`), the API with Openers, Search and Stats (`services/api/src/api/`, the Search compiler in `compiler.py`), single-node tuning (`infrastructure/docker/clickhouse/tuning.xml`), a Caddy proxy and provisioned Grafana dashboards. Its deploy notes say the running stack idles at 1.2 GB and only the Rust compile wants 4 GB. Daniel allows refactoring it for GNL.
 
@@ -58,11 +58,11 @@ Latency from report to searchable is the two intervals, minutes. A webhook from 
 - One new hop: the Vercel function calls `https://warehouse.<domain>` with a password header. Cloudflare terminates TLS, the tunnel carries it to the box, `cloudflared` forwards to ClickHouse or the API on localhost. ClickHouse gets a read-only user for this route.
 - Loads never cross the tunnel: ClickHouse reads R2 over the S3 API directly.
 - Downloads never touch the box or Supabase: the browser fetches from the R2 custom domain, cached by Cloudflare.
-- Location: Hetzner's EU locations sell the CX line at EUR 4 with about 100 ms per hop to Vercel's us-east region. Ashburn sells only CPX from about EUR 8 with a few ms. A search is one hop, so start in the EU.
+- Location: Hetzner's EU locations sell the CX line from EUR 5.49 (CX23) and EUR 8.49 (CX33, read 2026-10-02) with about 100 ms per hop to Vercel's us-east region. Ashburn sells only CPX from about EUR 8 with a few ms. A search is one hop, so start in the EU.
 
 ## Limits against GNL scale
 
-A replay is about 250 bytes per game second. A season is 400 replays, 100 MB raw, 1 MB parsed. 800 player-game rows.
+A replay is about 250 bytes per game second. A season is 400 replays, 100 MB raw, 1 MB parsed. 800 player rows, two a game.
 
 | Limit | Free tier or box | GNL per season |
 |---|---|---|
@@ -71,14 +71,14 @@ A replay is about 250 bytes per game second. A season is 400 replays, 100 MB raw
 | R2 reads, Class B | 10 million a month | one per replay per load, plus downloads |
 | R2 egress | free | every download and every load |
 | Hetzner traffic | 20 TB a month | negligible |
-| Box memory | 4 GB | the stack idles at 1.2 GB |
+| Box memory | 8 GB, the CX33 | the stack idles at 937 MiB (docs/deploy.md, local `docker stats`, 2026-10-02) |
 | Vercel function body | 4.5 MB | a three-replay report is under 3 MB even for hour-long games |
 
 ## Cost
 
 | Item | Per month |
 |---|---|
-| Hetzner CX22, 2 vCPU, 4 GB, 40 GB, or CAX11 on ARM | about EUR 4, plus about EUR 0.5 for IPv4 |
+| Hetzner CX33, 4 vCPU, 8 GB, 80 GB | EUR 8.49, plus EUR 0.50 for IPv4 (docs.hetzner.com, read 2026-10-02) |
 | Cloudflare: DNS, tunnel, R2 inside the free tier, custom domain | EUR 0 |
 | GitHub Actions for the image build | EUR 0 on a public repo |
 

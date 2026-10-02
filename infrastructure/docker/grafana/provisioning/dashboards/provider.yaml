@@ -1,0 +1,9 @@
+# Loads every dashboard JSON in /etc/grafana/dashboards (infrastructure/docker/grafana/dashboards).
+apiVersion: 1
+
+providers:
+  - name: warehouse
+    type: file
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/dashboards

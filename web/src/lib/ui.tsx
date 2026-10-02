@@ -1,0 +1,145 @@
+// Marks, fields and formats shared by the server pages and the client components.
+import type { CSSProperties, ReactNode } from "react";
+import type { GameEvent, Objects } from "./api";
+import { RACES } from "./races";
+
+export { RACES };
+
+/** The matchup in the order the players are shown: a race letter each, teams joined by "v". */
+export function matchup(players: { race: string; team_id: number }[]) {
+  const teams = new Map<number, string>();
+  for (const p of players) teams.set(p.team_id, (teams.get(p.team_id) ?? "") + (RACES[p.race]?.[2] ?? "?"));
+  return [...teams.values()].join("v");
+}
+
+/** Milliseconds as m:ss, 937219 -> 15:37. */
+export const mss = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
+
+export const shortName = (name: string) => name.split("#")[0];
+
+/** A record as "wins – losses", with its percent from ten decided games up; an em dash with none. */
+export function record(wins: number, losses: number) {
+  const n = wins + losses;
+  if (!n) return "—";
+  return `${wins} – ${losses}` + (n >= 10 ? ` (${Math.round((100 * wins) / n)}%)` : "");
+}
+
+/** A filter field: its label above the control. */
+export function Field({ label, children, className = "" }: { label: string; children: ReactNode; className?: string }) {
+  return (
+    <label className={`flex min-w-36 flex-1 flex-col gap-1 text-sm ${className}`}>
+      <span className="text-muted">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+/** The line colour of the i-th player: series-1 for the lower player_id. */
+export const seriesColor = (i: number) => `rgb(var(--v-theme-series-${i + 1}))`;
+
+export function RaceIcon({ race, size = "1.4em" }: { race: string; size?: string }) {
+  const r = RACES[race];
+  if (!r) return null;
+  return <img src={`/race-icons/${r[1]}.png`} alt={r[0]} title={r[0]} className="shrink-0" style={{ width: size, height: size }} />;
+}
+
+/** A player as name, in Cardo 700, then race icon. */
+export function PlayerName({ name, race, className = "" }: { name: string; race: string; className?: string }) {
+  return (
+    <span className={`inline-flex min-w-0 items-center gap-1.5 ${className}`}>
+      <span className="font-name truncate">{name}</span>
+      <RaceIcon race={race} />
+    </span>
+  );
+}
+
+/** A result as a word on its win, loss or draw fill. */
+export function Result({ won }: { won: boolean | null }) {
+  const [label, tone] = won === null ? ["No result", "bg-draw text-on-draw"] : won ? ["Won", "bg-win text-on-win"] : ["Lost", "bg-loss text-on-loss"];
+  return <span className={`chip ${tone}`}>{label}</span>;
+}
+
+/** The 2 px line key of a player's series. */
+export function SeriesKey({ i }: { i: number }) {
+  return <span aria-hidden className={`inline-block h-0.5 w-4 shrink-0 rounded-full ${i === 0 ? "bg-series-1" : "bg-series-2"}`} />;
+}
+
+/** An object's command-card icon, or a "?" tile when it has none; alt="" where its name stands beside it. */
+export function ObjIcon({ code, objects, size, alt, title }: { code: string; objects: Objects; size: number; alt: string; title?: string }) {
+  const icon = objects[code]?.icon;
+  if (!icon)
+    return (
+      <span
+        role={alt ? "img" : undefined}
+        aria-label={alt || undefined}
+        title={title}
+        // the "?" is CSS content, so it stays out of the row's text
+        className="grid shrink-0 place-items-center rounded-sm border bg-surface-light leading-none font-bold text-muted before:content-['?']"
+        style={{ width: size, height: size, fontSize: Math.round(size * 0.6) }}
+      />
+    );
+  return <img src={icon} width={size} height={size} alt={alt} title={title} className="block shrink-0 rounded-sm" />;
+}
+
+const nameOf = (objects: Objects, code: string) => objects[code]?.name ?? "Unknown skill";
+
+/** A hero's skills in time order: 24 px icon, m:ss under it. */
+export function SkillTrail({ skills, objects, className = "" }: { skills: GameEvent[]; objects: Objects; className?: string }) {
+  if (!skills.length) return null;
+  return (
+    <ol className={`flex flex-wrap gap-2.5 ${className}`}>
+      {skills.map((s, j) => (
+        <li key={j} className="flex flex-col items-center gap-0.5 text-xs text-muted" title={`${nameOf(objects, s.code)} at ${mss(s.time_ms)}`}>
+          <ObjIcon code={s.code} objects={objects} size={24} alt={nameOf(objects, s.code)} />
+          <span>{mss(s.time_ms)}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+export function Timer({ label }: { label: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" className="shrink-0" role="img" aria-label={label}>
+      <title>{label}</title>
+      <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <circle cx="12" cy="13.5" r="7.5" />
+        <path d="M12 9.5v4l2.5 2M9.5 3h5" />
+      </g>
+    </svg>
+  );
+}
+
+/** An object's command-card icon in a dark bevelled frame; an empty frame with no icon. */
+export function Tile({ icon, size, alt = "" }: { icon: string | null | undefined; size: number; alt?: string }) {
+  return (
+    <span className={`tile ${icon ? "" : "empty"}`} style={{ "--s": `${size}px` } as CSSProperties} role={alt ? "img" : undefined} aria-label={alt || undefined}>
+      {icon && <img src={icon} width={size} height={size} alt="" />}
+    </span>
+  );
+}
+
+export const fmt = (n: number) => n.toLocaleString("en-US");
+
+/** The line under a figure for its mirrors, games both players fit, which add no result. */
+export const mirrorsLine = (n: number) => `${fmt(n)} ${n === 1 ? "mirror" : "mirrors"}, no result`;
+
+/** The games list's columns a reader may hide, as the URL's `hide` key names them, with their switch labels. */
+export const HIDEABLE = [
+  ["heroes", "Heroes"],
+  ["result", "Result"],
+  ["length", "Length"],
+] as const;
+export type Hideable = (typeof HIDEABLE)[number][0];
+/** The hidden columns of a `hide` value such as "heroes.length", in switch order; unknown names drop. */
+export const parseHidden = (v: string): Hideable[] => HIDEABLE.map(([k]) => k).filter((k) => v.split(".").includes(k));
+
+/** A chevron; `open` rotates a right one by a quarter turn, and a chevron with no `open` sits at the line's end. */
+export function Chevron({ dir = "right", open }: { dir?: "down" | "right" | "left"; open?: boolean }) {
+  const d = { down: "M6 9l6 6 6-6", right: "M9 6l6 6-6 6", left: "M15 6l-6 6 6 6" }[dir];
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden className={`shrink-0 text-muted ${open === undefined && dir !== "left" ? "ml-auto" : ""} ${open ? "rotate-90" : ""}`}>
+      <path d={d} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

@@ -1,0 +1,62 @@
+{
+  "uid": "warehouse-data",
+  "title": "Warehouse data",
+  "tags": ["warehouse", "dbt"],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "editable": false,
+  "refresh": "1m",
+  "time": { "from": "now-7d", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Replays loaded",
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "none", "graphMode": "none" },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "editorType": "sql", "format": 1, "queryType": "table",
+        "rawSql": "SELECT count() AS replays FROM w3g.raw_replays FINAL" }]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "Replays loaded over time",
+      "interval": "1h",
+      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "custom": { "drawStyle": "bars", "fillOpacity": 80 } }, "overrides": [] },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "editorType": "sql", "format": 0, "queryType": "timeseries",
+        "rawSql": "SELECT $__timeInterval(ingested_at) AS time, count() AS replays\nFROM w3g.raw_replays FINAL\nWHERE $__timeFilter(ingested_at)\nGROUP BY time ORDER BY time" }]
+    },
+    {
+      "id": 3, "type": "table", "title": "Tables",
+      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "bytes" }, "properties": [{ "id": "unit", "value": "bytes" }] },
+          { "matcher": { "id": "byName", "options": "rows" }, "properties": [{ "id": "unit", "value": "short" }] },
+          { "matcher": { "id": "byName", "options": "rebuilt" }, "properties": [{ "id": "unit", "value": "dateTimeAsIso" }] }
+        ]
+      },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "editorType": "sql", "format": 1, "queryType": "table",
+        "rawSql": "SELECT t.name AS table, p.rows AS rows, p.bytes AS bytes, p.parts AS parts, t.metadata_modification_time AS rebuilt\nFROM system.tables AS t\nLEFT JOIN (\n    SELECT table, sum(rows) AS rows, sum(bytes_on_disk) AS bytes, count() AS parts\n    FROM system.parts WHERE database = 'w3g' AND active GROUP BY table\n) AS p ON p.table = t.name\nWHERE t.database = 'w3g' AND t.engine LIKE '%MergeTree' AND position(t.name, '__dbt_') = 0\nORDER BY bytes DESC" }]
+    },
+    {
+      "id": 4, "type": "table", "title": "dbt errors by node",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 24 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "last_run" }, "properties": [{ "id": "unit", "value": "dateTimeAsIso" }, { "id": "custom.width", "value": 190 }] },
+          { "matcher": { "id": "byRegexp", "options": "queries|errors" }, "properties": [{ "id": "custom.width", "value": 100 }] }
+        ]
+      },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "editorType": "sql", "format": 1, "queryType": "table",
+        "rawSql": "SELECT if(empty(extract(query, '\"node_id\": \"([^\"]+)\"') AS id), '(run)', id) AS node, max(event_time) AS last_run, count() AS queries, countIf(type != 'QueryFinish') AS errors, argMaxIf(exception, event_time, type != 'QueryFinish') AS last_error\nFROM system.query_log\nWHERE $__dateTimeFilter(event_date, event_time) AND user = 'default' AND current_database = 'w3g' AND type != 'QueryStart'\nGROUP BY node\nORDER BY errors DESC, last_run DESC" }]
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+# unrs-resolver (under eslint-config-next) installs a prebuilt binary, so its install script stays off.
+ignoredBuiltDependencies:
+  - unrs-resolver

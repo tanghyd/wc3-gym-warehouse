@@ -1,8 +1,8 @@
-# The parse worker. Reads .w3g objects from the bucket's replays/ prefix, parses
-# each via w3grs, and writes the parsed JSON to parsed/ for ClickHouse to load.
-# Run as a SINGLE instance — two instances race on the same keys.
+# The parse drain. Each run lists the source buckets' replay prefixes, parses each
+# new or changed .w3g via w3grs, and inserts the documents into ClickHouse's
+# ingest tables. Run one at a time: `just local::ingest` or `just local::drain-once`.
 #
-# All three bins ship: `drain` is the service, `parse` and `export-mappings` are
+# All three bins ship: `drain` is one pass, `parse` and `export-mappings` are
 # one-shot tools run with `docker compose run`.
 #
 # Builder pinned to -bookworm so its glibc matches the debian:bookworm-slim
@@ -12,8 +12,12 @@ WORKDIR /build
 COPY pipeline/parse-rs ./pipeline/parse-rs
 RUN cargo build --release --manifest-path pipeline/parse-rs/Cargo.toml
 
+# `just local::drain-test`: the unit tests and parser goldens on the compiled deps above.
+FROM build AS test
+RUN cargo test --release --manifest-path pipeline/parse-rs/Cargo.toml
+
 FROM debian:bookworm-slim
-# ca-certificates is for TLS to R2 in production; local MinIO is plain http.
+# ca-certificates is for TLS to R2 in production; local MinIO and ClickHouse are plain http.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/*
@@ -21,5 +25,5 @@ COPY --from=build /build/pipeline/parse-rs/target/release/drain /usr/local/bin/d
 COPY --from=build /build/pipeline/parse-rs/target/release/parse /usr/local/bin/parse
 COPY --from=build /build/pipeline/parse-rs/target/release/export-mappings /usr/local/bin/export-mappings
 
-# drain loops every WORKER_POLL_MS. `drain --once` is the batch mode.
-CMD ["drain"]
+# One pass over every source, then exit.
+CMD ["drain", "--once"]

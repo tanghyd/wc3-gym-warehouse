@@ -1,0 +1,29 @@
+# The warehouse transform: parsed replay documents in ingest.docs -> ClickHouse marts.
+# `just dbt build` runs it in the dbt container against the local ClickHouse.
+name: w3g
+version: "1.0"
+profile: w3g
+require-dbt-version: ">=2.0.0,<3.0.0"
+
+models:
+  w3g:
+    # ponytail: marts rebuild in full every run (an atomic swap, readers never see
+    # half a table). Switch a mart to incremental on replay_id when a build takes minutes.
+    +materialized: table
+    # The YAML descriptions become table and column comments in ClickHouse. No
+    # semicolons in a description: dbt 2.0.6 splits the comment DDL on them.
+    +persist_docs: {relation: true, columns: true}
+
+seeds:
+  w3g:
+    +persist_docs: {relation: true, columns: true}
+    mappings_melee:
+      +column_types: {code: String, name: String, kind: String, race: String, hero: String, is_supply_building: UInt8}
+    mappings_custom:
+      +column_types: {code: String, name: String, kind: String, category: String}
+    patches:
+      +column_types: {build_number: UInt32, patch: String, description: String}
+    object_sources:
+      +column_types: {code: String, kind: String, source_code: String, source_name: String}
+    start_locations:
+      +column_types: {map: String, slot: UInt8, x: Float64, y: Float64, source: String}

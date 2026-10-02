@@ -1,0 +1,13 @@
+{
+  "operator": "did not happen before another step",
+  "picked_by": "negate_before.sql",
+  "request": {
+    "filters": {"replay_id": ["3390394f2b184613178953dc89ae5f08aa285cb79e4c386b0e9a9e62e0ee30a6","475c75764667064b2a9fed018e434e0cd919b372265a39646377ee338e1be43d","56fa76b6591ec79673d328adb4aa16b6fbefae1324a682a991289becc8ea1559","5b6bb2c6812cb2a5fdaddf8511c32bfa62864745e14b9d9e625c67ec1144d8f2","5c00ef420eceedb8b9d7b7add486f3eac2842ef0446b406894403fd169e80583","92e6336e7b6e0ae5489b601b463a408fcd05079ca031162347d623098a75898b","9713ef467a28096158ea14ed13b261f4e1255c8f74b9c6814229dd23c4fc76e3","a4607e544f70234ad266ab512b2ed3a0ced5cb40d8e60212b21df51705475298","a7398b6e4ceab74aa3f1c3987660376cf04a2c3c11337ecd4fd205d85db0dc02","ab3ac82fdbdce5cdc0d5359a1fe6cc02a5b77c90c6a5c447ae5ee3e41bdd0db4"]},
+    "player": {"race": ["OC"], "groups": [{"steps": [{"kind": "building", "codes": ["ostr"]}, {"kind": "building", "codes": ["obar"], "negate": true, "before": 1}]}]},
+    "limit": 100
+  },
+  "expected": {
+    "games": 4,
+    "matches": [["3390394f2b184613178953dc89ae5f08aa285cb79e4c386b0e9a9e62e0ee30a6","Itsjustagame#11493"],["5c00ef420eceedb8b9d7b7add486f3eac2842ef0446b406894403fd169e80583","PandaHug#1747"],["9713ef467a28096158ea14ed13b261f4e1255c8f74b9c6814229dd23c4fc76e3","ClayPotBoy#1876"],["a4607e544f70234ad266ab512b2ed3a0ced5cb40d8e60212b21df51705475298","ELTERIF#1888"]]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "route": "/strategies/stats",
+  "request": {
+    "race": [
+      "HU",
+      "OC"
+    ]
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "detail": "race takes one race: HU, OC, NE or UD, alone or with its Random value"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "operator": "a count skips repeat clicks",
+  "picked_by": "repeat_click.sql",
+  "request": {
+    "filters": {"replay_id": ["08fc23520337628728c7a2c70786d659970703244cadf8b2a2ffce8429bf1007","3db351df96e80dc29f8ba8184663e192c8212fc2a6e24c23f8715fbdf4ac4892","7a7f974674a4185c286cfb5b22156aca7cf5cacf2dc1b0c6cb307d3cd30b89d5","7e14b9a108b62cba98c6417698f8822755262b534b430d300c3f9fb83f917320","be427663dc6b76e5116737e8ea48fbd364f1b28cf01e42574ef39a060f270685","c2f2dbe44e6c65227479e886eb87fe30f4fc8fdd896ae0c7ce1c673008b73635","cf142761754321d0d0772163f1eb08ef71243ac69843a86ad37d01930f8c8c81","e05602822dc91487afcf601cff42916104a06c919ba1d721f6edd53f4ec0058d","e65c8d1008565abe5ee0d49545a6cc037cacaace0eaa0810d56fc89028c682fa","f6f97c7e40ae93e323547b81b9a694539c9b8706a42008bb9e2dd9fa8b8db330"]},
+    "player": {"race": ["NE"], "groups": [{"steps": [{"kind": "building", "codes": ["etoa"], "count": 2}]}]},
+    "limit": 100
+  },
+  "expected": {
+    "games": 4,
+    "matches": [["3db351df96e80dc29f8ba8184663e192c8212fc2a6e24c23f8715fbdf4ac4892","thanks#11187"],["c2f2dbe44e6c65227479e886eb87fe30f4fc8fdd896ae0c7ce1c673008b73635","thanks#11187"],["cf142761754321d0d0772163f1eb08ef71243ac69843a86ad37d01930f8c8c81","IMaVirgnTT#2347"],["e65c8d1008565abe5ee0d49545a6cc037cacaace0eaa0810d56fc89028c682fa","MadPad09#11213"]]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "operator": "a mirror game with sides that differ: only one seating fits, shown from the player who fits, never marked both, and his result counts; every game in scope seats both players, so the scope has no record",
+  "picked_by": "mirror_one_side.sql",
+  "request": {
+    "filters": {"replay_id": ["00468ad656053ea24268af3be6691ed043c7ec4b3e901f3e5d4702daf27de273","1fd80af3bd149089b421c49b46ec96bf8887f4b18b122f16a2a563781fadba09","2aad66626112e64995a67a1197f4d267c442cd4033ad9442b5c0465b90ebc8f0","2c1ccaafa69e92e874955d6ec6b1336eea6a0dec322ff3bf5f7ff11776b139d9","6cce4169360675a1c2b15a06c596e585cfb598688664e74fe6ed8cd1b587a150","953385c927e80189e175cf6325a19d88ba6d6fbe2000915c763f73f6eebb129c","9be1e58ba6d1fff7d95ff9b506c4add6d02300a81b56e864f66b8f9df677f04b","be427663dc6b76e5116737e8ea48fbd364f1b28cf01e42574ef39a060f270685","e65c8d1008565abe5ee0d49545a6cc037cacaace0eaa0810d56fc89028c682fa","ed3c143b1ec2863b43956608b9847b225c25745e46995ded50f7c9190d701324"]},
+    "player": {"race": ["NE"], "groups": [{"steps": [{"kind": "building", "codes": ["eden"], "to_s": 360}]}]},
+    "opponent": {"race": ["NE"], "groups": [{"steps": [{"kind": "building", "codes": ["eden"], "to_s": 360, "negate": true}]}]},
+    "limit": 100
+  },
+  "expected": {
+    "games": 6,
+    "matches": [["00468ad656053ea24268af3be6691ed043c7ec4b3e901f3e5d4702daf27de273","MadPad09#11213"],["953385c927e80189e175cf6325a19d88ba6d6fbe2000915c763f73f6eebb129c","MadPad09#11213"],["9be1e58ba6d1fff7d95ff9b506c4add6d02300a81b56e864f66b8f9df677f04b","MadPad09#11213"],["be427663dc6b76e5116737e8ea48fbd364f1b28cf01e42574ef39a060f270685","MadPad09#11213"],["e65c8d1008565abe5ee0d49545a6cc037cacaace0eaa0810d56fc89028c682fa","MadPad09#11213"],["ed3c143b1ec2863b43956608b9847b225c25745e46995ded50f7c9190d701324","doctajones#11327"]],
+    "both": [],
+    "won": ["953385c927e80189e175cf6325a19d88ba6d6fbe2000915c763f73f6eebb129c","be427663dc6b76e5116737e8ea48fbd364f1b28cf01e42574ef39a060f270685","e65c8d1008565abe5ee0d49545a6cc037cacaace0eaa0810d56fc89028c682fa"],
+    "wins": 3,
+    "losses": 3,
+    "scope": {"games": 10, "wins": null, "losses": null}
+  }
+}

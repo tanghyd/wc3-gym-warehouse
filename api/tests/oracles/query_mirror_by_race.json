@@ -1,0 +1,19 @@
+{
+  "operator": "a game counts once in a /query row, and a mirror (both its players in the row) adds no win or loss: the Night Elf mirror 6f95bccb (slot 1 lost, slot 2 won) counts one game and one mirror in the NE row and no result; Human against Night Elf d6e39539 (Human won) and Orc against Undead f7f98dbb (Orc won) each count once in each of their races' rows with that player's result",
+  "picked_by": "query_mirror_by_race.sql",
+  "route": "/query",
+  "request": {
+    "dimensions": ["race"],
+    "measures": ["games", "mirrors", "wins", "losses", "apm_players"],
+    "order_by": ["race"],
+    "filters": {"replay_id": ["6f95bccbeb7f0b9ce9658fa98be4e8ebc63a0a978bb4fa4a98ce149df9d29280","d6e395396aaed78898653121cdc4ac46bd3c6217cbadbe72d95cb74d3a0e1ce0","f7f98dbb2671498ef60f13e03824e5004a4e290d0a16d6f8804ad6d711c62d3b"]}
+  },
+  "expected": {
+    "rows": [
+      {"race": "HU", "games": 1, "mirrors": 0, "wins": 1, "losses": 0, "apm_players": 1},
+      {"race": "NE", "games": 2, "mirrors": 1, "wins": 0, "losses": 1, "apm_players": 3},
+      {"race": "OC", "games": 1, "mirrors": 0, "wins": 1, "losses": 0, "apm_players": 1},
+      {"race": "UD", "games": 1, "mirrors": 0, "wins": 0, "losses": 1, "apm_players": 1}
+    ]
+  }
+}

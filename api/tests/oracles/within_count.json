@@ -1,0 +1,13 @@
+{
+  "operator": "then within: every counted order inside the window",
+  "picked_by": "within_count.sql",
+  "request": {
+    "filters": {"replay_id": ["587c192c885250d1e28adadb77fe7119efdf04d5eb148acad8ebb0b5be125e0c","5b6bb2c6812cb2a5fdaddf8511c32bfa62864745e14b9d9e625c67ec1144d8f2","836c7bfc25e03be10082c042abf22471de76ac2a0efc7395bd1eca3dc8119ca2","a1335d246555a5dd7d1ab266c81daa55c6fd86ae04d6fef6aea41b7e4469e10e","a341dfa160dbeea82274f57c6c3ebdbc772727d8330b4eb6d51630df18dd99bb","a8ff1c7d96e742fd641a97a58aea2e3cd220dcf6614a23365c030f6a13ad2f3e","b2544a71daa6d97814dccd2f579f0e4435b49231fa6506e7937e82c46cdd0e9d","db9c51791b30ff9ea80e80601292804ffe0d7a882da6e40d8da8f1b9a8d2e0bf","eeb5f74749d461820dc437525f0fd6f86440ac3217155001da257cdb4716db33","fb9b69ca47f87f0b01606c2a73284a750853f0a5ebd1103b21cf0a36f7d94e9d"]},
+    "player": {"race": ["HU"], "groups": [{"steps": [{"kind": "building", "codes": ["hbar"]}, {"kind": "unit", "codes": ["hfoo"], "count": 3, "link": "then", "within_s": 60}]}]},
+    "limit": 100
+  },
+  "expected": {
+    "games": 4,
+    "matches": [["587c192c885250d1e28adadb77fe7119efdf04d5eb148acad8ebb0b5be125e0c","drǃbucki#2383"],["a341dfa160dbeea82274f57c6c3ebdbc772727d8330b4eb6d51630df18dd99bb","Hoplite#1459"],["a8ff1c7d96e742fd641a97a58aea2e3cd220dcf6614a23365c030f6a13ad2f3e","Cenotaph#11854"],["b2544a71daa6d97814dccd2f579f0e4435b49231fa6506e7937e82c46cdd0e9d","GodBoy#21310"]]
+  }
+}

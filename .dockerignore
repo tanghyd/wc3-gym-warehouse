@@ -5,3 +5,7 @@ db/
 infrastructure/
 .github/
 *.md
+web/node_modules/
+web/.next/
+# Browser tests run in the e2e service; next build would type-check them.
+web/e2e/

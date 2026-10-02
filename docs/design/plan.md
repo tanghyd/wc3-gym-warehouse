@@ -149,7 +149,7 @@ Needed: the full load came through parse + `file()`, not the real path.
 | | |
 |---|---|
 | Scope | `OpenersView`, the selection panel, inline marks, the `open` and `sel` keys |
-| Gates | Shots: no-race picker, empty, deep link, phone order. Fixture rows through the UI. Children plus "Stopped here" equal the parent. The list header equals the node's player-games. A shared link rebuilds the tree and panel. |
+| Gates | Shots: no-race picker, empty, deep link, phone order. Fixture rows through the UI. Children plus "Stopped here" are the parent's games, or more by the games whose two players hold the prefix and then part ways. The list header equals the node's games. A shared link rebuilds the tree and panel. |
 
 ### PR 13: `feature/frontend-stats`
 
@@ -214,7 +214,7 @@ ClickHouse
 API
 - Race ids (Daniel, 2026-09-11): the wire uses the GNL ids `HU OC NE UD RANDOM` (gnl `app/models/enums.py:4-9`), and `RANDOM` stays a fifth race; storage keeps the parser letters `H O N U R` in `replay_players.race` and the event tables, so nothing is re-parsed; the Rust API maps at its boundary, request parsing turns a GNL id into the letter before it reaches SQL and the hydrate step and `GET /mappings` map the letter back, an unknown id gives 400; SQL text, the goldens and their parameter values keep the letters; the frontend uses the GNL ids everywhere, so `RaceSelect`, `RaceIcon` and the icon file names copy from gnl unchanged.
 - Private chat is hidden (the route is public, cached 1 hour). `hero_trained` time is the first cast, not the training order: accepted, revisit with the fork.
-- Story 2 reads "children plus stopped sum to the parent".
+- Story 2 reads "children plus stopped are the parent's games, or more".
 - Crate at `services/api/`; no compose healthcheck until something depends on the API; code 241 maps to 503.
 - PR 4 tests the empty password and `users.d`. clippy on parse-rs comes in a later `chore/` PR.
 - D4 is in, as PRs 15-16.

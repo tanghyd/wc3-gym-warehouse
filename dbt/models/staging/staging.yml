@@ -1,0 +1,21 @@
+models:
+  - name: valid_replays
+    description: >-
+      The loaded replays of valid games, the one source every mart reads documents from.
+      raw_replays read FINAL, so one row per replay at its newest parse version, without any
+      game in which a player gave no order (no building, unit, item, upgrade or unknown
+      order): such a game is an aborted start, not a game. A view, so it holds no copy of
+      the documents.
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }}"
+        data_tests:
+          - unique:
+              description: FINAL leaves one row per replay.
+      - name: doc
+        description: The whole parsed document as JSON text, as raw_replays holds it.
+      - name: events
+        description: >-
+          The orders and skill points of all players in the document, the rows replay_events
+          gets from it before repeat clicks are flagged. replays ranks the copies of one game
+          by it.

@@ -1,0 +1,14 @@
+{
+  "route": "/query",
+  "request": {
+    "dimensions": [
+      "nope"
+    ]
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "detail": "unknown dimension 'nope'"
+    }
+  }
+}

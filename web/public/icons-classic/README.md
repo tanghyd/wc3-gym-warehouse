@@ -1,0 +1,1 @@
+Classic (pre-Reforged) Warcraft III command-card icons, 64 x 64 webp, copied from wc3-gnl-website `public/wc3-icons/` (commit 87d0e2d), which took them from the W3Champions launcher (github.com/w3champions/launcher, `src/assets/images/hotkeys/icons/classic`). The art is Blizzard Entertainment's; no open licence covers it, the same terms as the Reforged set in `../icons/`.

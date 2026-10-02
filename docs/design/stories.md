@@ -75,7 +75,7 @@ Done when:
 - [ ] Each row shows building ordered, games, win rate, average minutes and branch count.
 - [ ] A click opens the next building in place, to depth 6 (index.html:448).
 - [ ] Win rate stays grey under 10 games (index.html:446). The floor sits in two places; tests pin both.
-- [ ] Children plus stopped sum to the parent.
+- [ ] Children plus stopped are the parent's games, or more: a game where both players hold the prefix and then part ways counts once in each player's row.
 - [ ] A row's replay button lists its games.
 
 | Review | Fixtures | Full load |
@@ -96,7 +96,7 @@ As a GNL player I want matchup win rates, hero picks, game lengths and APM for a
 Done when:
 - [ ] `/stats` takes the shared filters and states the cohort size.
 - [ ] Matchup table: games and win % of the row race.
-- [ ] Hero picks per race: share of that race's player-games.
+- [ ] Hero picks per race: share of that race's players.
 - [ ] Histograms: length in 5 min buckets, APM in 25 APM buckets.
 - [ ] A repeated load changes no number.
 - [ ] Each chart has a tooltip and a table view.
@@ -105,7 +105,7 @@ Done when:
 |---|---|---|
 | Games | 3 | 6,567 |
 | NvO, HvN | 2, 1 | 707, 672 |
-| Demon Hunter, of Night Elf player-games | 3 of 3 | 1,605 of 2,787 |
+| Demon Hunter, of Night Elf players | 3 of 3 | 1,605 of 2,787 |
 | Length 5-10 min, 15-20 min | 2, 1 | 1,129, 1,666 |
 
 Out of scope: MMR, seasons, teams, custom modes, player career pages.
@@ -152,6 +152,6 @@ Out of scope: stat-events, playback, hotkeys, resource transfers.
 **D4. Query forms.** Decided: minimum count, "without" and first hero are in, as PRs 15-16 at the top of the stack. Cross-player order stays out. Why: each form keeps the slot's `GROUP BY replay_id, player_id` shape and adds one bound `HAVING` term; PLAN.md:40 plans a first-hero filter; api.md §5 drops `hero_ordinal` until a story asks, and story 1 now asks. The PRs add api.md 3.4 Step and Group fields and a queries.md golden per form.
 
 Rules for the D4 forms:
-- **Count.** `unit` rows are training orders, not finished units; finished counts wait for stat-events. PR 15 checks whether the parser drops a cancelled training order (plan.md). Count `uniqExact(seq)`, not `count()`: `replay_events` is a ReplacingMergeTree and dedupes only at merge (`insert-optimize-avoid-final`). Skip flagged repeats.
+- **Count.** `unit` rows are training orders, not finished units; finished counts wait for stat-events. PR 15 checks whether the parser drops a cancelled training order (plan.md). Count with `count()`: `replay_events` is a MergeTree table that dbt rebuilds whole, so it holds no copies of a row. Skip flagged repeats (`is_repeat = 0`).
 - **Without.** The slot `WHERE` keeps only step codes, so the "without" codes join that `IN` list. A slot with only a "without" list has no rows to test; it uses `replay_players` of that race as its base.
-- **First hero.** Decided: `hero_trained` timing is accepted (it is the first ability cast, not the training order; api.md 6 question 5). On the full load, "earliest `hero_trained` is `Edem`" and "`player_heroes.hero_slot = 0` is `Edem`" both give 1,514 Night Elf player-games. w3warehouse ranks distinct heroes by earliest `hero_trained` (w3warehouse:services/api/src/api/compiler.py:806-844).
+- **First hero.** Decided: a `hero_trained` row is the order that trained the hero, the last order of its code at or before its first skill point (commit 7a66260; api.md 6 question 5). A hero step's `nth` reads the hero's place in `player_games.heroes`. On the 1,706 loaded games, "earliest `hero_trained` is `Edem`" and "`heroes[1]` is `Edem`" both give 502 Night Elf players. w3warehouse ranks distinct heroes by earliest `hero_trained` (w3warehouse:services/api/src/api/compiler.py:806-844).

@@ -1,0 +1,11 @@
+w3g:
+  target: local
+  outputs:
+    local:
+      type: clickhouse
+      host: "{{ env_var('CLICKHOUSE_HOST', 'clickhouse') }}"
+      port: 8123
+      user: default
+      password: "{{ env_var('CLICKHOUSE_PASSWORD', '') }}"
+      schema: w3g
+      secure: false

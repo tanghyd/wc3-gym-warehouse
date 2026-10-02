@@ -43,7 +43,7 @@ Not routes:
 | Unknown query key or body field | 400 (as w3warehouse: models.py:9-14) |
 | SQL values | Every value is a bound `{name:Type}` parameter. Measured on 26.9: `sequenceMatch({pat:String})`, `IN {ids:Array(String)}`, `seq[{d:UInt8}]` and `LIMIT {limit:UInt32} OFFSET {offset:UInt32}` accept bound values (queries.md §0, §7). |
 | Orders, not outcomes | Replays record commands, so every count and timeline row is an **order**. Finished-object counts wait for stat-events. Field names stay; the UI labels them "ordered". |
-| Repeat flag | `is_repeat UInt8`, computed at load on `player_order_events` and `replay_events` (PR 2). 1 on a same-code order by one player less than 1000 ms after that player's previous same-code order, only for single-instance codes: the tier halls `hkee hcas ostr ofrt unp1 unp2 etoa etoe`, research (codes starting `R`), and hero training (hero codes, in the `unknown` bucket via `mv__order_unknown`). Buildings and units stay raw. The first order keeps its time. Flag, never delete. Search, openers, counts and stats read `is_repeat = 0`; the timeline hides flagged rows. |
+| Repeat flag | `is_repeat UInt8`, computed at load on `player_order_events`, `hero_ability_events` and `replay_events`. An order: 1 on a tier hall (`hkee hcas ostr ofrt unp1 unp2 etoa etoe`), research (codes starting `R`) or hero order less than 1000 ms after the player's previous order of the same code. A skill point: 1 less than 1000 ms after the hero's previous point in that skill, or past level 3. Buildings and units stay raw. The first order keeps its time. Flag, never delete. `POST /search`, `POST /query` steps and the strategy stats read `is_repeat = 0`, and the replay page leaves flagged rows out; openers drop back-to-back repeats with `arrayCompact`. |
 
 Why (F): tier and research repeat almost only under 1 s (Stronghold 1,052 of 1,071); farms, towers and unit queues repeat at every gap. On 3 LAN stat-events games the rule fixed heroes exactly (14 orders → 8 = 8 real starts) and no time rule beat raw for buildings or units (`/home/daniel/.claude/jobs/ac2bfdc7/tmp/design-ground/order-calibration.md`). Tier halls sit in the buildings bucket, so the rule uses the code list, not the kind.
 
@@ -57,13 +57,14 @@ Why (F): tier and research repeat almost only under 1 s (Stronghold 1,052 of 1,0
 | `opponent_race` | GNL id | `HU OC NE UD RANDOM` | Race of the other player |
 | `player` | string | 1-64 chars | Focus player name. Exact, case-insensitive (`lowerUTF8()` on both sides, queries.md §1). |
 | `map` | string | 1-64 chars | Exact map name, as `GET /filters` lists it |
+| `patch` | string | a `patches` seed value | Game patch, such as `3.0` (`player_games.patch`, from the `patches` seed by build number) |
 | `min_minutes` | integer | 0-180 | `duration_ms >= min_minutes * 60000` |
 | `max_minutes` | integer | 0-180, not below `min_minutes` | `duration_ms <= max_minutes * 60000` |
 
 - No defaults. Bounds as w3warehouse: models.py:209-221, 290-300.
 - A game passes when it has players P and Q on different teams. P matches `race` and `player`. Q matches `opponent_race`.
 - P is the opener's owner on `/openers` (views.sql:52, index.html:887). On `/stats`, P and Q only select the cohort.
-- Every route adds `replays.type = '1on1'` (index.html:750, views.sql:80).
+- Every route adds `replays.type = '1on1'` (index.html:750, views.sql:80) and counts a game once: it reads `player_games`, which leaves out a second file of the same game (`replays.duplicate_of`, 2.5).
 - Decided: `RANDOM` is a fifth race, so `race=OC` skips a Random who rolled Orc. Why: the rolled race is out of scope (`race_detected` has it for 964 of 1,004 Random players (F), queries.md §4.1 rule 4).
 - No season or team filter until the dims loader (after the four pages).
 
@@ -76,7 +77,7 @@ The search body has no top-level `race`, `opponent_race` or `player`; each slot 
 | `race` | `groups[0].race` |
 | `opponent_race` | `groups[1].race` |
 | `player` | `groups[0].player` |
-| `map`, `min_minutes`, `max_minutes` | same top-level name |
+| `map`, `patch`, `min_minutes`, `max_minutes` | same top-level name |
 
 ### 2.4 Paging and order
 
@@ -103,13 +104,14 @@ The search body has no top-level `race`, `opponent_race` or `player`; each slot 
 | `map` | string | `""` when the file name gives none |
 | `matchup` | string | e.g. `"NvO"` |
 | `duration_ms` | integer | Game length |
-| `winning_team_id` | integer | `-1` when unknown (views.sql:108) |
+| `winning_team_id` | integer | `replays.winning_team_id`: the team of a player leave marked victory (result 09), else the team opposite the first player to quit: the first player leave recorded or, with none, the saver, because a FLO player-saved w3c- file drops the saver's own leave. `-1` unless the game has exactly two teams. |
 | `gnl` | object or null | `{"series_id": int, "game_no": int}`. Null when `gnl_series_id = 0` (tables.sql:33-36). The UI shows it as text. |
 | `download_url` | string or null | `DOWNLOAD_BASE_URL` + `replays.source_key` when both are non-empty, else null. The UI then shows "No file". |
 | `focus_player_id` | integer or null | The player the result column reports. `/search`: the player `groups[0]` bound to; null with no groups; the lower `player_id` when both fit. `/openers/replays`: the opener's owner (3.6). |
-| `players` | array | Sorted by `player_id`. Item: `player_id` int, `name` string, `race` GNL id, `team_id` int, `won` bool or null (null when `winning_team_id < 0`). |
+| `players` | array | Sorted by `player_id`. Item: `player_id` int, `name` string, `race` GNL id, `team_id` int, `won` bool or null (null when `winning_team_id < 0`), `heroes` array of `{"code": string, "final_level": int}` in pick order (`player_heroes.hero_slot`, rows with `hero_id = ''` left out), `[]` when the player spent no skill point. |
 
-- Row key: `(replay_id, focus_player_id)`. On `/openers/replays` a mirror game can appear twice (3.6).
+- Row key: `replay_id`. A game is one row (Daniel 2026-10-02): when both players fit, it shows from the lower player slot (3.4).
+- One game, one row: `/search` reads `player_games`, which leaves out a replay whose `replays.duplicate_of` is set (a second file of the same game, such as a player-saved copy of a replay-service file). `/replays/{id}` still answers any replay.
 - `source_key` (queries.md §5 S3, PR 3): the drain writes the raw R2 object key into each doc; `replays.source_key String DEFAULT ''` stores it. PR 3 re-stages the staging bucket (drain re-run, breadcrumbs cleared). Rows not loaded by the drain (fixtures, dev load) keep `''`.
 - Names carry no flag and no MMR until the dims loader lands.
 
@@ -263,6 +265,8 @@ GET /filters
 
 ### 3.4 `POST /search`
 
+Decided (Daniel 2026-10-02): a search matches a game, not a player. The prototype's request has a `player` and an `opponent` side (README "The query API"); a game matches when the Player side's conditions hold for one of its players and the Opponent side's for the other. Every count is games: `total`, `summary`, `scope` and `POST /strategies/stats`. Daniel: "the games are one concept, we don't need a copy for each side".
+
 Query: `limit`, `offset` (2.4). Body:
 
 | Field | Type | Bounds | Default |
@@ -301,17 +305,20 @@ Match rules:
 | Rule | Detail |
 |---|---|
 | Slots are players | `groups[0]` and `groups[1]` bind to two different players of one replay (different `player_id` and `team_id`). w3warehouse: compiler.py:381-387 merged same-race groups (A11). |
+| One game | `api/compile.py` `compile_search` reads `player_games`, where a row seats one player on the Player side and the other on the Opponent side, and groups the matching rows by `replay_id`. When both seatings fit, the game is a mirror (a game both players fit): one row, shown from the lower player slot with `both: true`; `summary.both` counts the mirrors. Swap trades the sides: the same games, each shown from the other player. (F), 1,706 games: no filters 1,706 games, all both; Night Elf v any race 710 games, 70 both; Night Elf v Night Elf 70 games, all both. |
+| Record | `wins` and `losses` count only the games that are not mirrors, each with its Player's result; a mirror is counted in `both` and adds no result, since either player can sit on the Player side. They are null when every game is a mirror. `scope` and every preset of `/strategies/stats` count the same way, with `both` the games that seat both players in scope. (F): no filters 1,706 games, all both, no record; Night Elf v any race 710 games, 70 both, 317 – 323 over 640; Night Elf v Night Elf no record. |
 | Empty slot | A group with no steps and no `without` binds on `race`, `player` and `result` only (the "opponent Orc" slot; w3warehouse: models.py:170-173). |
 | No groups | Lists every 1on1 game passing `map` and minutes. Paging bounds the cost. |
 | Orders only | Every step condition adds `is_repeat = 0` (2.1). |
 | One step | No `sequenceMatch`. The step's WHERE condition is the whole test (index.html:720-721). |
-| 2+ steps | Two jobs, two patterns (queries.md §4.2, rule 7). Order: `sequenceMatch({gI_pat:String})(time_ms, cond1, ...)`, pattern `(?1)` then `.*(?k)` per later step. It never carries a `(?t…)`. Gap: each step with `within_previous_seconds` ANDs its own `sequenceMatch({gI_sK_pat:String})(time_ms, <cond k-1>, <cond k>)`, pattern `(?1)(?t<={ms})(?2)`. Why: `sequenceMatch` skips only events that match no condition, so in one pattern a third step's order between the pair breaks the gap and a real game is lost. Never `.*(?t<=N)` or `(?t<=N).*` (compiler.py:909 bug). |
+| 2+ steps | `POST /query`: one `sequenceMatch` over `replay_events`, pattern `(?1)` then `.*(?k)` per later step, or `(?t<={ms})(?k)` for a step with a gap (`api/compile.py` `sequence_pattern`). An order of a third step between a bounded pair does not break the gap: `sequenceMatch` passes over it (measured on ClickHouse 26.8: A at 0, an order of a third condition C at 10 and B at 20 give 1 for `(?1)(?t<=30)(?2)`). Never `(?t<=N).*`: the `.*` lets the matcher pick another pair. `POST /search` builds no pattern: per player it collects each step's sorted order times (`groupArrayIf`) and tests the chain with array functions (`_chain_sql`); a `then` step with `within_s` needs all its `count` orders inside the window. |
 | Step window | `time_from_seconds`, `time_to_seconds` go into that step's condition as bound `UInt32` values. |
 | Repeated step | "A then A" needs two A events (measured: one gives 0, two give 1 for `(?1).*(?2)`). |
 | Equal timestamps | Decided: a real-data golden pins the order. Why: 1,605 of 1,605 came in order (F; queries.md C5). |
-| Minimum count | One bound `HAVING` term per counted step: `uniqExactIf(seq, <step cond>) >= {gI_sK_min:UInt32}`. Not `count()`: `replay_events` dedupes only at merge (`insert-optimize-avoid-final`). The step sits in the sequence at its first matching order. |
+| Minimum count | A step's `count` is the number of its orders: `count()` over its `replay_events` rows, which hold no copies because dbt rebuilds the table whole (a MergeTree, not a ReplacingMergeTree). A skill step's count is the skill level. |
 | Without | The codes join the slot's `subject_code IN` list; one bound term `countIf(subject_code IN {gI_without:Array(String)}) = 0`. A slot with only `without` codes uses `replay_players FINAL` of that race as its base. |
-| First hero | The player's earliest `hero_trained` row has this code (as w3warehouse: compiler.py:806-844). Decided: `hero_trained` = first ability cast, not training order; accepted. (F): that and `player_heroes.hero_slot = 0` both give 1,514 Night Elf player-games for `Edem`. |
+| First hero | A hero step with `nth`: the `hero_trained` row's `seq` is the hero's place in `player_games.heroes` (`api/compile.py:387-388`); a lone "1st hero X" step reads `heroes[nth]` and no orders (`api/compile.py:464-465`). A `hero_trained` row is the order that trained the hero: the last order of its code at or before its first skill point (`player_heroes.trained_ms`, commit 7a66260). (F), 1,706 games: `heroes[1] = 'Edem'`, the earliest `hero_trained` and `seq = 1` each give 502 Night Elf players; the earliest training order differs from `hero_slot = 0` for 0 of 3,346 players with a hero. |
+| Forward | A building step with `forward: true` keeps the placements under 3,000 map units from the opponent's start location: `sqrt(pow(x - opp_start_x, 2) + pow(y - opp_start_y, 2)) < {pN:Float64}`, the bound 3,000 a parameter (`api/compile.py` `FORWARD_UNITS`, `forward_condition`). `x`, `y` are on `replay_events` building rows; `opp_start_x`, `opp_start_y` on `player_games` (from `player_starts`), joined into the chain's scan on `(replay_id, player_id)` only when a step of the chain is forward. The step's `count` counts forward placements. With no opponent start (NULL) no placement is forward. Another kind with `forward` is refused (400). (F), 1,706 games: the Human tower rush (Scout Tower x3 by 4:00, 2 of them forward) gives 25 of 60 games. |
 | Too complex | A pattern caps at 1,000,000 iterations, then 160 → 400 (2.6). (F), race N: 7 × `unit ewsp` at 600 s gaps then `building etol` within 1 s fails in ~0.06 s; 4 × fails too; 8 × with open gaps returns 2,668 pairs. No setting raises the cap on 26.9, and a step cap cannot prevent it. Measured with the old one-pattern form; the split form (rule above) runs 7 two-condition aggregates plus one 8-condition ordering pattern, so PR 6 re-checks whether 160 still fires. If not, the case becomes a plain golden and the 160 → 400 map keeps only its stub test. |
 | Dedup and header shape | queries.md §4.1 is the source. Rules 10-11: each slot binds through `replay_players FINAL` with `(replay_id, player_id) IN (<slot set>)`. Rule 14: page `GROUP BY r.replay_id, …`. `replays FINAL` relies on the runtime join filter (`RF1`, on by default from 26.2, measured on 26.9), not a second `IN` (queries.md §5). Header reads use `FINAL` (`insert-optimize-avoid-final`). |
 
@@ -427,10 +434,10 @@ Response:
 |---|---|---|
 | `race` | GNL id | Echo |
 | `prefix` | array of codes | Echo |
-| `total` | integer | Player-games whose opener starts with `prefix` |
-| `stopped` | integer | Part of `total` whose opener ends exactly at `prefix`. `sum(rows[].games) + stopped = total`. |
+| `total` | integer | Games in which a player's opener starts with `prefix`, a game where both players' do once |
+| `stopped` | integer | Part of `total` whose opener ends exactly at `prefix`. `sum(rows[].games) + stopped` is `total`, or more: a game where both players hold `prefix` and then part ways counts once in each player's row. |
 | `rows[].code` | string | Building at depth `len(prefix) + 1` |
-| `rows[].games` | integer | Player-games |
+| `rows[].games` | integer | Games, a game where both players opened this way once |
 | `rows[].wins` | integer | Games that player won |
 | `rows[].avg_minutes` | number | Mean `duration_ms / 60000`, one decimal |
 | `rows[].branches` | integer | Distinct buildings at the next depth. 0 at depth 6. |
@@ -518,10 +525,10 @@ Request: shared filters only.
 | `matchups[].wins` | integer or null | Decided games won by `race`. Null on a mirror row. |
 | `heroes[]` | array | One item per player race, sorted by `race` |
 | `heroes[].race` | GNL id | |
-| `heroes[].player_games` | integer | Player-games of that race: the share's denominator |
+| `heroes[].player_games` | integer | Players of that race, two in a mirror game: the share's denominator |
 | `heroes[].picks[]` | array | `{code, player_games}`, sorted by `player_games` desc, then `code`. Tavern heroes count under the player's race. |
 | `durations` | object | `{"width_minutes": 5, "cap_minutes": 60, "counts": [int]}` |
-| `apm` | object | `{"width": 25, "cap": 500, "counts": [int]}`, over player-games |
+| `apm` | object | `{"width": 25, "cap": 500, "counts": [int]}`, over the players of the games |
 
 - Histogram: `counts[i]` covers `[i*width, (i+1)*width)`; index `cap/width` holds all values ≥ `cap` (as w3warehouse: analytics.py:1260-1286). Dense to the last non-empty bucket; empty cohort `[]`. No `pct`.
 - 1-3 heroes per player, so shares sum past 100% (models.py:485-490).
@@ -565,16 +572,18 @@ Hero rows come from `player_heroes`. APM rows come from `replay_players.apm`: 89
 | Field | Type | Meaning |
 |---|---|---|
 | `replay_id`, `map`, `matchup`, `duration_ms`, `winning_team_id`, `gnl`, `download_url` | | As in 2.5 |
-| `version` | string | `replays.version` |
+| `version` | string | `replays.version`, the replay file format version such as `"2.00"`, not the game patch |
+| `patch` | string | `replays.patch`, the game patch from the `patches` seed by build number, such as `"3.0"`. `""` for a build the seed has no row for. The replay header shows it |
 | `players[]` | array | Sorted by `player_id`. `player_id`, `name`, `race`, `team_id`, `won` as in 2.5. |
 | `players[].apm` | integer | Whole-game APM |
-| `players[].apm_per_minute` | array of int | `replay_players.apm_timed`, one value per game minute (inferred (X): 7 values for 6.7 min, 16 for 15.6 min) |
+| `players[].apm_per_minute` | array of int | `replay_players.apm_timed`, one value per game minute (inferred (X): 7 values for 6.7 min, 16 for 15.6 min). The last, partial minute is scaled to a full minute, or dropped when it is under 30 s |
 | `players[].heroes[]` | array | `{slot, code, final_level}` from `player_heroes`, sorted by `slot` |
 | `events[]` | array | The order timeline, sorted by `time_ms`, `player_id`, `seq`. Rows with `is_repeat = 1` are hidden. |
 | `events[].player_id`, `.time_ms` | integer | |
 | `events[].event_type` | enum | The six step kinds, plus `hero_retrained` (timeline only, never a search step; queries.md 3.8, C9). `unknown` rows are left out. |
 | `events[].code` | string | Object code; the name comes from `/mappings`. On `hero_retrained`, the hero's code. |
 | `events[].hero_code` | string or null | On `hero_skill` and `hero_retrained`: the hero (`hero_ability_events.hero_id`). The UI nests skills under it. Null otherwise. |
+| `events[].forward` | integer | 1 on a building placement a `forward` step keeps (the same condition on `player_games.opp_start_x`, `opp_start_y`), 0 otherwise. The page marks a forward step's orders by it. |
 | `chat[]` | array | `{time_ms, player_id, mode, message}`, sorted by `time_ms`. Only `mode = 'All'`. |
 
 - Decided: hide private chat (`AND mode = 'All'`, queries.md 3.8). Why: the route is public and cached 1 hour. (F): 5 lines, 3 `All`, 2 `Private`.
@@ -591,7 +600,7 @@ GET /replays/dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8
 {
   "replay_id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
   "map": "Concealed Hill", "matchup": "NvO", "duration_ms": 937219, "winning_team_id": 0,
-  "version": "2.00", "gnl": null, "download_url": null,
+  "version": "2.00", "patch": "2.0", "gnl": null, "download_url": null,
   "players": [
     {"player_id": 1, "name": "thanks#11187", "race": "NE", "team_id": 0, "won": true, "apm": 140,
      "apm_per_minute": [110, 96, 162, 130, 149],
@@ -615,7 +624,7 @@ GET /replays/dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8
 
 - Cut: `apm_per_minute` has 16 values per player. `events` has 152 rows (158 `replay_events` minus 6 `unknown`) before the repeat flag, 150 after PR 2 (2 flagged; queries.md D1-D4). `chat` holds 3 lines, all `All`.
 - Later in the timeline: `{"player_id": 1, "time_ms": 142254, "event_type": "hero_trained", "code": "Edem", "hero_code": null}` and `{"player_id": 1, "time_ms": 142254, "event_type": "hero_skill", "code": "AEim", "hero_code": "Edem"}`.
-- `hero_trained` is synthetic, at the hero's first ability event (views.sql:405-431).
+- `hero_trained` is synthetic, at the order that trained the hero (`player_heroes.trained_ms`), or at its first skill point when no order of its code comes before it.
 
 Errors: 404 `No game with this id` (the story text); 503, 504, 500 per 2.6.
 
@@ -629,14 +638,14 @@ Errors: 404 `No game with this id` (the story text); 503, 504, 500 per 2.6.
 | A4 | `/mappings` derives `race` | `mappings.race` is empty for upgrades and skills (F); index.html gets `AHfa`, `Rwdm` wrong. |
 | A5 | Race ids: the GNL ids `HU OC NE UD RANDOM` on the wire, the stored letters `H O N U R` in SQL | Decided 2026-09-11 (Daniel). The app speaks one race id (gnl backend `app/models/enums.py:4-9`); the API maps id to letter when it parses a request and letter to id when it hydrates a response (rust.md 4.4). Storage and `matchup` keep the letters, so no re-parse. |
 | A6 | `max-age` tiers (2.7), no ETags | 60 s staleness is invisible next to minutes of ingest (PLAN.md:54). |
-| A7 | Openers carry `stopped`; story 2 reads "children plus stopped sum to the parent" | 59 stopped at `prefix=eate,eaom` (F; queries.md 3.5). |
+| A7 | Openers carry `stopped`; story 2 reads "children plus stopped are the parent's games, or more" | 59 stopped at `prefix=eate,eaom` (F; queries.md 3.5). |
 | A8 | `/stats`: one route, one cohort | Story 3 states one cohort size; charts are small. |
 | A9 | `/replays/{id}`: one route | The page shows almost all of it at once. |
 | A10 | `http_wait_end_of_query = 1` | One error path: a failure is a non-200 with the code header. Exists on 26.9 (default 0); PR 2 re-checks on 26.8. |
 | A11 | `groups[i]` is player i; two different players | Mirrors become searchable. |
 | A12 | 6-permit semaphore (1 s wait), 202 → 503, one per-IP edge rule (2.9) | With the 202 map alone, 3 loads at once fail. Only the edge rule stops one client taking every permit. |
 | A13 | Openers keep `arrayCompact`, not `arrayDistinct` | Top repeats are real extra buildings (F): `otrb` 3,368, `hwtw` 568, `eaom` 543, `eden` 239, `usep` 234. Story 2 says "first buildings". |
-| A14 | `/openers/replays`: one row per opener owner | The tree counts player-games. Row key `(replay_id, focus_player_id)`. |
+| A14 | `/openers/replays`: one row per game | Decided (Daniel 2026-10-02): the tree counts games, and a game where both players hold the prefix is one row, shown from the lower player slot. Row key `replay_id`. |
 | A15 | Count, `without`, first hero in PRs 15-16 (stories D4) | Each adds one bound `HAVING` term to the slot shape. PLAN.md:40 plans first hero. Cross-player order, ordered negation, OR in a step and second hero stay out. |
 
 ## 5. Dropped from the w3warehouse request model
@@ -662,7 +671,7 @@ Numbers stay stable for references from other documents.
 2. List order: decided, fixed order now; PR 3 adds a play date if the drain can read the upload time (2.4).
 3. Readonly profile over HTTP: a check, not a question. `?readonly=1` in a URL fails with Code 164; a native `--readonly=1` session accepts `--param_x` (measured). PR 4 (users.d, empty-password test) and the live CI job on 26.8 (rust.md 17.3) run `curl -u <api user>: 'http://127.0.0.1:8123/?param_x=7' --data-binary 'SELECT {x:UInt8} FORMAT JSON'`.
 4. `stopped`: decided (A7).
-5. `hero_trained` timing: decided, first cast accepted (3.4 "First hero").
+5. `hero_trained` timing: decided, the training order (3.4 "First hero").
 6. Private chat: decided, hidden (3.8).
 7. `download_url`: decided, `source_key` (2.5, PR 3).
 8. Profile limits: decided, measured after PR 2 (2.8).

@@ -263,7 +263,7 @@ LIMIT {limit:UInt32} OFFSET {offset:UInt32}
 ```
 
 - One row per opener owner (api.md 3.6, A14). The view has 12,881 rows and 12,881 distinct `(replay_id, player_id)`, so no `GROUP BY`.
-- A mirror where both hold the prefix gives two rows. Rust hydrates the distinct ids (3.4) and keeps each row's `focus_player_id`.
+- A mirror where both hold the prefix gives two rows here; since 2026-10-02 the API lists such a game once, from the lower player slot (api.md A14). Rust hydrates the distinct ids (3.4) and keeps each row's `focus_player_id`.
 - The `replays` side relies on the runtime join filter (3.4). A `replay_id IN (view)` pre-filter would run the view a second time. The plan is the 3.5 plan plus one `replays FINAL` read.
 - `prefix = eate,eaom,eden`, race N: 816 rows in 794 replays; 816 equals that tree row's `games`.
 
@@ -316,7 +316,7 @@ ORDER BY bucket WITH FILL FROM 0
 ```
 
 ```sql
--- apm, over player-games
+-- apm, over the players of the games
 SELECT least(intDiv(apm, 25), 20) AS bucket, count() AS n
 FROM w3g.replay_players FINAL
 WHERE replay_id IN (C)
@@ -359,7 +359,7 @@ GROUP BY race
 - A mirror row gets `wins = null` in Rust. `FINAL` on every read; `uniqExact` where a join can fan out. No plain `count()` over `replay_events` (clickhouse-audit finding 7).
 - Heroes: `hero_id != ''` drops the 68 empty rows; Rust reads the total from `is_total = 1`. Each race has exactly one `code = ''` row.
 - Stats read no order rows, so `is_repeat` does not touch them. An identical `IN (C)` is built once (plan shows `subquery1` twice).
-- Decided: `H O N U R` are the storage values in `replay_players.race` and the event tables, and every race `{…:String}` param here takes a letter; the wire ids are the GNL ids `HU OC NE UD RANDOM`, and the Rust API maps each one to its letter before the SQL runs and back again when it hydrates. `R` is a fifth race. No filter: `R` has 1,004 player-games, e.g. `['R', 'Ucrl', 106]`.
+- Decided: `H O N U R` are the storage values in `replay_players.race` and the event tables, and every race `{…:String}` param here takes a letter; the wire ids are the GNL ids `HU OC NE UD RANDOM`, and the Rust API maps each one to its letter before the SQL runs and back again when it hydrates. `R` is a fifth race. No filter: `R` has 1,004 players, e.g. `['R', 'Ucrl', 106]`.
 
 ```
 filtered durations: ReadFromMergeTree (w3g.replays) FINAL: 1
@@ -508,7 +508,7 @@ The two new aggregates both give 1, so the slot matches.
 
 Known limit, accepted: the gap aggregate and the ordering pattern match independently. A slot with an early A, B, C chain and a late A, B pair within N passes, although no single chain holds both. Rare on real builds; a golden in PR 6 records the shape. The old form's false negative hit every 3-step search with a common third code.
 
-- **Equal timestamps.** `hero_trained` ties with the hero's first skill (views.sql:405-431). No documented order guarantee was found. Measured: "`hero_trained Edem` then a Demon Hunter skill" matches 1,605 of 1,605 player-games; the reverse order matches 3. Decided (C5): keep plain `time_ms` and pin golden E1 (§7).
+- **Equal timestamps.** `hero_trained` ties with the hero's first skill (views.sql:405-431). No documented order guarantee was found. Measured: "`hero_trained Edem` then a Demon Hunter skill" matches 1,605 of 1,605 players; the reverse order matches 3. Decided (C5): keep plain `time_ms` and pin golden E1 (§7).
 - **Split `hero_trained`.** views.sql:405-408 assumes a hero's ability events arrive in one INSERT block. One doc is one `replays_raw` row, so this holds per doc. If it fails, two `hero_trained` rows land with different `time_ms`; neither `FINAL` nor `DISTINCT` merges them. The fix belongs in the load path, not the compiler. No step search asks "`hero_trained X` then `hero_trained X`".
 
 ### 4.3 D4 forms (PRs 15-16)
@@ -1073,13 +1073,13 @@ Goldens for the other builders (SQL from §3 with these params):
 | O2 | 3.5, `prefix`, winrate | `{"after": 4, "depth": 2, "next": 3, "prefix": ["eate", "eaom"], "race": "N"}` | 6 rows, incl. `['', 59, 18, 3.8, 0]` (`stopped`) |
 | O3 | 3.5, player | `{"after": 2, "next": 1, "player": "MEDUSA#31315", "race": "N"}` | 1 row, `eate`, 2 games |
 | O4 | 3.5, depth 5 | `{"after": 7, "depth": 5, "next": 6, "prefix": ["eate", "eaom", "etoa", "edob", "eden"], "race": "N"}` | 8 rows, all `branches = 0` |
-| R1 | 3.6 | `{"depth": 3, "limit": 25, "offset": 0, "prefix": ["eate", "eaom", "eden"], "race": "N"}` | 816 player-games (794 replays), equal to the `eden` tree row |
+| R1 | 3.6 | `{"depth": 3, "limit": 25, "offset": 0, "prefix": ["eate", "eaom", "eden"], "race": "N"}` | 816 players (794 replays), equal to the `eden` tree row |
 | T1-T4 | 3.7, opponent block | `{"opponent_race": "O", "player": "medusa#31315", "race": "N"}` | durations `[[0,0],[1,1]]`; matchups `N-O 1/1/1`, `O-N 1/1/0`; totals `N 1`, `O 1` (`is_total = 1`); `Edem`, `Ekee`, `Oshd`, `Obla` 1 each |
 | T5 | 3.7 heroes, no filter | `{}` | one `code = ''` row per race, each `is_total = 1` (a real `hero_id = ''` must not appear) |
 | H1 | 3.4 hydrate | `{"ids": ["dcd3…", "0ddb…"]}` (full ids) | 2 rows, input order |
 | D1-D4 | 3.8 | `{"id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8"}` | header 1 row; 2 players; 150 events (152 raw minus 2 flagged); 3 chat lines (0 `Private`, 0 `retraining`) |
 | D5 | 3.8 events, a retrain | any `replay_id` from `hero_ability_events WHERE event_type = 'retraining'` | no `code = ''`; the retrain is `hero_retrained` with the hero code |
-| E1 | §4.2 equal timestamps | every player-game with `hero_trained Edem`: step 1 `hero_trained Edem`, step 2 its first `hero_skill`, `(?1).*(?2)` | 1,605 of 1,605 match (full load, 26.9) |
+| E1 | §4.2 equal timestamps | every player with `hero_trained Edem`: step 1 `hero_trained Edem`, step 2 its first `hero_skill`, `(?1).*(?2)` | 1,605 of 1,605 match (full load, 26.9) |
 | F1 | §9 flag | full load, `sum(is_repeat)` per class after PR 2 | hero 11,429, tier 4,392, research 3,651 (19,472 total; 26.9 window emulation) |
 
 ## 8. Settled questions

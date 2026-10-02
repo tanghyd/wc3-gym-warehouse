@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<!--
+  default: dbt's user and the admin. From the server itself and the compose network only.
+  api: the query API's user. Read only, the w3g database only, with a time and
+  memory cap per query so one bad filter cannot starve the server.
+  grafana: Grafana's user. Read only, w3g and the system tables its dashboards
+  read, with the same caps.
+  ingest: the drain's user. SELECT and INSERT on the ingest database only, from the
+  compose network. The tables are in ingest.sql.
+  172.30.0.0/24 is the compose network's fixed subnet (compose.yaml), so only a compose
+  container passes; the port is published on 127.0.0.1 only. A new subnet needs both files changed.
+-->
+<clickhouse>
+    <users>
+        <default>
+            <networks replace="replace">
+                <ip>127.0.0.1</ip>
+                <ip>::1</ip>
+                <ip>172.30.0.0/24</ip>
+            </networks>
+        </default>
+        <api>
+            <password from_env="CLICKHOUSE_API_PASSWORD"/>
+            <profile>api</profile>
+            <quota>default</quota>
+            <networks><ip>::/0</ip></networks>
+            <allow_databases><database>w3g</database></allow_databases>
+        </api>
+        <grafana>
+            <password from_env="CLICKHOUSE_GRAFANA_PASSWORD"/>
+            <profile>grafana</profile>
+            <quota>default</quota>
+            <networks><ip>::/0</ip></networks>
+            <grants>
+                <query>GRANT SELECT ON w3g.*</query>
+                <query>GRANT SELECT ON system.query_log</query>
+                <query>GRANT SELECT ON system.metric_log</query>
+                <query>GRANT SELECT ON system.asynchronous_metric_log</query>
+                <query>GRANT SELECT ON system.parts</query>
+            </grants>
+        </grafana>
+        <ingest>
+            <password from_env="CLICKHOUSE_INGEST_PASSWORD"/>
+            <quota>default</quota>
+            <networks>
+                <ip>172.30.0.0/24</ip>
+            </networks>
+            <grants>
+                <query>GRANT SELECT, INSERT ON ingest.*</query>
+            </grants>
+        </ingest>
+    </users>
+    <profiles>
+        <api>
+            <readonly>1</readonly>
+            <max_execution_time>10</max_execution_time>
+            <max_memory_usage>2000000000</max_memory_usage>
+            <!-- count() is UInt64; answer it as a JSON number, not a string -->
+            <output_format_json_quote_64bit_integers>0</output_format_json_quote_64bit_integers>
+        </api>
+        <grafana>
+            <readonly>1</readonly>
+            <max_execution_time>10</max_execution_time>
+            <max_memory_usage>2000000000</max_memory_usage>
+            <!-- The plugin's driver sends max_execution_time with every query;
+                 readonly=1 refuses any setting unless a constraint allows it. -->
+            <constraints>
+                <max_execution_time>
+                    <max>10</max>
+                    <changeable_in_readonly/>
+                </max_execution_time>
+            </constraints>
+        </grafana>
+    </profiles>
+</clickhouse>

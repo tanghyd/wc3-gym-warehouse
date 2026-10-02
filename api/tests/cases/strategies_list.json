@@ -1,0 +1,2180 @@
+{
+  "route": "/strategies",
+  "response": {
+    "status": 200,
+    "body": {
+      "strategies": [
+        {
+          "id": "ud-dk",
+          "name": "Death Knight first",
+          "race": "UD",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Udea"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "ud-dk-expo",
+          "name": "… fast expand",
+          "race": "UD",
+          "parent_id": "ud-dk",
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "ugol"
+              ],
+              "to_s": 480
+            }
+          ]
+        },
+        {
+          "id": "ud-lich",
+          "name": "Lich first",
+          "race": "UD",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Ulic"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "ud-dl",
+          "name": "Dreadlord first",
+          "race": "UD",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Udre"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "ud-cl-necro-mw",
+          "name": "CL — Necromancer + Meat Wagon",
+          "race": "UD",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Ucrl"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "unec"
+              ],
+              "count": 2
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "umtw"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ud-cl-necro-mw-fe",
+          "name": "… fast expand",
+          "race": "UD",
+          "parent_id": "ud-cl-necro-mw",
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "ugol"
+              ],
+              "to_s": 480
+            }
+          ]
+        },
+        {
+          "id": "ud-cl-necro-mw-onebase",
+          "name": "… one-base push",
+          "race": "UD",
+          "parent_id": "ud-cl-necro-mw",
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "ugol"
+              ],
+              "negate": true
+            }
+          ]
+        },
+        {
+          "id": "ud-cl-necro-mw-late",
+          "name": "… late expo",
+          "race": "UD",
+          "parent_id": "ud-cl-necro-mw",
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "ugol"
+              ],
+              "from_s": 480,
+              "to_s": 900
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ugol"
+              ],
+              "to_s": 480,
+              "negate": true
+            }
+          ]
+        },
+        {
+          "id": "ud-fiend-heavy",
+          "name": "Fiend-heavy",
+          "race": "UD",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "unit",
+              "codes": [
+                "ucry"
+              ],
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "ud-gargoyle",
+          "name": "Gargoyle opener",
+          "race": "UD",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "unit",
+              "codes": [
+                "ugar"
+              ],
+              "count": 4
+            }
+          ]
+        },
+        {
+          "id": "ud-tavern",
+          "name": "Tavern hero first",
+          "race": "UD",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Nalc",
+                "Nbrn",
+                "Nbst",
+                "Nfir",
+                "Nngs",
+                "Npbm",
+                "Nplh",
+                "Ntin"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "ud-expand",
+          "name": "Fast expand",
+          "race": "UD",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "ugol"
+              ],
+              "to_s": 480
+            }
+          ]
+        },
+        {
+          "id": "hu-am",
+          "name": "Archmage first",
+          "race": "HU",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Hamg"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "hu-am-expo",
+          "name": "… fast expand",
+          "race": "HU",
+          "parent_id": "hu-am",
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "htow"
+              ],
+              "to_s": 360
+            }
+          ]
+        },
+        {
+          "id": "hu-am-late",
+          "name": "… late expand",
+          "race": "HU",
+          "parent_id": "hu-am",
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "htow"
+              ],
+              "from_s": 360,
+              "to_s": 900
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "htow"
+              ],
+              "to_s": 360,
+              "negate": true
+            }
+          ]
+        },
+        {
+          "id": "hu-am-onebase",
+          "name": "… one base",
+          "race": "HU",
+          "parent_id": "hu-am",
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "htow"
+              ],
+              "negate": true
+            }
+          ]
+        },
+        {
+          "id": "hu-tavern",
+          "name": "Tavern hero first",
+          "race": "HU",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Nalc",
+                "Nbrn",
+                "Nbst",
+                "Nfir",
+                "Nngs",
+                "Npbm",
+                "Nplh",
+                "Ntin"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "hu-expand",
+          "name": "Fast expand",
+          "race": "HU",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "htow"
+              ],
+              "to_s": 360
+            }
+          ]
+        },
+        {
+          "id": "hu-rifle",
+          "name": "Rifleman mass",
+          "race": "HU",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "unit",
+              "codes": [
+                "hrif"
+              ],
+              "count": 8
+            }
+          ]
+        },
+        {
+          "id": "hu-knight",
+          "name": "Knights",
+          "race": "HU",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "unit",
+              "codes": [
+                "hkni"
+              ],
+              "count": 4
+            }
+          ]
+        },
+        {
+          "id": "hu-breaker",
+          "name": "Spell Breakers",
+          "race": "HU",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "unit",
+              "codes": [
+                "hspt"
+              ],
+              "count": 4
+            }
+          ]
+        },
+        {
+          "id": "hu-gryphon",
+          "name": "Gryphon Riders",
+          "race": "HU",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "unit",
+              "codes": [
+                "hgry"
+              ],
+              "count": 4
+            }
+          ]
+        },
+        {
+          "id": "hu-mk",
+          "name": "Mountain King first",
+          "race": "HU",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Hmkg"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "hu-pala",
+          "name": "Paladin first",
+          "race": "HU",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Hpal"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "hu-blm",
+          "name": "Blood Mage first",
+          "race": "HU",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Hblm"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "hu-tower-rush",
+          "name": "Tower rush",
+          "race": "HU",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "hwtw"
+              ],
+              "count": 3,
+              "to_s": 240
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "hwtw"
+              ],
+              "count": 2,
+              "to_s": 240,
+              "forward": true
+            }
+          ]
+        },
+        {
+          "id": "or-bm",
+          "name": "Blademaster first",
+          "race": "OC",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Obla"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "or-fs",
+          "name": "Far Seer first",
+          "race": "OC",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Ofar"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "or-tc",
+          "name": "Tauren Chieftain first",
+          "race": "OC",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Otch"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "or-sh",
+          "name": "Shadow Hunter first",
+          "race": "OC",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Oshd"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "or-expand",
+          "name": "Expanding Orc",
+          "race": "OC",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "ogre"
+              ],
+              "to_s": 630
+            }
+          ]
+        },
+        {
+          "id": "or-tavern",
+          "name": "Tavern hero first",
+          "race": "OC",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Nalc",
+                "Nbrn",
+                "Nbst",
+                "Nfir",
+                "Nngs",
+                "Npbm",
+                "Nplh",
+                "Ntin"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "or-tower-rush",
+          "name": "Tower rush",
+          "race": "OC",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "owtw"
+              ],
+              "count": 2,
+              "to_s": 300,
+              "forward": true
+            }
+          ]
+        },
+        {
+          "id": "ne-dh",
+          "name": "Demon Hunter first",
+          "race": "NE",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Edem"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "ne-kotg",
+          "name": "Keeper first",
+          "race": "NE",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Ekee"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "ne-potm",
+          "name": "Priestess first",
+          "race": "NE",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Emoo"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "ne-warden",
+          "name": "Warden first",
+          "race": "NE",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Ewar"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "ne-expand",
+          "name": "Expanding Night Elf",
+          "race": "NE",
+          "parent_id": null,
+          "source": "w3warehouse",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "etol"
+              ],
+              "to_s": 540
+            }
+          ]
+        },
+        {
+          "id": "ne-tavern",
+          "name": "Tavern hero first",
+          "race": "NE",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Nalc",
+                "Nbrn",
+                "Nbst",
+                "Nfir",
+                "Nngs",
+                "Npbm",
+                "Nplh",
+                "Ntin"
+              ],
+              "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "ne-tower-rush",
+          "name": "Tower rush",
+          "race": "NE",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "etrp"
+              ],
+              "count": 2,
+              "to_s": 300,
+              "forward": true
+            }
+          ]
+        },
+        {
+          "id": "beginner-rifle-caster",
+          "name": "Beginner Rifle Caster",
+          "race": "HU",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Hamg"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "hero",
+              "codes": [
+                "Hmkg"
+              ],
+              "nth": 2
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "hkee"
+              ]
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "hrif"
+              ],
+              "count": 3,
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "hmpr"
+              ],
+              "count": 2
+            }
+          ]
+        },
+        {
+          "id": "paladin-rifle-build",
+          "name": "Paladin Rifle Build",
+          "race": "HU",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "UD"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Hpal"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "hbla"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "hbar"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "hrif"
+              ],
+              "count": 2,
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "hkee"
+              ],
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "mk-2-barracks-footmen-tower-rush",
+          "name": "MK 2 Barracks Footmen Tower Rush",
+          "race": "HU",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Hmkg"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "hbar"
+              ]
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "hfoo"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "hbar"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "hwtw"
+              ],
+              "count": 2,
+              "link": "then",
+              "forward": true
+            }
+          ]
+        },
+        {
+          "id": "archmage-one-camp-into-expansion",
+          "name": "Archmage One Camp into Expansion",
+          "race": "HU",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Hamg"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "hfoo"
+              ],
+              "count": 4
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "htow"
+              ],
+              "to_s": 360,
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "solo-paladin-baptism-build",
+          "name": "Solo Paladin Baptism Build",
+          "race": "HU",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "UD"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Hpal"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "htow"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "hatw"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "hkee"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "hgtw"
+              ],
+              "count": 2,
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "standard-human-mirror-build",
+          "name": "Standard Human Mirror Build",
+          "race": "HU",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "HU"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Hamg"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "hero",
+              "codes": [
+                "Hmkg"
+              ],
+              "nth": 2
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "hkee"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "hars"
+              ],
+              "count": 2,
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "hmpr"
+              ],
+              "count": 2,
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "hspt"
+              ],
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "farseer-headhunter-2-burrow-tech",
+          "name": "Farseer Headhunter 2 Burrow Tech",
+          "race": "OC",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Ofar"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ohun"
+              ],
+              "count": 2
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ostr"
+              ],
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "farseer-1-grunt-into-headhunters",
+          "name": "Farseer 1 Grunt into Headhunters",
+          "race": "OC",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "OC"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Ofar"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ogru"
+              ]
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ohun"
+              ],
+              "count": 2,
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ostr"
+              ],
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "farseer-fast-tech-without-barracks",
+          "name": "Farseer Fast Tech without Barracks",
+          "race": "OC",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "HU"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Ofar"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ostr"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "obar"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ogru"
+              ],
+              "count": 2,
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "obar"
+              ],
+              "before": 2,
+              "negate": true
+            }
+          ]
+        },
+        {
+          "id": "1-burrow-barracks-and-shop-before-tech",
+          "name": "1 Burrow, Barracks and Shop before Tech",
+          "race": "OC",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "obar"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ovln"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ogru"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ostr"
+              ],
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "two-burrow-tech-with-grunts",
+          "name": "Two Burrow Tech with Grunts",
+          "race": "OC",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "obar"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "otrb"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ogru"
+              ],
+              "count": 2,
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ostr"
+              ],
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "no-barracks-shop-before-tech",
+          "name": "No Barracks Shop before Tech",
+          "race": "OC",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "ovln"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ostr"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "obar"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "obar"
+              ],
+              "before": 2,
+              "negate": true
+            }
+          ]
+        },
+        {
+          "id": "tauren-chieftain-headhunters",
+          "name": "Tauren Chieftain Headhunters",
+          "race": "OC",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Otch"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "obar"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "oalt"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ohun"
+              ],
+              "count": 3,
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ostr"
+              ],
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "tier-2-farseer-naga-push-vs-ne",
+          "name": "Tier 2 Farseer / Naga Push vs NE",
+          "race": "OC",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "NE"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Ofar"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "hero",
+              "codes": [
+                "Nngs"
+              ],
+              "nth": 2
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ogru"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ostr"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ogru"
+              ],
+              "count": 3,
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "demon-hunter-fast-tech-bears",
+          "name": "Demon Hunter Fast Tech Bears",
+          "race": "NE",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Edem"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "earc"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "etoa"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "eaoe"
+              ],
+              "count": 2,
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "edoc"
+              ],
+              "count": 2,
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "firelord-fast-expo",
+          "name": "Firelord Fast Expo",
+          "race": "NE",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Nfir"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "etol"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "eate"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "etoa"
+              ],
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "1-aow-fast-hunts-tech",
+          "name": "1 AoW Fast Hunts Tech",
+          "race": "NE",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "OC"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Ekee"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "edob"
+              ]
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "esen"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "etoa"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "eaom"
+              ],
+              "exactly": true,
+              "before": 4
+            }
+          ]
+        },
+        {
+          "id": "naga-archer-talon-push",
+          "name": "1st Hero and Naga Archer/DotT Push",
+          "race": "NE",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Nngs"
+              ],
+              "nth": 2
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "etoa"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "eaow"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "edot"
+              ],
+              "count": 2,
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "earc"
+              ],
+              "count": 8
+            }
+          ]
+        },
+        {
+          "id": "tavern-hero-first",
+          "name": "Tavern Hero First",
+          "race": "NE",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Nalc",
+                "Nbrn",
+                "Nbst",
+                "Nfir",
+                "Nngs",
+                "Npbm",
+                "Nplh",
+                "Ntin"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "eaom"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "eate"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "earc"
+              ],
+              "count": 3,
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "etoa"
+              ],
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "24-food-proxy-expo",
+          "name": "24 Food Proxy Expo",
+          "race": "NE",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "UD"
+          ],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "etoa"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "etol"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "eaoe"
+              ],
+              "count": 2,
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "edry"
+              ],
+              "count": 2,
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "mass-talons-vs-orc",
+          "name": "Mass Talons vs Orc",
+          "race": "NE",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "OC"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Edem"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "etoa"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "etoe"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "eaow"
+              ],
+              "count": 2,
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "edot"
+              ],
+              "count": 2,
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "fast-death-knight-fiends",
+          "name": "Fast Death Knight Fiends",
+          "race": "UD",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Udea"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ucry"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp1"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp2"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "uobs"
+              ],
+              "count": 2
+            }
+          ]
+        },
+        {
+          "id": "fast-fiends-and-death-knight",
+          "name": "Fast Fiends and Death Knight",
+          "race": "UD",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "OC"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Udea"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ugrv"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "uzig"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ucry"
+              ],
+              "count": 3,
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp1"
+              ],
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "quick-1-ziggurat-tech-into-gargoyles",
+          "name": "Quick 1 Ziggurat Tech into Gargoyles",
+          "race": "UD",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "NE"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Udea"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp1"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "usep"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ugar"
+              ],
+              "count": 3,
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "uzig"
+              ],
+              "exactly": true,
+              "before": 2
+            }
+          ]
+        },
+        {
+          "id": "ghoul-pull-build-vs-night-elf",
+          "name": "Ghoul Pull Build vs Night Elf",
+          "race": "UD",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "NE"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Udea"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unpl"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp1"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ugar"
+              ],
+              "count": 2,
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "dk-ghoul-tech-vs-dh-naga-panda-1-base",
+          "name": "DK Ghoul Tech vs DH Naga/Panda 1 Base",
+          "race": "UD",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "NE"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Udea"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ugho"
+              ],
+              "count": 4
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp1"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp2"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ugol"
+              ],
+              "negate": true
+            }
+          ]
+        },
+        {
+          "id": "dk-ghoul-expo-vs-ne",
+          "name": "DK Ghoul Expo vs NE",
+          "race": "UD",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "NE"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Udea"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ugho"
+              ],
+              "count": 3
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ugol"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp1"
+              ],
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "dk-ghoul-tech-push-vs-kotg-dh-expo",
+          "name": "DK Ghoul Tech Push vs KotG DH Expo",
+          "race": "UD",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "NE"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Udea"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "hero",
+              "codes": [
+                "Ulic"
+              ],
+              "nth": 2
+            },
+            {
+              "kind": "hero",
+              "codes": [
+                "Ntin"
+              ],
+              "nth": 3
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp1"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp2"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "uobs"
+              ],
+              "count": 2,
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "dk-ghoul-tier-3-expo-vs-kotg-dh",
+          "name": "DK Ghoul Tier 3 Expo vs KotG DH",
+          "race": "UD",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "NE"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Udea"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "hero",
+              "codes": [
+                "Ulic"
+              ],
+              "nth": 2
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp1"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp2"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ugol"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "uban"
+              ],
+              "count": 2,
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "facing-paladin-rifle-as-undead",
+          "name": "Facing Paladin Rifle as Undead",
+          "race": "UD",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [
+            "HU"
+          ],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Ucrl"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ugho"
+              ],
+              "count": 4
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "ugol"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp1"
+              ],
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "crypt-lord-fast-fiends-fast-tech",
+          "name": "Crypt Lord Fast Fiends with Fast Tech",
+          "race": "UD",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Ucrl"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ucry"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp1"
+              ],
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "ucry"
+              ],
+              "count": 3,
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "uslh"
+              ],
+              "link": "then"
+            }
+          ]
+        },
+        {
+          "id": "pit-lord-fast-t3-necro-wagon-push",
+          "name": "Pit Lord Fast T3 Necro Wagon Push",
+          "race": "UD",
+          "parent_id": null,
+          "source": "wc3-gnl-website",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Nplh"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp1"
+              ]
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "utod"
+              ],
+              "count": 2,
+              "link": "then"
+            },
+            {
+              "kind": "unit",
+              "codes": [
+                "unec"
+              ],
+              "count": 2,
+              "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "unp2"
+              ],
+              "link": "then"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

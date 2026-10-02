@@ -1,0 +1,354 @@
+# Fixtures are SQL, not dict rows: dbt 2.0.6 casts dict rows to Nullable(<column type>),
+# which ClickHouse refuses for LowCardinality and which makes the JSON functions on
+# valid_replays.doc return Nullable(Array), an illegal type. A SQL expect compares
+# every column, so it lists them all. dbt 2.0.6 checks only the String and float columns:
+# it shows integer and array columns as [unsupported], and a wrong integer passes.
+unit_tests:
+  - name: player_games_openers
+    description: >-
+      player_games keeps the first six non-supply buildings by time then seq, drops a
+      back-to-back repeat (also one left adjacent once a supply building is removed),
+      ignores other order kinds and fills '' past the end. heroes lists the heroes by
+      hero_slot without the '' hero, and first_hero to third_hero are its first three
+      ('' past the end). It takes the played races, the random flags and the result
+      from replay_players and replays, and leaves out a replay that duplicates another
+      (r2).
+    model: player_games
+    given:
+      - input: ref('replay_events')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, player_id UInt8, event_type String, subject_code String, time_ms UInt32, seq UInt32',
+            ('r1', 1, 'unit',         'hpea', 500,  1),
+            ('r1', 1, 'building',     'hhou', 1000, 1),
+            ('r1', 1, 'building',     'halt', 2000, 2),
+            ('r1', 1, 'building',     'hbar', 3000, 3),
+            ('r1', 1, 'building',     'hbar', 3000, 4),
+            ('r1', 1, 'building',     'hhou', 4000, 5),
+            ('r1', 1, 'building',     'hbar', 5000, 6),
+            ('r1', 1, 'building',     'hlum', 6000, 7),
+            ('r1', 1, 'building',     'hvlt', 7000, 9),
+            ('r1', 1, 'building',     'htow', 7000, 8),
+            ('r1', 1, 'building',     'hgra', 8000, 10),
+            ('r1', 1, 'building',     'hars', 9000, 11),
+            ('r1', 2, 'building',     'obar', 1500, 1))
+      - input: ref('mappings')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'code String, kind String, is_supply_building UInt8',
+            ('hhou', 'building', 1), ('halt', 'building', 0), ('hbar', 'building', 0),
+            ('hlum', 'building', 0), ('htow', 'building', 0), ('hvlt', 'building', 0),
+            ('hgra', 'building', 0), ('hars', 'building', 0), ('obar', 'building', 0))
+      - input: ref('player_heroes')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, player_id UInt8, hero_slot UInt8, hero_id String, final_level UInt8',
+            ('r1', 1, 0, 'Hamg', 3),
+            ('r1', 2, 1, 'Obla', 1),
+            ('r1', 2, 0, 'Ofar', 2),
+            ('r1', 2, 2, '',     1))
+      - input: ref('replay_players')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, player_id UInt8, name String, race String, random UInt8, team_id Int8, apm UInt32',
+            ('r1', 1, 'Alice', 'HU', 0, 0, 100),
+            ('r1', 2, 'Bob',   'OC', 1, 1, 120),
+            ('r2', 1, 'Alice', 'HU', 0, 0, 100),
+            ('r2', 2, 'Bob',   'OC', 1, 1, 120))
+      - input: ref('replays')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, type String, map String, patch String, added_at DateTime, duration_ms UInt32,
+             winning_team_id Int8, duplicate_of String',
+            ('r1', '1on1', 'Echo Isles', '3.0', '2026-10-01 08:00:00', 600000, 0, ''),
+            ('r2', '1on1', 'Echo Isles', '3.0', '2026-10-01 08:00:00', 600000, 0, 'r1'))
+      - input: ref('player_starts')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, player_id UInt8, start_x Nullable(Float64), start_y Nullable(Float64)',
+            ('r1', 1, -4000, -4000), ('r1', 2, 4000, 4000))
+    expect:
+      format: sql
+      rows: |
+        SELECT * FROM VALUES(
+          'replay_id String, player_id UInt8, player String, race String, random UInt8, opponent_id UInt8,
+           opponent String, opponent_race String, opponent_random UInt8, matchup String, map String, patch String,
+           added_at DateTime, duration_ms UInt32, minutes Float64, minutes_5 UInt16, result String, apm UInt32,
+           heroes Array(String), hero_levels Array(UInt8), first_hero String, second_hero String, third_hero String,
+           opener Array(String), opener_1 String, opener_2 String, opener_3 String, opener_4 String,
+           opener_5 String, opener_6 String, opp_start_x Nullable(Float64), opp_start_y Nullable(Float64)',
+          ('r1', 1, 'Alice', 'HU', 0, 2, 'Bob', 'OC', 1, 'HvO', 'Echo Isles', '3.0', '2026-10-01 08:00:00', 600000, 10, 10,
+           'win', 100, ['Hamg'], [3], 'Hamg', '', '',
+           ['halt', 'hbar', 'hlum', 'htow', 'hvlt', 'hgra'], 'halt', 'hbar', 'hlum', 'htow', 'hvlt', 'hgra', 4000, 4000),
+          ('r1', 2, 'Bob', 'OC', 1, 1, 'Alice', 'HU', 0, 'HvO', 'Echo Isles', '3.0', '2026-10-01 08:00:00', 600000, 10, 10,
+           'loss', 120, ['Ofar', 'Obla'], [2, 1], 'Ofar', 'Obla', '',
+           ['obar'], 'obar', '', '', '', '', '', -4000, -4000))
+
+  - name: race_code_maps_parser_letters
+    description: >-
+      The race_code macro, through replay_players, maps H O N U R to HU OC NE UD RANDOM
+      and passes any other letter through. A random player with no detected race and no
+      order keeps RANDOM, with random 1.
+    model: replay_players
+    given:
+      - input: ref('valid_replays')
+        format: sql
+        rows: |
+          SELECT
+            'r1' AS replay_id,
+            '{"id":"r1","duration":120000,"players":[{"id":1,"race":"H"},{"id":2,"race":"O"},{"id":3,"race":"N"},{"id":4,"race":"U"},{"id":5,"race":"R"},{"id":6,"race":"X"}]}' AS doc,
+            toUInt32(0) AS events
+    expect:
+      format: sql
+      rows: |
+        SELECT * FROM VALUES(
+          'replay_id String, player_id UInt8, name String, color String, team_id Int8, race String, random UInt8,
+           race_detected String, apm UInt32, actions_rightclick UInt32, actions_basic UInt32,
+           actions_buildtrain UInt32, actions_ability UInt32, actions_item UInt32, actions_select UInt32,
+           actions_removeunit UInt32, actions_subgroup UInt32, actions_selecthotkey UInt32,
+           actions_assigngroup UInt32, actions_esc UInt32, apm_timed Array(UInt32)',
+          ('r1', 1, '', '', -1, 'HU', 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, []),
+          ('r1', 2, '', '', -1, 'OC', 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, []),
+          ('r1', 3, '', '', -1, 'NE', 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, []),
+          ('r1', 4, '', '', -1, 'UD', 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, []),
+          ('r1', 5, '', '', -1, 'RANDOM', 1, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, []),
+          ('r1', 6, '', '', -1, 'X', 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, []))
+
+  - name: replay_players_played_race
+    description: >-
+      A random player plays the detected race (p1), else the race letter of his earliest
+      building or unit order code, skipping neutral codes (p2 built hlum at 9 s after hiring
+      ngsp at 1 s, p3 trained ugho before building otrb). p4 gave no order and keeps RANDOM.
+      A player who picked a race keeps it (p5).
+    model: replay_players
+    given:
+      - input: ref('valid_replays')
+        format: sql
+        rows: |
+          SELECT
+            'r1' AS replay_id,
+            '{"id":"r1","duration":120000,"players":[
+              {"id":1,"race":"R","raceDetected":"N"},
+              {"id":2,"race":"R","raceDetected":"","buildings":{"order":[{"id":"hlum","ms":9000}]},"units":{"order":[{"id":"ngsp","ms":1000},{"id":"hpea","ms":12000}]}},
+              {"id":3,"race":"R","raceDetected":"","buildings":{"order":[{"id":"otrb","ms":7000}]},"units":{"order":[{"id":"ugho","ms":5000}]}},
+              {"id":4,"race":"R","raceDetected":""},
+              {"id":5,"race":"H","raceDetected":"O"}]}' AS doc,
+            toUInt32(0) AS events
+    expect:
+      format: sql
+      rows: |
+        SELECT * FROM VALUES(
+          'replay_id String, player_id UInt8, name String, color String, team_id Int8, race String, random UInt8,
+           race_detected String, apm UInt32, actions_rightclick UInt32, actions_basic UInt32,
+           actions_buildtrain UInt32, actions_ability UInt32, actions_item UInt32, actions_select UInt32,
+           actions_removeunit UInt32, actions_subgroup UInt32, actions_selecthotkey UInt32,
+           actions_assigngroup UInt32, actions_esc UInt32, apm_timed Array(UInt32)',
+          ('r1', 1, '', '', -1, 'NE', 1, 'N', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, []),
+          ('r1', 2, '', '', -1, 'HU', 1, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, []),
+          ('r1', 3, '', '', -1, 'UD', 1, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, []),
+          ('r1', 4, '', '', -1, 'RANDOM', 1, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, []),
+          ('r1', 5, '', '', -1, 'HU', 0, 'O', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, []))
+
+  - name: replays_result_and_duplicate
+    description: >-
+      replays gives -1 when neither a player leave nor the saver names a loser. Within one
+      game key the copy that stands for the game is the longest (b1 outranks b2, which has the
+      winner), then the one with the most events (c2 over c1), then the lowest id (a1). game_key
+      sorts the names, so a copy that lists its players in another order (a2) matches. patch
+      comes from the patches seed, '' for a build it has no row for.
+    model: replays
+    given:
+      - input: ref('valid_replays')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, doc String, events UInt32',
+            ('a1', '{"type":"1on1","buildNumber":7000,"randomseed":1,"leaves":[{"playerId":2}],"source_key":"replays/w3warehouse-ladder/a1.w3g","players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0),
+            ('a2', '{"type":"1on1","buildNumber":7000,"randomseed":1,"leaves":[{"playerId":2}],"source_key":"replays/local/a2.w3g","players":[{"id":2,"name":"B","teamid":1},{"id":1,"name":"A","teamid":0}]}', 0),
+            ('b1', '{"type":"1on1","buildNumber":6117,"randomseed":2,"duration":600000,"source_key":"replays/1/game1.w3g","players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0),
+            ('b2', '{"type":"1on1","buildNumber":6117,"randomseed":2,"duration":300000,"leaves":[{"playerId":1}],"source_key":"replays/1/game2.w3g","players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0),
+            ('c1', '{"type":"1on1","buildNumber":9999,"randomseed":3,"source_key":"x/c1.w3g","players":[{"id":1,"name":"C","teamid":0},{"id":2,"name":"D","teamid":1}]}', 5),
+            ('c2', '{"type":"1on1","buildNumber":9999,"randomseed":3,"source_key":"x/c2.w3g","players":[{"id":1,"name":"C","teamid":0},{"id":2,"name":"D","teamid":1}]}', 10))
+      - input: ref('patches')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'build_number UInt32, patch String, description String',
+            (6117, '2.0', 'Reforged 2.0'), (7000, '3.0', 'Patch 3.0'))
+    expect:
+      format: sql
+      rows: |
+        SELECT * FROM VALUES(
+          'replay_id String, map String, map_json String, gamename String,
+           creator String, type String, matchup String, duration_ms UInt32, build_number UInt32, version String,
+           patch String, expansion UInt8, parse_time_ms UInt32, source_key String, added_at DateTime, winning_team_id Int8,
+           winner_names String, random_seed Int64, game_key String, duplicate_of String,
+           start_spots UInt8, observers Array(String), speed UInt8, fixed_teams UInt8, teams_together UInt8,
+           full_shared_unit_control UInt8, always_visible UInt8, map_explored UInt8, referees UInt8,
+           observer_mode String, random_hero UInt8, random_races UInt8, hide_terrain UInt8',
+          ('a1', '', '', '', '', '1on1', '', 0, 7000, '', '3.0', 0, 0, 'replays/w3warehouse-ladder/a1.w3g',
+           0, 0, 'A', 1, '1:A,B', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('a2', '', '', '', '', '1on1', '', 0, 7000, '', '3.0', 0, 0, 'replays/local/a2.w3g',
+           0, 0, 'A', 1, '1:A,B', 'a1', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('b1', '', '', '', '', '1on1', '', 600000, 6117, '', '2.0', 0, 0, 'replays/1/game1.w3g',
+           0, -1, '', 2, '2:A,B', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('b2', '', '', '', '', '1on1', '', 300000, 6117, '', '2.0', 0, 0, 'replays/1/game2.w3g',
+           0, 1, 'B', 2, '2:A,B', 'b1', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('c1', '', '', '', '', '1on1', '', 0, 9999, '', '', 0, 0, 'x/c1.w3g',
+           0, -1, '', 3, '3:C,D', 'c2', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('c2', '', '', '', '', '1on1', '', 0, 9999, '', '', 0, 0, 'x/c2.w3g',
+           0, -1, '', 3, '3:C,D', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0))
+
+  - name: replays_winner_from_the_leave_records
+    description: >-
+      A leave marked victory names the winner, else the first player to leave lost and the
+      other team won, checked through winner_names.
+      w1 records both leaves after an observer's (24), so the first player leave (B) lost.
+      w2 records only the opponent's leave, so the saver (A) won. w3 records no player
+      leave, so the saver quit first and lost. w4 is a client-written file whose only leave
+      is the saver's own with reason 0c000000, which the parser's winningTeamId reads as a
+      saver win: the saver left first and lost. w5 has three teams, so no winner. w6 logs
+      the winner B leaving with result 09000000 before the loser A, so B won.
+    model: replays
+    given:
+      - input: ref('valid_replays')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, doc String, events UInt32',
+            ('w1', '{"randomseed":1,"saverPlayerId":1,"leaves":[{"playerId":24,"reason":"0c000000","result":"0b000000"},{"playerId":2,"reason":"01000000","result":"07000000"},{"playerId":1,"reason":"01000000","result":"09000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0),
+            ('w2', '{"randomseed":2,"saverPlayerId":1,"leaves":[{"playerId":2,"reason":"07000000","result":"07000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0),
+            ('w3', '{"randomseed":3,"saverPlayerId":1,"leaves":[{"playerId":24,"reason":"0c000000","result":"0b000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0),
+            ('w4', '{"randomseed":4,"saverPlayerId":1,"winningTeamId":0,"leaves":[{"playerId":1,"reason":"0c000000","result":"07000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0),
+            ('w5', '{"randomseed":5,"saverPlayerId":1,"leaves":[{"playerId":3,"reason":"01000000","result":"07000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1},{"id":3,"name":"C","teamid":2}]}', 0),
+            ('w6', '{"randomseed":6,"saverPlayerId":1,"leaves":[{"playerId":2,"reason":"09000000","result":"09000000"},{"playerId":1,"reason":"0b000000","result":"0d000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":1}]}', 0))
+      - input: ref('patches')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES('build_number UInt32, patch String, description String', (6117, '2.0', 'Reforged 2.0'))
+    expect:
+      format: sql
+      rows: |
+        SELECT * FROM VALUES(
+          'replay_id String, map String, map_json String, gamename String,
+           creator String, type String, matchup String, duration_ms UInt32, build_number UInt32, version String,
+           patch String, expansion UInt8, parse_time_ms UInt32, source_key String, added_at DateTime, winning_team_id Int8,
+           winner_names String, random_seed Int64, game_key String, duplicate_of String,
+           start_spots UInt8, observers Array(String), speed UInt8, fixed_teams UInt8, teams_together UInt8,
+           full_shared_unit_control UInt8, always_visible UInt8, map_explored UInt8, referees UInt8,
+           observer_mode String, random_hero UInt8, random_races UInt8, hide_terrain UInt8',
+          ('w1', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
+           0, 0, 'A', 1, '1:A,B', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('w2', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
+           0, 0, 'A', 2, '2:A,B', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('w3', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
+           0, 1, 'B', 3, '3:A,B', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('w4', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
+           0, 1, 'B', 4, '4:A,B', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('w5', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
+           0, -1, '', 5, '5:A,B,C', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('w6', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
+           0, 1, 'B', 6, '6:A,B', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0))
+
+  - name: replays_team_game_winner
+    description: >-
+      A 2v2 (A and B on team 0, C and D on team 1), checked through winner_names. t1 has a
+      leave marked victory, so A's team won although C left first. In t2 C and D left before
+      any player of team 0 (an observer's leave and a second leave of C skipped), so team 0
+      won. In t3 C left, then A, then D: no team left whole first, so no winner. t4 records
+      no player leave: the saver does not count in a team game, so no winner.
+    model: replays
+    given:
+      - input: ref('valid_replays')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, doc String, events UInt32',
+            ('t1', '{"randomseed":1,"saverPlayerId":1,"leaves":[{"playerId":3,"result":"07000000"},{"playerId":1,"result":"09000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":0},{"id":3,"name":"C","teamid":1},{"id":4,"name":"D","teamid":1}]}', 0),
+            ('t2', '{"randomseed":2,"saverPlayerId":1,"leaves":[{"playerId":24,"result":"0b000000"},{"playerId":3,"result":"07000000"},{"playerId":3,"result":"07000000"},{"playerId":4,"result":"07000000"},{"playerId":1,"result":"07000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":0},{"id":3,"name":"C","teamid":1},{"id":4,"name":"D","teamid":1}]}', 0),
+            ('t3', '{"randomseed":3,"saverPlayerId":1,"leaves":[{"playerId":3,"result":"07000000"},{"playerId":1,"result":"07000000"},{"playerId":4,"result":"07000000"}],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":0},{"id":3,"name":"C","teamid":1},{"id":4,"name":"D","teamid":1}]}', 0),
+            ('t4', '{"randomseed":4,"saverPlayerId":1,"leaves":[],"players":[{"id":1,"name":"A","teamid":0},{"id":2,"name":"B","teamid":0},{"id":3,"name":"C","teamid":1},{"id":4,"name":"D","teamid":1}]}', 0))
+      - input: ref('patches')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES('build_number UInt32, patch String, description String', (6117, '2.0', 'Reforged 2.0'))
+    expect:
+      format: sql
+      rows: |
+        SELECT * FROM VALUES(
+          'replay_id String, map String, map_json String, gamename String,
+           creator String, type String, matchup String, duration_ms UInt32, build_number UInt32, version String,
+           patch String, expansion UInt8, parse_time_ms UInt32, source_key String, added_at DateTime, winning_team_id Int8,
+           winner_names String, random_seed Int64, game_key String, duplicate_of String,
+           start_spots UInt8, observers Array(String), speed UInt8, fixed_teams UInt8, teams_together UInt8,
+           full_shared_unit_control UInt8, always_visible UInt8, map_explored UInt8, referees UInt8,
+           observer_mode String, random_hero UInt8, random_races UInt8, hide_terrain UInt8',
+          ('t1', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
+           0, 0, 'A,B', 1, '1:A,B,C,D', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('t2', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
+           0, 0, 'A,B', 2, '2:A,B,C,D', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('t3', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
+           0, -1, '', 3, '3:A,B,C,D', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0),
+          ('t4', '', '', '', '', '', '', 0, 0, '', '', 0, 0, '',
+           0, -1, '', 4, '4:A,B,C,D', '', 0, [], 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0))
+
+  - name: player_starts_rules
+    description: >-
+      player_starts names a start by the three rules in order. r1 player 1 builds first beside
+      start 0 (first building). r1 player 2 builds first off every start, then beside start 1
+      (later building). r2 player 2 builds only mid-map on a two-start map, so he gets the start
+      player 1 does not hold (opponent). r3 player 2 has only a placement with no x on a four-start
+      map, so he has none. Orders with no x, such as a unit or a hall upgrade, never anchor a
+      start. dbt 2.0.6 compares start_x, start_y and start_source (measured), not player_id.
+    model: player_starts
+    given:
+      - input: ref('start_locations')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'map String, slot UInt8, x Float64, y Float64, source String',
+            ('M2', 0, -4000, -4000, 'map file'), ('M2', 1, 4000, 4000, 'map file'),
+            ('M4', 0, -4000, -4000, 'map file'), ('M4', 1, 4000, 4000, 'map file'),
+            ('M4', 2, -4000, 4000, 'map file'), ('M4', 3, 4000, -4000, 'map file'))
+      - input: ref('replays')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, type String, map String',
+            ('r1', '1on1', 'M2'), ('r2', '1on1', 'M2'), ('r3', '1on1', 'M4'))
+      - input: ref('replay_players')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, player_id UInt8, team_id Int8',
+            ('r1', 1, 0), ('r1', 2, 1), ('r2', 1, 0), ('r2', 2, 1), ('r3', 1, 0), ('r3', 2, 1))
+      - input: ref('player_order_events')
+        format: sql
+        rows: |
+          SELECT * FROM VALUES(
+            'replay_id String, player_id UInt8, kind String, x Nullable(Float32), y Nullable(Float32), time_ms UInt32, seq UInt32',
+            ('r1', 1, 'unit',     NULL,  NULL,  1000,  1),
+            ('r1', 1, 'building', -3500, -3600, 5000,  1),
+            ('r1', 2, 'building', 1000,  1500,  15000, 1),
+            ('r1', 2, 'building', 3300,  3500,  20000, 2),
+            ('r2', 1, 'building', -3400, -3400, 6000,  1),
+            ('r2', 2, 'building', 300,   200,   27000, 1),
+            ('r3', 1, 'building', -3600, 3500,  6000,  1),
+            ('r3', 2, 'building', NULL,  NULL,  90000, 1))
+    expect:
+      format: sql
+      rows: |
+        SELECT * FROM VALUES(
+          'replay_id String, player_id UInt8, start_x Nullable(Float64), start_y Nullable(Float64), start_source String',
+          ('r1', 1, -4000, -4000, 'first building'),
+          ('r1', 2, 4000,  4000,  'later building'),
+          ('r2', 1, -4000, -4000, 'first building'),
+          ('r2', 2, 4000,  4000,  'opponent'),
+          ('r3', 1, -4000, 4000,  'first building'),
+          ('r3', 2, NULL,  NULL,  'none'))

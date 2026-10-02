@@ -1,9 +1,7 @@
 <clickhouse>
-    <!-- Enable ClickHouse's built-in server-internal time-series so the Grafana
-         CH-health panels have history (not just live snapshots). `replace="1"`
-         overrides the image default outright. 14-day TTL keeps the *_log tables
-         bounded at production ingest volume (5k+ replays/day) — these grow with
-         server uptime, not data, so a short window is plenty for trend panels. -->
+    <!-- ClickHouse's own metric history, which Grafana's ClickHouse server dashboard
+         reads. `replace="1"` overrides the image default. These tables grow with
+         uptime, not data, so 14 days is plenty for trend panels. -->
     <metric_log replace="1">
         <database>system</database>
         <table>metric_log</table>

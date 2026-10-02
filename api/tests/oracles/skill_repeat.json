@@ -1,0 +1,13 @@
+{
+  "operator": "a skill count skips repeat clicks",
+  "picked_by": "skill_repeat.sql",
+  "request": {
+    "filters": {"replay_id": ["0138cacf7f79a95eed5e905c4c3675c61e7420acebf1e2ee213840fe7d386cf4","08ae9f115209c414a11fef2019578b79ba4b30ff2b2aec16ba84d7cae9bd1bb4","29bc0754517df1bf1fbfdf64f681a1719c0b21e621644c02e282b663d413c016","3415f73262beb4d7082fe01a6cd4fd177d0d9d8f3c243f4d0b93f371db284998","50c4e6463e75df95a0efefdd75034b456497df5b17fe9c03d95028853e9833c1","7b9347f11ff4907e7b287d42b7fc0b3969b418b26e1962be8a737746901c5108","876c2364b0f0ab408e1a32c83438bc1bc96f98b79aae341e63f196786f421fdd","8f1c14c32736bf93ce8ee76a75a612c98c27dd26d525af3e9854caedb5ca50cf","9072c9a6a2961688cecf122130993b64a55d964c0203838ad724db94a4809678","e1549f0d17bf1ec1d25ccc2db702764c7e02c39e8bca288fec6bf874d77d1dd0"]},
+    "player": {"race": ["HU"], "groups": [{"steps": [{"kind": "skill", "codes": ["AHbz"], "count": 2}]}]},
+    "limit": 100
+  },
+  "expected": {
+    "games": 3,
+    "matches": [["08ae9f115209c414a11fef2019578b79ba4b30ff2b2aec16ba84d7cae9bd1bb4","Hoplite#1459"],["876c2364b0f0ab408e1a32c83438bc1bc96f98b79aae341e63f196786f421fdd","alicio12#1213"],["9072c9a6a2961688cecf122130993b64a55d964c0203838ad724db94a4809678","HLRSHLRSHLRS#1760"]]
+  }
+}

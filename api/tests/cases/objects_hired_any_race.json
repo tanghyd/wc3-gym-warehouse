@@ -1,0 +1,106 @@
+{
+  "route": "/objects",
+  "request": {
+    "kind": "hired",
+    "filters": {
+      "replay_id": [
+        "0ddbb4abacfb6b62d88223ac6bb3902edc0bdc3a2eac55e29ffe367405cffa60",
+        "92336fe5a392d0043442e75ad4a5097086d6451a35b3d68d99c3093e65b8d8f6",
+        "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8"
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "groups": [
+        {
+          "source": {
+            "code": "nmer",
+            "name": "Mercenary Camp"
+          },
+          "objects": [
+            {
+              "code": "nanm",
+              "name": "Barbed Arachnathid (mercenary)",
+              "games": 0
+            },
+            {
+              "code": "ndtb",
+              "name": "Dark Troll Berserker",
+              "games": 0
+            },
+            {
+              "code": "ndtp",
+              "name": "Dark Troll Shadow Priest",
+              "games": 0
+            },
+            {
+              "code": "nftb",
+              "name": "Forest Troll Berserker",
+              "games": 0
+            },
+            {
+              "code": "nfsp",
+              "name": "Forest Troll Shadow Priest",
+              "games": 0
+            },
+            {
+              "code": "ngnb",
+              "name": "Gnoll Brute",
+              "games": 0
+            },
+            {
+              "code": "ngnw",
+              "name": "Gnoll Warden",
+              "games": 0
+            },
+            {
+              "code": "nits",
+              "name": "Ice Troll Berserker",
+              "games": 0
+            },
+            {
+              "code": "ngrk",
+              "name": "Mud Golem",
+              "games": 0
+            },
+            {
+              "code": "nomg",
+              "name": "Ogre Magi",
+              "games": 0
+            },
+            {
+              "code": "nogm",
+              "name": "Ogre Mauler",
+              "games": 0
+            }
+          ]
+        },
+        {
+          "source": {
+            "code": "ngad",
+            "name": "Goblin Laboratory"
+          },
+          "objects": [
+            {
+              "code": "ngsp",
+              "name": "Goblin Sapper",
+              "games": 0
+            },
+            {
+              "code": "ngir",
+              "name": "Goblin Shredder",
+              "games": 0
+            },
+            {
+              "code": "nzep",
+              "name": "Goblin Zeppelin",
+              "games": 0
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

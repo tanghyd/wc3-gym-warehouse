@@ -1,0 +1,9 @@
+{
+  "route": "/replays/nope",
+  "response": {
+    "status": 404,
+    "body": {
+      "detail": "No game with this id"
+    }
+  }
+}

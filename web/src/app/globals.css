@@ -1,0 +1,490 @@
+@import "tailwindcss";
+
+/* Every palette token is a Tailwind colour (bg-surface, text-win, bg-series-1). palette.ts writes
+   the --v-theme-* values for light and dark. */
+@theme inline {
+  --color-surface: rgb(var(--v-theme-surface));
+  --color-surface-bright: rgb(var(--v-theme-surface-bright));
+  --color-surface-light: rgb(var(--v-theme-surface-light));
+  --color-surface-variant: rgb(var(--v-theme-surface-variant));
+  --color-on-surface-variant: rgb(var(--v-theme-on-surface-variant));
+  --color-on-surface: rgb(var(--v-theme-on-surface));
+  --color-primary: rgb(var(--v-theme-primary));
+  --color-on-primary: rgb(var(--v-theme-on-primary));
+  --color-primary-text: rgb(var(--v-theme-primary-text));
+  --color-banner: rgb(var(--v-theme-banner));
+  --color-on-banner: rgb(var(--v-theme-on-banner));
+  /* second-level text on a banner */
+  --color-banner-muted: rgba(var(--v-theme-on-banner), 0.72);
+  --color-win: rgb(var(--v-theme-win));
+  --color-loss: rgb(var(--v-theme-loss));
+  --color-draw: rgb(var(--v-theme-draw));
+  --color-on-win: rgb(var(--v-theme-on-win));
+  --color-on-loss: rgb(var(--v-theme-on-loss));
+  --color-on-draw: rgb(var(--v-theme-on-draw));
+  --color-series-1: rgb(var(--v-theme-series-1));
+  --color-series-2: rgb(var(--v-theme-series-2));
+  --color-amount: rgb(var(--v-theme-amount));
+  --color-amount-track: rgb(var(--v-theme-amount-track));
+  --color-meter: rgb(var(--v-theme-meter));
+  /* second-level text: ink at medium emphasis */
+  --color-muted: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  --color-border: rgba(var(--v-border-color), var(--v-border-opacity));
+
+  --font-sans: var(--font-lato), Lato, "Helvetica Neue", Arial, sans-serif;
+  --font-heading: var(--font-cardo), Cardo, Georgia, serif;
+  --font-title: var(--font-cinzel), Cinzel, Georgia, serif;
+}
+
+@layer base {
+  /* A border with no colour draws the theme hairline, not the text colour. */
+  *, ::before, ::after { border-color: var(--color-border); }
+
+  /* Lato for text, controls and every figure; lining, equal-width digits line up in a column. */
+  html, body {
+    background-color: rgb(var(--v-theme-background));
+    color: rgb(var(--v-theme-on-background));
+    font-family: var(--font-sans);
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  /* Cardo for headings, Cinzel for the page title. Cinzel has capitals only, so a name never takes it. */
+  h1, h2, h3 { font-family: var(--font-heading); font-weight: 700; line-height: 1.25; }
+  h1 { font-family: var(--font-title); font-size: 2.125rem; line-height: 1.2; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.125rem; }
+  @media (max-width: 959px) {
+    h1 { font-size: 1.6rem; }
+    h2 { font-size: 1.3rem; }
+  }
+
+  a { color: rgb(var(--v-theme-primary-text)); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  /* primary-text: gold in dark, dark gold in light, where gold is under 3:1 on the surface */
+  :focus-visible { outline: 2px solid rgb(var(--v-theme-primary-text)); outline-offset: 2px; }
+}
+
+@layer components {
+  .wrap { max-width: 1280px; margin-inline: auto; padding-inline: 16px; }
+  @media (min-width: 640px) { .wrap { padding-inline: 24px; } }
+
+  /* A player name reads in Cardo 700, in its own case. */
+  .font-name { font-family: var(--font-heading); font-weight: 700; text-transform: none; }
+
+  /* A near-square panel with a hairline edge; clip, not hidden, so a sticky head inside still sticks. */
+  .card {
+    min-width: 0; overflow: clip; border-radius: 0.35rem;
+    background: rgb(var(--v-theme-surface)); border: 1px solid var(--color-border);
+  }
+
+  /* A banner is a dark warm bar with cream text and a gold title, embossed, over a gold hairline. */
+  .banner, .bar {
+    background: rgb(var(--v-theme-banner)); color: rgb(var(--v-theme-on-banner));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.55);
+    border-bottom: 1px solid oklch(80% 0.06 80 / 0.35);
+  }
+  .banner :focus-visible, .bar :focus-visible { outline-color: rgb(var(--v-theme-on-banner)); }
+
+  /* A card's title bar. */
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-height: 52px; padding: 10px 16px; }
+  .bar h2 { font-size: 1.25rem; line-height: 1.3; color: rgb(var(--v-theme-primary)); }
+  /* A card that lets a menu out (overflow-visible) still rounds its title bar. */
+  .card > .bar:first-child { border-radius: calc(0.35rem - 1px) calc(0.35rem - 1px) 0 0; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.25rem; border-radius: 9999px;
+    padding: 0 0.5rem; font-size: 0.75rem; line-height: 1.5rem; font-weight: 700; white-space: nowrap;
+  }
+
+  /* A chip on a title bar: on-banner with a 40% edge when off, flat gold when on. */
+  .toggle {
+    display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 12px;
+    border: 1px solid rgba(var(--v-theme-on-banner), 0.4); border-radius: 9999px;
+    font-size: 0.875rem; color: rgb(var(--v-theme-on-banner)); cursor: pointer;
+  }
+  .toggle[aria-pressed="true"] {
+    background: rgb(var(--v-theme-primary)); border-color: rgb(var(--v-theme-primary));
+    color: rgb(var(--v-theme-on-primary)); font-weight: 700;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 18px;
+    border-radius: 0.35rem; font-weight: 700; white-space: nowrap; text-decoration: none; cursor: pointer;
+  }
+  .btn:hover { text-decoration: none; }
+  .btn:active { transform: translateY(1px); }
+  @media (prefers-reduced-motion: reduce) { .btn:active { transform: none; } }
+
+  /* The filled button is embossed gold, the public site's recipe. */
+  .btn-gold {
+    color: oklch(22% 0.04 60);
+    background-image: linear-gradient(180deg, oklch(88% 0.13 90) 0%, oklch(78% 0.14 84) 48%, oklch(68% 0.13 78) 100%);
+    box-shadow: inset 0 1px 0 oklch(97% 0.06 95 / 0.8), inset 0 -1px 0 var(--btn-gold-edge), var(--btn-gold-drop);
+  }
+  .btn-gold:hover { color: oklch(22% 0.04 60); filter: brightness(1.05); }
+
+  /* A quiet button: a hairline edge and no fill. */
+  .btn-line { border: 1px solid var(--color-border); font-weight: 400; color: inherit; }
+  .btn-line:hover { background: rgba(var(--v-theme-on-surface), 0.06); }
+
+  /* A 32 px icon button; gold-tinted when what it opens is set. */
+  .icon-btn {
+    display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 0.35rem;
+    color: var(--color-muted); cursor: pointer;
+  }
+  .icon-btn:hover:not(:disabled) { background: rgba(var(--v-theme-on-surface), 0.06); color: rgb(var(--v-theme-on-surface)); }
+  .icon-btn:disabled { opacity: 0.35; cursor: default; }
+  .icon-btn[data-on] { background: rgba(var(--v-theme-primary), 0.2); color: rgb(var(--v-theme-primary-text)); }
+
+  /* One choice of a radio group drawn as joined buttons; flat gold when chosen. */
+  .seg {
+    position: relative; display: inline-flex; align-items: center; height: 34px; padding: 0 14px;
+    font-size: 0.875rem; cursor: pointer;
+  }
+  .seg + .seg { border-left: 1px solid var(--color-border); }
+  .seg:first-child { border-radius: 0.35rem 0 0 0.35rem; }
+  .seg:last-child { border-radius: 0 0.35rem 0.35rem 0; }
+  .seg:has(:checked) { background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary)); font-weight: 700; }
+  .seg:has(:focus-visible) { z-index: 1; outline: 2px solid rgb(var(--v-theme-on-surface)); outline-offset: 2px; }
+
+  .field {
+    height: 38px; min-width: 0; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 0.35rem;
+    background: rgb(var(--v-theme-surface)); color: inherit;
+  }
+  .field:focus-visible { outline-offset: 0; }
+  .field:disabled { background: rgb(var(--v-theme-surface-light)); color: var(--color-muted); cursor: not-allowed; }
+
+  /* A popover: a raised surface over the page, such as a menu or a picker. */
+  .pop {
+    background: rgb(var(--v-theme-surface-bright)); border: 1px solid var(--color-border); border-radius: 0.35rem;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18); padding: 6px;
+  }
+
+  /* One row of a menu or a picker: icon, name, and a muted count at the end. */
+  .opt {
+    display: flex; width: 100%; align-items: center; gap: 10px; min-height: 36px; padding: 4px 8px;
+    border-radius: 0.3rem; text-align: left; font-size: 0.9375rem; cursor: pointer;
+  }
+  .opt:hover, .opt:focus-visible { background: rgba(var(--v-theme-on-surface), 0.06); }
+  .opt:focus-visible { outline-offset: -2px; }
+  .opt[aria-checked="true"], .opt[aria-current="true"] { background: rgb(var(--v-theme-surface-light)); font-weight: 700; }
+  .opt-count { margin-left: auto; padding-left: 12px; font-size: 0.8125rem; font-weight: 400; color: var(--color-muted); }
+  .opt-count.zero, .opt.zero .opt-name { color: rgba(var(--v-theme-on-surface), 0.5); }
+
+  /* The race menu under its button; the Random submenu beside its row, or under it on a phone. */
+  .race-menu {
+    position: absolute; z-index: 30; top: calc(100% + 4px); left: 0;
+    min-width: 100%; width: max-content; max-width: calc(100vw - 32px);
+  }
+  .race-sub { position: absolute; z-index: 31; top: -7px; left: calc(100% + 10px); width: max-content; }
+  @media (max-width: 639px) {
+    .race-sub { position: static; width: auto; margin: 2px 0 4px 18px; padding: 0; border: 0; box-shadow: none; }
+  }
+
+  /* A command-card icon in a dark bevelled frame, --s wide. */
+  .tile {
+    --s: 40px; display: inline-block; flex-shrink: 0; width: calc(var(--s) + 2px); height: calc(var(--s) + 2px);
+    padding: 1px; border-radius: 3px; background: var(--tile-edge);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 0 0 1px oklch(80% 0.06 80 / 0.25);
+  }
+  .tile img { display: block; width: var(--s); height: var(--s); border-radius: 2px; }
+  .tile.empty { background: rgb(var(--v-theme-surface-light)); box-shadow: inset 0 0 0 1px var(--color-border); }
+
+  /* A step picker: groups on the left, the open group's objects on the right; on a phone one
+     column at a time, the objects after a group is opened. */
+  .picker-list { max-height: 18rem; overflow-y: auto; }
+  .cascade { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: 8px; }
+  .cascade > .col-right { border-left: 1px solid var(--color-border); padding-left: 8px; }
+  .colhead { display: flex; align-items: center; gap: 8px; min-height: 24px; padding: 0 8px 4px; font-size: 0.8125rem; color: var(--color-muted); }
+  .colhead .back { display: none; margin-right: auto; }
+  @media (max-width: 639px) {
+    .cascade { grid-template-columns: minmax(0, 1fr); }
+    .cascade > .col-right { border-left: 0; padding-left: 0; }
+    .cascade:not([data-drilled]) > .col-right, .cascade[data-drilled] > .col-left { display: none; }
+    .colhead .back { display: inline-flex; }
+    .colhead .desk { display: none; }
+  }
+
+  /* A native checkbox in the gold of a chosen control. */
+  .check { width: 16px; height: 16px; accent-color: rgb(var(--v-theme-primary)); cursor: pointer; }
+
+  /* A data table: hairline rows, a quiet hover, numbers right-aligned by the cell. */
+  .table { width: 100%; text-align: left; }
+  .table th { height: 40px; padding: 0 12px; font-size: 0.875rem; font-weight: 700; white-space: nowrap; }
+  .table td { padding: 10px 12px; }
+  .table tbody tr { border-top: 1px solid var(--color-border); }
+  .table tbody tr:hover { background: rgba(var(--v-theme-on-surface), 0.04); }
+
+  /* A quiet text button in link gold. */
+  .btn-quiet {
+    display: inline-flex; align-items: center; height: 38px; padding: 0 10px; border-radius: 0.35rem;
+    color: rgb(var(--v-theme-primary-text)); cursor: pointer;
+  }
+  .btn-quiet:hover:not(:disabled) { background: rgba(var(--v-theme-on-surface), 0.06); }
+  .btn-quiet:disabled { opacity: 0.4; cursor: default; }
+  .btn-line:disabled { opacity: 0.5; cursor: default; }
+
+  /* A field on a banner: the banner's ink over a 40% edge. */
+  .field.on-bar { height: 32px; background: transparent; color: rgb(var(--v-theme-on-banner)); border-color: rgba(var(--v-theme-on-banner), 0.4); font-size: 0.875rem; }
+  .field.on-bar option { color: rgb(var(--v-theme-on-surface)); background: rgb(var(--v-theme-surface)); }
+
+  /* The one filter row of a page, and a from-to pair of fields. */
+  .filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding: 16px; }
+  .filters > * { flex: 1 1 180px; }
+  .filters > :last-child { flex: 0 1 auto; }
+  .range { display: flex; align-items: center; gap: 8px; }
+  .range .field { width: 76px; }
+
+  /* The sides panel: Player and Opponent under their banners, the swap button on the seam. */
+  .versus { display: grid; grid-template-columns: minmax(0, 1fr) 0 minmax(0, 1fr); }
+  .versus > .side { min-width: 0; display: flex; flex-direction: column; }
+  .versus > .side:first-child > .bar { border-radius: calc(0.35rem - 1px) 0 0 0; }
+  .versus > .side:last-child > .bar { border-radius: 0 calc(0.35rem - 1px) 0 0; padding-left: 32px; }
+  .versus > .side:last-child { border-left: 1px solid var(--color-border); }
+  .swap { position: relative; z-index: 2; }
+  .swap-btn {
+    position: absolute; top: 6px; left: -20px; width: 40px; height: 40px; border-radius: 9999px;
+    display: grid; place-items: center; cursor: pointer;
+    background: rgb(var(--v-theme-surface)); color: rgb(var(--v-theme-on-surface));
+    border: 1px solid oklch(80% 0.06 80 / 0.6); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+  .swap-btn .v { display: none; }
+  .side-body { flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 16px; }
+  .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: end; }
+
+  /* A step: its icon, kind word over object name, time chips, then its tools. */
+  .steps .step { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 6px 0; }
+  .steps .num { font-size: 0.8125rem; color: var(--color-muted); text-align: right; }
+  .step-main { display: flex; align-items: center; gap: 10px; min-width: 0; border-radius: 0.35rem; text-align: left; cursor: pointer; }
+  .step-main[aria-expanded="true"] .obj { text-decoration: underline; text-decoration-color: rgb(var(--v-theme-primary)); text-underline-offset: 3px; }
+  .st { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+  .st .kind { font-size: 0.8125rem; color: var(--color-muted); }
+  .st .obj { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .quals { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+  .qual {
+    display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; border-radius: 9999px;
+    border: 1px solid var(--color-border); font-size: 0.8125rem; white-space: nowrap;
+  }
+  .tools { display: flex; }
+  .steps .link { display: flex; padding-left: 28px; }
+  .seg-xs { display: inline-flex; overflow: hidden; border: 1px solid var(--color-border); border-radius: 9999px; font-size: 0.75rem; }
+  .seg-xs button { padding: 1px 9px; color: var(--color-muted); cursor: pointer; }
+  .seg-xs button + button { border-left: 1px solid var(--color-border); }
+  .seg-xs button[aria-pressed="true"] { background: rgb(var(--v-theme-surface-light)); color: rgb(var(--v-theme-on-surface)); font-weight: 700; }
+  .seg-xs button:disabled { opacity: 0.4; cursor: default; }
+  .settings { display: flex; flex-direction: column; gap: 14px; padding: 12px; }
+  /* Alternatives: boxes of steps with "or" between them. */
+  .alt { border: 1px solid var(--color-border); border-radius: 0.35rem; padding: 6px 10px 10px; }
+  .or { padding: 6px 0 6px 12px; font-size: 0.8125rem; font-weight: 700; color: var(--color-muted); }
+
+  /* The summary strip: two figures, each a label, a number and one muted line. */
+  .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-border); }
+  .stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 14px 16px; }
+  .stat + .stat { border-left: 1px solid var(--color-border); }
+  .s-l, .s-n { font-size: 0.875rem; color: var(--color-muted); }
+  .s-v { font-size: 1.75rem; font-weight: 700; line-height: 1.15; font-variant-numeric: lining-nums proportional-nums; }
+
+  /* The games list: one game a row on one line, fixed columns, the hero icons its one bold mark;
+     two lines on a phone. */
+  .games { --hero: 24px; width: 100%; table-layout: fixed; border-collapse: collapse; text-align: left; }
+  .games th { height: 36px; padding: 0 10px; border-bottom: 1px solid var(--color-border); font-size: 0.875rem; font-weight: 700; color: var(--color-muted); white-space: nowrap; }
+  .games th a { color: inherit; }
+  .games td { padding: 5px 10px; border-bottom: 1px solid var(--color-border); vertical-align: middle; font-size: 0.9375rem; line-height: 1.25rem; white-space: nowrap; }
+  .games tbody tr:hover { background: rgb(var(--v-theme-surface-light)); }
+  .games th[aria-sort] a { color: rgb(var(--v-theme-primary-text)); }
+  .games .c-p { padding-left: 16px; }
+  .games .c-ph, .games .c-oh { width: 120px; }
+  .games .c-r { width: 84px; }
+  .games .c-m { padding-right: 16px; overflow: hidden; text-overflow: ellipsis; }
+  .games .c-l { width: 80px; padding-right: 16px; text-align: right; }
+  .games .vs { display: none; }
+  .who { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; vertical-align: middle; }
+  .who .tag { font-weight: 400; color: var(--color-muted); }
+  /* a game either player fits: a quiet outlined word after the Player's name, the only tag of a row */
+  .who .both { flex-shrink: 0; padding: 0 6px; border: 1px solid var(--color-border); border-radius: 9999px; font-size: 0.75rem; line-height: 1rem; color: var(--color-muted); }
+  .heroes { display: flex; gap: 10px; }
+  .heroes li { position: relative; display: block; }
+  .heroes img, .heroes .none { display: block; width: var(--hero); height: var(--hero); border-radius: 2px; box-shadow: 0 0 0 1px var(--tile-edge); }
+  .heroes .none { display: grid; place-items: center; background: rgb(var(--v-theme-surface-light)); font-size: 12px; font-weight: 700; color: var(--color-muted); }
+  .heroes .none::before { content: "?"; }
+  /* a hero's final level on the icon's corner, like the in-game hero level */
+  .lv {
+    position: absolute; right: -6px; bottom: -3px; min-width: 13px; height: 13px; padding: 0 2px; border-radius: 3px;
+    background: rgb(var(--v-theme-banner)); color: rgb(var(--v-theme-on-banner)); font-size: 10px; font-weight: 700; line-height: 13px; text-align: center;
+    box-shadow: 0 0 0 1px oklch(80% 0.06 80 / 0.6);
+  }
+  .res { display: inline-flex; align-items: center; gap: 6px; }
+  .sq { width: 10px; height: 10px; border-radius: 2px; }
+  /* The Show switches over the games list; a column the reader hid is not drawn. */
+  .show-cols { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 10px 16px 6px; font-size: 0.875rem; }
+  [data-hide~="heroes"] .games :is(.c-ph, .c-oh), [data-hide~="result"] .games .c-r, [data-hide~="length"] .games .c-l { display: none; }
+  .pager { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 16px; font-size: 0.875rem; color: var(--color-muted); }
+  .pager > span:first-child { margin-right: 8px; }
+  .pager .btn { height: 32px; padding: 0 12px; color: rgb(var(--v-theme-on-surface)); }
+
+  /* A quiet button on a banner: the banner's ink over a 40% edge. */
+  .btn-line.on-bar { height: 32px; padding: 0 12px; font-size: 0.875rem; color: rgb(var(--v-theme-on-banner)); border-color: rgba(var(--v-theme-on-banner), 0.4); }
+  .btn-line.on-bar:hover { background: rgba(var(--v-theme-on-banner), 0.1); }
+
+  /* Explore's query card: a label, then a row of chips. A shown measure is a gold chip. */
+  .q-card { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+  .q-row { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 8px 12px; }
+  .q-label { font-size: 0.875rem; color: var(--color-muted); }
+  .q-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .q-chip {
+    display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px; border-radius: 9999px;
+    border: 1px solid var(--color-border); font-size: 0.9375rem; white-space: nowrap; cursor: pointer;
+  }
+  .q-toggle:hover { background: rgba(var(--v-theme-on-surface), 0.06); }
+  .q-toggle[aria-pressed="true"] {
+    background: rgb(var(--v-theme-primary)); border-color: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary)); font-weight: 700;
+  }
+  .q-set { gap: 2px; padding: 0 4px 0 12px; background: rgb(var(--v-theme-surface-light)); cursor: default; max-width: 100%; }
+  .q-open { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .q-x { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 9999px; color: var(--color-muted); cursor: pointer; }
+  .q-x:hover { background: rgba(var(--v-theme-on-surface), 0.1); color: rgb(var(--v-theme-on-surface)); }
+  .q-add { color: rgb(var(--v-theme-primary-text)); }
+  .q-add:hover { background: rgba(var(--v-theme-on-surface), 0.06); }
+  .q-dashed { border-style: dashed; }
+  .q-pop { min-width: 14rem; }
+  .q-list { max-height: 18rem; overflow-y: auto; }
+
+  /* The heat map: cells in three gold bins and a zero cell, 2 px of surface between them. */
+  .heat-wrap { overflow: visible; }
+  .heat { display: grid; gap: 2px; align-items: stretch; border-radius: 0.35rem; }
+  .heat:focus-visible { outline-offset: 4px; }
+  .heat-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; padding-bottom: 4px; font-size: 0.8125rem; line-height: 1.2; text-align: center; color: var(--color-muted); }
+  .heat-row { display: flex; align-items: center; min-width: 0; min-height: 36px; padding-right: 8px; font-size: 0.9375rem; }
+  .heat-cell { position: relative; display: grid; place-items: center; min-height: 36px; border-radius: 2px; font-size: 0.875rem; font-weight: 700; }
+  .heat-cell.on { outline: 2px solid rgb(var(--v-theme-on-surface)); outline-offset: 1px; z-index: 2; }
+  .heat-sum { display: grid; align-items: center; justify-items: center; font-size: 0.875rem; color: var(--color-muted); }
+  .heat-total { font-weight: 700; color: rgb(var(--v-theme-on-surface)); }
+  .bin-0 { background: rgb(var(--v-theme-surface-light)); color: rgba(var(--v-theme-on-surface), 0.45); font-weight: 400; }
+  .bin-1 { background: rgb(var(--v-theme-bin-1)); color: rgb(var(--v-theme-on-bin-1)); }
+  .bin-2 { background: rgb(var(--v-theme-bin-2)); color: rgb(var(--v-theme-on-bin-2)); }
+  .bin-3 { background: rgb(var(--v-theme-bin-3)); color: rgb(var(--v-theme-on-bin-3)); }
+  .heat-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 14px; font-size: 0.8125rem; color: var(--color-muted); }
+  .heat-legend .font-bold { color: rgb(var(--v-theme-on-surface)); }
+  .heat-legend .sw { display: inline-block; width: 14px; height: 14px; margin-right: 6px; border-radius: 2px; vertical-align: -2px; }
+  .heat-legend .sw.bin-0 { box-shadow: inset 0 0 0 1px var(--color-border); }
+
+  /* Bars of one gold step, 20 px thick, the value at the tip; columns for an ordered dimension. */
+  .bars { display: flex; flex-direction: column; gap: 2px; border-radius: 0.35rem; }
+  .bars .mark { position: relative; display: grid; grid-template-columns: minmax(0, 30%) minmax(0, 1fr); align-items: center; gap: 12px; min-height: 30px; }
+  .bar-label { min-width: 0; font-size: 0.9375rem; }
+  .bar-track { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .bar-fill { height: 20px; min-width: 2px; border-radius: 0 4px 4px 0; background: var(--color-amount); }
+  .tip-value { font-size: 0.875rem; white-space: nowrap; }
+  .mark.on .bar-fill, .mark.on .col-fill { outline: 2px solid rgb(var(--v-theme-on-surface)); outline-offset: 1px; }
+  .cols { display: grid; gap: 2px; align-items: end; border-radius: 0.35rem; }
+  .cols .mark { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+  .col-track { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; width: 100%; height: 200px; }
+  .col-fill { width: 100%; max-width: 24px; min-height: 1px; border-radius: 4px 4px 0 0; background: var(--color-amount); }
+  .cap { margin-bottom: 2px; font-size: 0.75rem; white-space: nowrap; }
+  .col-label { padding-top: 4px; font-size: 0.75rem; color: var(--color-muted); }
+  .col-axis { grid-column: 1 / -1; text-align: center; font-size: 0.8125rem; color: var(--color-muted); }
+  .stats.tiles { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+
+  /* The tabs of a page: links on a hairline, a gold underline on the current one. */
+  .tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--color-border); }
+  .tabs a { display: flex; align-items: center; height: 44px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: rgb(var(--v-theme-on-surface)); }
+  .tabs a:hover { text-decoration: none; border-bottom-color: var(--color-border); }
+  .tabs a[aria-current="page"] { border-bottom-color: rgb(var(--v-theme-primary)); font-weight: 700; }
+
+  /* Named strategies: a variant sits indented on the bright surface; the rule reads under the name. */
+  .named { --indent: 24px; }
+  .named td { vertical-align: middle; }
+  .named tr.variant { background: rgb(var(--v-theme-surface-bright)); }
+  .named .rule { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 0.875rem; color: var(--color-muted); }
+  .named .c-go { width: 1%; white-space: nowrap; font-size: 0.875rem; }
+  /* a phone shows the rule in this row; wider, it sits under the name */
+  .named .rule-row { display: none; }
+  /* A share of a whole: a 72 px gold fill on its lighter track. */
+  .meter { display: inline-block; width: 72px; height: 6px; margin-right: 12px; vertical-align: middle; border-radius: 9999px; background: var(--color-amount-track); overflow: hidden; }
+  .meter > span { display: block; height: 100%; border-radius: 9999px; background: var(--color-meter); }
+
+  /* A search step's number on the orders it matched: ink on a surface ring, on the mark's corner. */
+  .step-no {
+    position: absolute; left: -6px; top: -6px; z-index: 1; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 9999px;
+    background: rgb(var(--v-theme-on-surface)); color: rgb(var(--v-theme-surface)); box-shadow: 0 0 0 2px rgb(var(--v-theme-surface));
+    font-size: 10px; font-weight: 700; line-height: 15px; text-align: center;
+  }
+  .step-no.static { position: static; flex-shrink: 0; box-shadow: none; }
+  .step-hit { outline: 2px solid rgb(var(--v-theme-on-surface)); outline-offset: 1px; }
+  .step-legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 12px 32px; padding: 14px 16px; border-bottom: 1px solid var(--color-border); }
+
+  @media (max-width: 639px) {
+    .filters > * { flex: 1 1 140px; }
+    .filters > :last-child { flex: 1 1 100%; }
+    .range .field { flex: 1; width: auto; }
+
+    .versus { grid-template-columns: minmax(0, 1fr); }
+    .versus > .side:first-child > .bar { border-radius: calc(0.35rem - 1px) calc(0.35rem - 1px) 0 0; }
+    .versus > .side:last-child > .bar { border-radius: 0; padding-left: 16px; }
+    .versus > .side:last-child { border-left: 0; }
+    .swap { height: 0; }
+    .swap-btn { left: auto; right: 16px; top: -20px; }
+    .swap-btn .h { display: none; }
+    .swap-btn .v { display: grid; }
+    .side-body { padding: 12px; }
+    .pair { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    .steps .step { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "s x" "q q"; gap: 4px 10px; }
+    .steps .num, .tools .move { display: none; }
+    .step-main { grid-area: s; }
+    .quals { grid-area: q; justify-content: flex-start; padding-left: 48px; }
+    .quals:empty { display: none; }
+    .tools { grid-area: x; }
+    .steps .link { padding-left: 8px; }
+
+    .stat { padding: 12px; }
+    .s-v { font-size: 1.4rem; }
+
+    /* line 1: Player, his heroes, result, length; line 2: Opponent, his heroes, map */
+    .games { --hero: 20px; }
+    .games .heroes { gap: 8px; }
+    .games .who .tag { display: none; }
+    .games thead { display: none; }
+    .games, .games tbody { display: block; }
+    .games tr {
+      display: grid; grid-template-columns: minmax(0, 1fr) 84px 60px 42px; grid-template-areas: "p ph r l" "o oh m m";
+      align-items: center; gap: 4px 10px; padding: 6px 12px; border-bottom: 1px solid var(--color-border);
+    }
+    .games td { display: block; padding: 0; border: 0; width: auto !important; min-width: 0; }
+    .games .c-p { grid-area: p; padding: 0; }
+    .games .c-ph { grid-area: ph; }
+    .games .c-r { grid-area: r; font-size: 0.875rem; }
+    .games .c-l { grid-area: l; padding: 0; font-size: 0.875rem; }
+    .games .c-o { grid-area: o; display: flex; align-items: center; gap: 6px; }
+    .games .c-o .vs { display: inline; font-size: 0.875rem; color: var(--color-muted); }
+    .games .c-oh { grid-area: oh; }
+    .games .c-m { grid-area: m; padding: 0; text-align: right; font-size: 0.875rem; }
+    /* with no heroes the names take their column; a hidden result or length leaves its place to the map */
+    [data-hide~="heroes"] .games tr { grid-template-columns: minmax(0, 1fr) 0 60px 42px; column-gap: 5px; }
+    .show-cols { padding: 10px 12px 6px; }
+    .pager { padding: 12px; }
+
+    .q-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    .heat-row { font-size: 0.8125rem; min-height: 32px; padding-right: 4px; }
+    .heat-cell { min-height: 32px; font-size: 0.8125rem; }
+    .bars .mark { grid-template-columns: minmax(0, 40%) minmax(0, 1fr); gap: 8px; }
+    .bar-label { font-size: 0.875rem; }
+    .x-table th, .x-table td { padding-left: 8px; padding-right: 8px; }
+
+    .named { --indent: 10px; }
+    .named th, .named td { padding-left: 8px; padding-right: 8px; }
+    .named .c-len, .named .c-go, .named .meter { display: none; }
+    /* the rule moves to a row of its own across the table, so the name cell holds the name only */
+    .named tr:not(.rule-row) .rule { display: none; }
+    .named tr:not(.rule-row) > td { padding-bottom: 4px; }
+    .named .rule-row { display: table-row; border-top: 0; }
+    .named .rule-row > td { padding-top: 0; }
+    .named .rule { overflow-wrap: break-word; }
+  }
+}
+
+/* The gold button's lower edge and drop shadow, softer on the light ground, and the dark frame of a tile. */
+:root { --btn-gold-edge: oklch(50% 0.1 70 / 0.35); --btn-gold-drop: 0 1px 1px oklch(20% 0.04 60 / 0.22); --tile-edge: rgba(10, 6, 2, 0.75); }
+:root[data-theme="dark"] { --btn-gold-edge: oklch(50% 0.1 70 / 0.6); --btn-gold-drop: 0 1px 2px oklch(0% 0 0 / 0.6); --tile-edge: rgba(231, 235, 227, 0.22); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) { --btn-gold-edge: oklch(50% 0.1 70 / 0.6); --btn-gold-drop: 0 1px 2px oklch(0% 0 0 / 0.6); --tile-edge: rgba(231, 235, 227, 0.22); }
+}

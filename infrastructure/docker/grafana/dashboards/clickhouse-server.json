@@ -1,0 +1,81 @@
+{
+  "uid": "clickhouse-server",
+  "title": "ClickHouse server",
+  "tags": ["warehouse", "clickhouse"],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "editable": false,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "timeseries", "title": "Queries per second",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "editorType": "sql", "format": 0, "queryType": "timeseries",
+        "rawSql": "SELECT $__timeInterval(event_time) AS time, avg(ProfileEvent_SelectQuery) AS selects, avg(ProfileEvent_InsertQuery) AS inserts\nFROM system.metric_log\nWHERE $__dateTimeFilter(event_date, event_time)\nGROUP BY time ORDER BY time" }]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "Running queries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 }, "overrides": [] },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "editorType": "sql", "format": 0, "queryType": "timeseries",
+        "rawSql": "SELECT $__timeInterval(event_time) AS time, max(CurrentMetric_Query) AS queries\nFROM system.metric_log\nWHERE $__dateTimeFilter(event_date, event_time)\nGROUP BY time ORDER BY time" }]
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Memory",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" },
+        "overrides": [
+          { "matcher": { "id": "byFrameRefID", "options": "A" }, "properties": [{ "id": "displayName", "value": "resident" }] },
+          { "matcher": { "id": "byFrameRefID", "options": "B" }, "properties": [{ "id": "displayName", "value": "tracked" }] }
+        ]
+      },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "editorType": "sql", "format": 0, "queryType": "timeseries",
+          "rawSql": "SELECT $__timeInterval(event_time) AS time, avg(value) AS resident\nFROM system.asynchronous_metric_log\nWHERE $__dateTimeFilter(event_date, event_time) AND metric = 'MemoryResident'\nGROUP BY time ORDER BY time" },
+        { "refId": "B", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "editorType": "sql", "format": 0, "queryType": "timeseries",
+          "rawSql": "SELECT $__timeInterval(event_time) AS time, avg(CurrentMetric_MemoryTracking) AS tracked\nFROM system.metric_log\nWHERE $__dateTimeFilter(event_date, event_time)\nGROUP BY time ORDER BY time" }
+      ]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "CPU (cores busy)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "stacking": { "mode": "normal" }, "fillOpacity": 20 } }, "overrides": [] },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "editorType": "sql", "format": 0, "queryType": "timeseries",
+        "rawSql": "SELECT $__timeInterval(event_time) AS time, avgIf(value, metric = 'CGroupUserTime') AS user, avgIf(value, metric = 'CGroupSystemTime') AS system\nFROM system.asynchronous_metric_log\nWHERE $__dateTimeFilter(event_date, event_time) AND metric IN ('CGroupUserTime', 'CGroupSystemTime')\nGROUP BY time ORDER BY time" }]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Merges and active parts",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 },
+        "overrides": [{ "matcher": { "id": "byName", "options": "active_parts" },
+          "properties": [{ "id": "custom.axisPlacement", "value": "right" }] }]
+      },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "editorType": "sql", "format": 0, "queryType": "timeseries",
+        "rawSql": "SELECT $__timeInterval(event_time) AS time, max(CurrentMetric_Merge) AS merges, avg(CurrentMetric_PartsActive) AS active_parts\nFROM system.metric_log\nWHERE $__dateTimeFilter(event_date, event_time)\nGROUP BY time ORDER BY time" }]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Inserted rows per second",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "editorType": "sql", "format": 0, "queryType": "timeseries",
+        "rawSql": "SELECT $__timeInterval(event_time) AS time, avg(ProfileEvent_InsertedRows) AS rows\nFROM system.metric_log\nWHERE $__dateTimeFilter(event_date, event_time)\nGROUP BY time ORDER BY time" }]
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "route": "/query",
+  "request": {
+    "model": "mappings",
+    "dimensions": [
+      "code",
+      "name",
+      "kind"
+    ],
+    "filters": {
+      "code": [
+        "hbar",
+        "eaom",
+        "Edem",
+        "AEim",
+        "BS05"
+      ]
+    },
+    "order_by": [
+      "code"
+    ]
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "rows": [
+        {
+          "code": "AEim",
+          "name": "Immolation",
+          "kind": "hero_skill"
+        },
+        {
+          "code": "BS05",
+          "name": "Val'sharah",
+          "kind": "unknown"
+        },
+        {
+          "code": "Edem",
+          "name": "Demon Hunter",
+          "kind": "hero"
+        },
+        {
+          "code": "eaom",
+          "name": "Ancient of War",
+          "kind": "building"
+        },
+        {
+          "code": "hbar",
+          "name": "Barracks",
+          "kind": "building"
+        }
+      ]
+    }
+  }
+}

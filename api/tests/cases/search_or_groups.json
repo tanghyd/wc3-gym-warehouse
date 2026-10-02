@@ -1,0 +1,110 @@
+{
+  "route": "/search",
+  "request": {
+    "filters": {
+      "replay_id": [
+        "0ddbb4abacfb6b62d88223ac6bb3902edc0bdc3a2eac55e29ffe367405cffa60",
+        "92336fe5a392d0043442e75ad4a5097086d6451a35b3d68d99c3093e65b8d8f6",
+        "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8"
+      ]
+    },
+    "player": {
+      "race": [
+        "NE"
+      ],
+      "groups": [
+        {
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Edem"
+              ],
+              "nth": 1
+            },
+            {
+              "kind": "skill",
+              "codes": [
+                "AEmb"
+              ],
+              "count": 2
+            }
+          ]
+        },
+        {
+          "steps": [
+            {
+              "kind": "hero",
+              "codes": [
+                "Ekee"
+              ],
+              "nth": 1
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "total": 1,
+      "summary": {
+        "games": 1,
+        "wins": 1,
+        "losses": 0,
+        "duration_ms_total": 937219,
+        "both": 0
+      },
+      "scope": {
+        "games": 3,
+        "wins": 3,
+        "losses": 0,
+        "duration_ms_total": 1747119,
+        "both": 0
+      },
+      "replays": [
+        {
+          "replay_id": "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8",
+          "map": "Concealed Hill",
+          "duration_ms": 937219,
+          "both": false,
+          "player": {
+            "name": "thanks#11187",
+            "race": "NE",
+            "won": true,
+            "heroes": [
+              {
+                "code": "Edem",
+                "level": 4
+              },
+              {
+                "code": "Ekee",
+                "level": 4
+              }
+            ]
+          },
+          "opponent": {
+            "name": "Okeanos#22605",
+            "race": "OC",
+            "won": false,
+            "heroes": [
+              {
+                "code": "Ofar",
+                "level": 3
+              },
+              {
+                "code": "Oshd",
+                "level": 2
+              },
+              {
+                "code": "Otch",
+                "level": 1
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

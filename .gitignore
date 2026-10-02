@@ -1,7 +1,12 @@
 .env
 *.env
+.env.box
 !.env.example
 target/
 __pycache__/
 .venv/
 data/
+dbt/logs/
+web/e2e/node_modules/
+web/e2e/shots/
+web/e2e/test-results/

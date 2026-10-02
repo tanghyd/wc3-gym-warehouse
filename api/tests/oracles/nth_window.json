@@ -1,0 +1,13 @@
+{
+  "operator": "nth with a time window times that hero",
+  "picked_by": "nth_window.sql",
+  "request": {
+    "filters": {"replay_id": ["026d7c4c01c6dfe47095d68666213b8a4f5df78845815b7c510d11a8d782e34e","2e750d087f48cdf546d3516ec2af73a0ed942a18993d3d2c885a3ca7b2a114d0","49414061f2f7c2b243cb0a978b9b7278de947670a52c539706202635955b9eb3","5b6bb2c6812cb2a5fdaddf8511c32bfa62864745e14b9d9e625c67ec1144d8f2","8f1c14c32736bf93ce8ee76a75a612c98c27dd26d525af3e9854caedb5ca50cf","98f24bf006e070291de52bac1a423620a833996aa63a33d296473d398c053928","9b89d241ac1e969e3a0e4ceaff89715d61da50cf02ccb8d005ba5d4deb73a7d5","aaec606306ae3136bf1007003a9d4693bcc1c53189defd666b886a5edf220a92","e65c8d1008565abe5ee0d49545a6cc037cacaace0eaa0810d56fc89028c682fa","f9402e1b247128a0df7db90a56d7219964350a5861d192c2f8e6166b8c1f48e1"]},
+    "player": {"race": ["HU", "OC", "NE", "UD"], "groups": [{"steps": [{"kind": "hero", "codes": ["Nalc","Nbrn","Nbst","Nfir","Nngs","Npbm","Nplh","Ntin"], "nth": 1, "from_s": 150}]}]},
+    "limit": 100
+  },
+  "expected": {
+    "games": 4,
+    "matches": [["98f24bf006e070291de52bac1a423620a833996aa63a33d296473d398c053928","Kaccel#2863"],["9b89d241ac1e969e3a0e4ceaff89715d61da50cf02ccb8d005ba5d4deb73a7d5","Adventurer#139364116"],["aaec606306ae3136bf1007003a9d4693bcc1c53189defd666b886a5edf220a92","LuckyPants#253888"],["f9402e1b247128a0df7db90a56d7219964350a5861d192c2f8e6166b8c1f48e1","老顽童#31450"]]
+  }
+}

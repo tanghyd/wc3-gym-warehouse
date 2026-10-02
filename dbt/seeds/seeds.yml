@@ -1,0 +1,137 @@
+seeds:
+  - name: mappings_melee
+    description: The parser's melee object tables, written by `just mappings` (export-mappings in the drain image). Never edit by hand.
+    data_tests:
+      - unique:
+          name: mappings_melee_one_row_per_code_and_kind
+          description: A melee code has one name per kind.
+          arguments:
+            column_name: "code || ':' || kind"
+    columns:
+      - name: code
+        description: "{{ doc('object_code') }}"
+        data_tests:
+          - not_null:
+              description: Every row has a code.
+      - name: name
+        description: The object's display name, such as Barracks.
+      - name: kind
+        description: building, unit, item, upgrade, hero or hero_skill.
+        data_tests:
+          - accepted_values:
+              description: Kind is one of the parser's melee table kinds.
+              arguments:
+                values: [building, unit, item, upgrade, hero, hero_skill]
+      - name: race
+        description: The object's race (human, orc, night_elf, undead, neutral), or '' when the parser's table gives none.
+      - name: hero
+        description: For a hero_skill, the name of the hero that learns it, or '' otherwise.
+      - name: is_supply_building
+        description: 1 for a building the parser flags as supply (Farm, Moon Well and Ziggurat, not Orc Burrow), else 0.
+
+  - name: mappings_custom
+    description: Custom-map rawcodes with a display name and a category (ui-menu, builder, tower, upgrade, item, other) from the map's own object data. Kept by hand.
+    columns:
+      - name: code
+        description: "{{ doc('object_code') }}"
+        data_tests:
+          - unique:
+              description: A custom code is listed once.
+          - not_null:
+              description: Every row has a code.
+      - name: name
+        description: The object's display name in the custom map.
+      - name: kind
+        description: Always unknown, the kind the parser gives a code in no melee table.
+      - name: category
+        description: The object's group in the custom map, ui-menu, builder, tower, upgrade, item or other.
+
+  - name: patches
+    description: The game patch each replay build number belongs to. Kept by hand, one row per build seen. A build with no row gives patch '' and the builds_have_a_patch test warns.
+    columns:
+      - name: build_number
+        description: The build number from the replay header, such as 7000.
+        data_tests:
+          - unique:
+              description: A build belongs to one patch.
+          - not_null:
+              description: Every row has a build number.
+      - name: patch
+        description: The patch name shown to people, such as 3.0.
+        data_tests:
+          - not_null:
+              description: Every build names its patch.
+      - name: description
+        description: What the patch is, in a few words.
+
+  - name: object_sources
+    description: >-
+      The building, altar, camp or shop each melee object comes from, for the step pickers.
+      Units and upgrades by the building that trains or researches them, heroes by altar or
+      Tavern, mercenaries by camp, items by shop. Kept by hand from the game's tech tree and
+      checked against the orders: each unit or upgrade source is ordered before its object in
+      97% or more of the players who order it, except a starting hall. A Marketplace
+      item is one the replays show bought only there.
+    data_tests:
+      - unique:
+          name: object_sources_one_row_per_source
+          description: An object is listed once per kind and source.
+          arguments:
+            column_name: "code || ':' || kind || ':' || source_code"
+    columns:
+      - name: code
+        description: "{{ doc('object_code') }}"
+        data_tests:
+          - not_null:
+              description: Every row has a code.
+          - relationships:
+              description: Every object has a name in mappings.
+              arguments:
+                to: ref('mappings')
+                field: code
+      - name: kind
+        description: The picker kind. unit for a race's own unit, hired for a mercenary, then upgrade, hero and item.
+        data_tests:
+          - accepted_values:
+              description: Kind is a picker kind with a source.
+              arguments:
+                values: [unit, hired, upgrade, hero, item]
+      - name: source_code
+        description: The object code of the source, such as eaom for Ancient of War. Its first letter names the race (h o e u), n a neutral source.
+      - name: source_name
+        description: The source's display name, such as Ancient of War or Tavern.
+
+  - name: start_locations
+    description: >-
+      The start locations of each map the replays carry, keyed by replays.map. A replay holds no
+      start position, so player_starts reads it from where a player builds against these points.
+      source 'map file' is a start location (sloc unit) of the W3Champions map archive in
+      wc3-gnl-website map-sources/, as its creep-route catalogues list them (12 maps, 28 rows).
+      source 'cluster' is the mean of the players' first buildings around one start, for the 4 maps
+      with no archive there (Boulder Vale 1.7, Concealed Hill, Northern Isles, Springtime 1.3). On
+      the 12 maps with a file that mean lies 99 to 382 units from the file start. Kept by hand.
+    data_tests:
+      - unique:
+          name: start_locations_one_row_per_slot
+          description: A map lists each slot once.
+          arguments:
+            column_name: "map || ':' || toString(slot)"
+    columns:
+      - name: map
+        description: The map as replays.map names it, such as Echo Isles 2.2.
+        data_tests:
+          - not_null:
+              description: Every row names its map.
+      - name: slot
+        description: The start's number on its map. The map file's player slot of the start location, or 0 and 1 for a cluster.
+      - name: x
+        description: The start's map x in game units.
+      - name: y
+        description: The start's map y in game units.
+      - name: source
+        description: map file or cluster, as above.
+        data_tests:
+          - accepted_values:
+              description: A start comes from a map file or a cluster.
+              arguments:
+                values: [map file, cluster]

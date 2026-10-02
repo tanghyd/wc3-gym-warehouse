@@ -1,0 +1,26 @@
+{
+  "route": "/search",
+  "request": {
+    "player": {
+      "groups": [
+        {
+          "steps": [
+            {
+              "kind": "unit",
+              "codes": [
+                "earc"
+              ],
+              "link": "then"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "detail": "the first step of a group has no step above to come after"
+    }
+  }
+}

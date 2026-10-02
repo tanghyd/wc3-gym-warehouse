@@ -1,0 +1,52 @@
+sources:
+  - name: ingest
+    description: >-
+      What the drain (pipeline/parse-rs/src/bin/drain.rs) read from the source buckets,
+      in ClickHouse's ingest database. The drain inserts as the ingest user. The tables
+      are in infrastructure/docker/clickhouse/ingest.sql.
+    schema: ingest
+    tables:
+      - name: docs
+        description: >-
+          One parsed replay document per object key. A ReplacingMergeTree on (source, key):
+          a re-parse or a re-upload adds a row, and a merge keeps the one with the highest
+          parse_version, then source_last_modified. Read it FINAL.
+        config:
+          loaded_at_field: ingested_at
+          freshness:
+            warn_after: {count: 7, period: day}
+        columns:
+          - name: source
+            description: The bucket the drain listed the object in.
+          - name: key
+            description: The raw object key, also the document's source_key.
+          - name: parse_version
+            description: The PARSE_VERSION of the drain that parsed the object, also in the document.
+          - name: source_last_modified
+            description: When the bucket last wrote the object, also in the document.
+          - name: ingested_at
+            description: When the drain inserted the document.
+          - name: doc
+            description: One parsed replay document as JSON text, as w3grs wrote it plus the drain's source_key (the raw object key), source_last_modified and parse_version.
+
+models:
+  - name: raw_replays
+    description: >-
+      One parsed replay document per replay, from the source ingest.docs: per replay_id,
+      the document at the highest parse_version, then the newest source_last_modified,
+      then the lowest (source, key). Every run rebuilds it, so a parser bump or a
+      re-upload replaces the older document. A ReplacingMergeTree on replay_id with
+      parse_version as its version, which holds one row per replay, so readers may read it
+      FINAL.
+    columns:
+      - name: replay_id
+        description: "{{ doc('replay_id') }} Read from the document's id field."
+        data_tests:
+          - not_null:
+              description: Every loaded document has an id.
+      - name: doc
+        description: The whole parsed document as JSON text. Every mart extracts its fields from here.
+      - name: ingested_at
+        description: When the drain inserted this document into ingest.docs (UTC).
+      - name: parse_version
+        description: The parser version (PARSE_VERSION) the drain stamped on the document, the table's version column.

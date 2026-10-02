@@ -96,6 +96,7 @@ Decided (stories D2): a view never holds a filter or selection that is not also 
 | "Search" button on `/search` | `router.push`. Back returns to the previous search. |
 | Page, sort | `router.replace` |
 | Open, close or select an opener row | `router.replace` |
+| A Show switch over the games list (8.2) | `router.replace`, with the hidden columns drawn at once (`useOptimistic`) |
 
 - Each view has one `watch(() => route.query, load, { immediate: true })`. `load` decodes the query, calls the API and aborts the previous request (`AbortController`). A slow old answer never overwrites a new one.
 - Text fields (player, minutes) write to the query after 400 ms without typing, or on Enter.
@@ -150,6 +151,7 @@ without=eden                      no Ancient of Wonders ordered, up to 3 codes (
 | `open` | none | Opened prefixes, one key per row: `open=eate&open=eate.eaom`. Codes join with `.`. |
 | `sel` | none | The one selected prefix: `sel=eate.eaom.etoa`. On decode every parent of `sel` joins `open`. |
 | `kinds` | none | `/replays/:id` only: the kind chips that are on, joined with `,`: `kinds=building,unit`. Absent means every kind. |
+| `hide` | none | `/` only: the games list columns the reader hid, joined with `.` in switch order: `hide=heroes.result.length`. Search, Clear and the pager keep it; a game link drops it. |
 
 ### 4.4 Test
 
@@ -159,7 +161,7 @@ without=eden                      no Ancient of Wonders ordered, up to 3 codes (
 - The step token grammar, including `~` on step 0 (passed through, the API rejects it), `@-300`, `*5` and `^` (PR 16).
 - `[{}, {...}]` when only slot 2 is set, `[]` when nothing is set.
 - Code to `event_type` for `eate`, `ankh`, `Recb`, `Edem`, `AEmb` (api.md 3.2).
-- `m:ss` parsing: `5` gives 300 s, `5:30` gives 330 s, blank gives none.
+- Time parsing (`parseMss` in `web/src/lib/steps.ts`): `2:30` and `02:30` give 150 s, `150` gives 150 s, blank gives none, `2:5` and `6 min` are no time.
 - `sel=a.b.c` with no `open` decodes to `open` = `a`, `a.b`.
 - `kinds=building,unit` round trips to the two chips; absent decodes to every kind.
 - `WIN_RATE_FLOOR` equals 10 (section 13).
@@ -417,7 +419,7 @@ html, body { font-family: var(--font-body); font-variant-numeric: lining-nums ta
 | Focus | 2 px `primary` outline, 2 px offset |
 | Tooltip | Vuetify's default: `surface-variant`, `on-surface-variant` text, 13 px. Light on dark in the light theme, dark on light in the dark theme. |
 
-- Command-card icons are 64 x 64 PNGs (`file frontend/icons/btn3m1-result.png`). Sizes: 40 px in the picker and opener path tiles, 28 px in step lists and opener trails, 24 px in the timeline and skill trails, 20 px on phones. `rounded="sm"`, no border.
+- Command-card icons are the classic (pre-Reforged) art that W3Champions uses (Daniel 2026-10-02): 64 x 64 webp in `web/public/icons-classic/`, mapped code to file by `web/public/icons-classic.json` (606 of the 648 codes of `icons.json`, 496 files; source and terms in that folder's README). A code with no classic file keeps its Reforged 64 x 64 PNG from `web/public/icons/` through `icons.json`: 42 codes, mostly items and summons (`iconOf` in `web/src/lib/api.ts`). Sizes: 40 px in the picker and opener path tiles, 28 px in step lists and opener trails, 24 px in the timeline, skill trails and the games list (8.2), 20 px on phones. `rounded="sm"`, no border.
 - Decided: `ObjectIcon.vue` falls back to `mdi-help-box-outline` at the same size, name in the tooltip. Why: 3 of 649 named codes have no icon (`orbr` Reinforced Orc Burrow, `uzg1` Spirit Tower, `nits` Ice Troll Berserker).
 - Race marks: `RaceIcon.vue` from gnl, 1.4 em square with a tooltip (gnl: `RaceIcon.vue:2-14, 21`).
 - Player names: the GNL app standard is `{flag} {name} {race} {mmr}`. The warehouse has no country and no MMR until the dims loader, so `PlayerName` shows `{name} {race}` and has no flag or MMR slot (section 7).
@@ -506,23 +508,29 @@ Rejected:
 - A "Clear" text button shows when any key is set.
 - 390 px: one `v-expansion-panels` titled "Filters" with a count badge. Open when no key is set, closed once a result shows. Fields in a two-column grid.
 
-### 8.2 Replay table (`ReplayTable.vue`)
+### 8.2 Games list (`table.games` in `web/src/app/page.tsx`)
 
-`v-data-table-server`, 25 rows, total from `X-Total-Count`. Search results and the openers panel use it. No column sorts: rows come in the API's one fixed order (api.md 2.4, A2).
+One game a row, 25 a page, in the order of the sort menu. Decided (Daniel 2026-10-02): a game is one concept, not a copy for each side. A row is a game in which the Player side's conditions hold for one player and the Opponent side's for the other, and the row shows that player as the Player. A mirror (a game both players fit) is still one row, shown from the lower player slot, with a "mirror" tag when the strip has a record. Decided (Daniel 2026-10-02): a row is one text line, so a screen stacks many games. A 24 px hero icon and 5 px of padding set its height (35 px with the hairline).
 
-| Column | Source (api.md 2.5) |
+The strip over the list (Daniel 2026-10-02): the Games figure, with its share of the scope when steps, the outcome or openers narrow it, then the Player record ("19 – 11 (63%)", wins before losses) of the games that are not mirrors; under it, when steps, the outcome or openers narrow the games, the scope's: "Of 640, mirrors aside: 317 – 323". A mirror adds no result, since either player can sit on the Player side; under Games a line says "70 mirrors, no result" when some games are mirrors and some are not. When every game is a mirror (equal sides, such as Night Elf v Night Elf) the strip shows the games alone: no record, no percentage, no mirrors line and no tag. Why: a result read from one seat of such a game is an arbitrary seat's; Daniel: "the player record of 1706 - 1706 (50%) is completely useless".
+
+| Column | Cell |
 |---|---|
-| Map | `map`, "Unknown map" when `""` |
-| Matchup | `matchup` |
-| Players | The `focus_player_id` player, "v", the other. No focus player: `players[]` order (by `player_id`). Each a `PlayerName`. The winner in `font-weight-medium`. |
-| Length | `duration_ms` as `m:ss`, right-aligned |
-| Result | The focus player: "Won" or "Lost" plus the dot (6.6). Blank when `won` is null or no focus player. Focus is Player 1 on search, the opener's owner in the panel. |
-| GNL | `gnl` as "S{series_id} G{game_no}", text only, blank when null |
-| File | `mdi-download` icon button to `download_url` (stories D1); "No file" when null |
+| Player | Race icon (18 px), then the name in Cardo 700 with its battle tag number ("#2726") at 400 in medium emphasis, cut with an ellipsis, the full tag in its title; then, on a mirror and only when the strip has a record, "mirror" in a 12 px outlined pill in medium emphasis, the only tag of the row, titled "Both players fit the Player side, so the game adds no result" |
+| Heroes | The Player's heroes in pick order, 24 px command-card icons 10 px apart, the final level on each icon's corner |
+| Result | The Player's result: a 10 px `win` or `loss` square and "Won" or "Lost" in ink; "No result" in medium emphasis |
+| Opponent | As Player |
+| Heroes | The Opponent's heroes, as above |
+| Map | The link to `/replays/:id`, cut with an ellipsis, the full name in its title. Sorts by map. |
+| Length | `duration_ms` as `m:ss`, right-aligned. Sorts by length. |
 
-- Row key: `replay_id` plus `focus_player_id`. The openers list can hold one game twice, once per owner (api.md 2.5, 3.6).
-- A row click goes to `/replays/:id`. The file button stops the click.
-- Compact form (390 px, and the openers panel at every width): one cell per row. Line 1: focus player, "v", other. Line 2: map, length, result. File button at the right edge. Decided: PR 10 tries the Vuetify `mobile` prop of `v-data-table-server` first; custom one-cell rows only if it falls short.
+- `table-layout: fixed`: the hero columns are 120 px, Result 84 px, Length 80 px, and Player, Opponent and Map share the rest, so each column starts at the same x on every row.
+- Text 15 px on a 20 px line; heads 14 px, 700, medium emphasis, the sorted head's link in `primary-text`. Hairline under each row, no zebra, hover in `surface-light` (6.4).
+- The hero icons are the row's bold mark (1, 6.4); every other cell is plain text.
+- A departure from `PlayerName` (7): the race icon comes before the name here, so the race marks line up in a column.
+- 390 px: no heads; two lines per row on fixed columns (name, 84 px heroes, 60 px, 42 px), so the heroes line up down the list. Line 1: Player, his heroes, result, length. Line 2: "v", Opponent, his heroes, the map at the right over the last two columns. Hero icons 20 px, 8 px apart. Names drop the battle tag number.
+- Show switches (Daniel 2026-10-02) sit in one row over the heads: "Show", then a checkbox each for Heroes (both hero columns), Result and Length, all on by default. Off hides those columns at every width and writes `hide` (4.3), so a link reproduces the view. On a phone hidden heroes give their column to the names; a hidden result or length leaves its place to the map.
+- The row has no date: the search answer carries none (`api/compile.py`, the `rows` query).
 
 ### 8.3 States (`StateBlock.vue`)
 
@@ -562,7 +570,7 @@ Rejected:
 - Steps show as a numbered list, because the order is the query.
 - A step reads as an order: the timing row says "ordered within 30 s", "ordered by 5:00".
 - Reorder: remove and add again. Drag-to-reorder is skipped until players ask.
-- Decided: timing entry is `m:ss` ("5" is 5:00). Why: opener timings are under a minute.
+- Decided (Daniel 2026-10-02): a time field takes `m:ss`, `mm:ss` or whole seconds ("150" is 2:30). Its placeholder is "m:ss" and one muted line under it reads "m:ss, such as 2:30, or seconds". On blur it reads back as `m:ss`; other text stays in the field, is not applied, and the line under it turns to ink: "Not a time. Type m:ss, such as 2:30, or seconds." Why: "5" as 5:00 was a format nobody could guess. The same field takes the "Then within" gap.
 
 ### 9.3 Object picker (`ObjectPicker.vue`)
 
@@ -570,7 +578,7 @@ A command-card grid, like the in-game build card: a name search field, kind tabs
 
 - Items come from `/mappings`. A tab shows one `kind`.
 - Race filter: an item shows when `race` equals the slot race or `race` is null (api.md 3.2, the derived `race`). This keeps heroes, skills, upgrades and items for Night Elf, where a "code starts with the race letter" filter would empty them.
-- Slot race `RANDOM`, or no slot race: every item shows, grouped in each tab under a race icon heading in the order `HU`, `OC`, `NE`, `UD`, then no race. Why: a derived `race` is never `RANDOM`, and a Random player's events carry `race = 'RANDOM'` but the rolled race's codes (queries.md §8 question 5). Measured 2026-09-11 on the dev set: Random player-games rolled `UD` 259, `HU` 243, `NE` 235, `OC` 227, unknown 40; Random building events start with `h` 5,755, `u` 4,562, `o` 3,495, `e` 3,470.
+- Slot race `RANDOM`, or no slot race: every item shows, grouped in each tab under a race icon heading in the order `HU`, `OC`, `NE`, `UD`, then no race. Why: a derived `race` is never `RANDOM`, and a Random player's events carry `race = 'RANDOM'` but the rolled race's codes (queries.md §8 question 5). Measured 2026-09-11 on the dev set: Random players rolled `UD` 259, `HU` 243, `NE` 235, `OC` 227, unknown 40; Random building events start with `h` 5,755, `u` 4,562, `o` 3,495, `e` 3,470.
 - The search field filters by `name` across all tabs. Enter picks the first hit.
 - Skills group under a heading per hero, from the `hero` field.
 - Each icon is a `v-btn` with `aria-label` = name and a name tooltip. Arrow keys move focus in the grid. Enter picks.
@@ -598,7 +606,7 @@ PR 15 adds the API fields (api.md 3.4). PR 16 adds these controls. The codec is 
 
 | Form | Control | Label on screen | Review (stories.md story 1) |
 |---|---|---|---|
-| Minimum count | "At least" number field in the step's timing row, minimum 2; blank clears the token (api.md bounds it 2-100) | "at least 5 Archer orders by 5:00" | Night Elf, `earc` at least 5 by 5:00: fixtures 1, dev set 1,100 |
+| Minimum count | "At least" field between a minus and a plus button: a typed whole number (`inputmode="numeric"`), the first click selects it so a digit replaces it; blank or 0 is 1 again on blur, past 9 is 9 (the API bounds it 1-9) | "at least 5 Archer orders by 5:00" | Night Elf, `earc` at least 5 by 5:00: fixtures 1, dev set 1,100 |
 | Without | "Without" chips under the steps, up to 3 codes, each from the picker. Button hidden at 3. | "no Ancient of Wonders ordered" | Night Elf, `eate`, without `eden`: 1, 573 |
 | First hero | "First hero" switch on a hero step. Shown only for the `hero_trained` kind. | "first hero Demon Hunter" | Night Elf, first hero `Edem`: 3, 1,430 |
 
@@ -611,7 +619,7 @@ PR 15 adds the API fields (api.md 3.4). PR 16 adds these controls. The codec is 
 
 md and up: the tree (7 of 12 columns) and the selection panel (5 of 12, `position: sticky`) side by side. The sort toggle ("Most played", "Best win rate") sits right of the filter row.
 
-- Tree: "{total} player-games", then columns Opener, Games (share bar), Win rate (win bar), Avg min, replay button. A "Stopped here" row closes each open level.
+- Tree: "{total} games won or lost", then columns Opener, Games (share bar), Win rate (win bar), Avg min, replay button. A "Stopped here" row closes each open level.
 - Panel: path tiles, figures, then the replay list (10.3).
 - Dev-set example, Night Elf: root 2,730; `eate` 2,503 (92%, 50%, 15.3 min); `eaom` 2,294 (92%, 50%, 15.4); `etoa` 872 (38%, 51%, 16.1, 21 stopped); `eden` 816 (36%, 48%, 15.8); 59 stopped at `eaom`.
 
@@ -635,17 +643,17 @@ md and up: the tree (7 of 12 columns) and the selection panel (5 of 12, `positio
 | Win rate | `wins / games` through `fmtPct`, plus the win bar (10.4). Below `WIN_RATE_FLOOR`: `text-medium-emphasis`, no bar. |
 | Avg min | `avg_minutes`, one decimal |
 | Replay button (`mdi-play-box-multiple`, `aria-label` "Show games") | sets `sel`, moves focus to the panel's replay list; on phones scrolls to it |
-| "Stopped here" row | `stopped`, shown when above 0. Children plus stopped sum to the parent (api.md A7). |
+| "Stopped here" row | `stopped`, shown when above 0. Children plus stopped are the parent's games, or more: a game where both players hold the prefix and then part ways counts once in each player's row (api.md A7, A14). |
 
 ### 10.3 Selection panel
 
 | Part | Fields | Source |
 |---|---|---|
 | Path tiles | Root tile: 40 px race icon, race name, `total`, "100%". One tile per code in `sel`: 40 px icon, name, `games`, share of its parent level's `total` via `fmtPct`. The last tile has the `primary` tint. A tile click sets `sel` to that prefix. | cached level answers |
-| Figures | `games` labelled "player-games"; win rate via `fmtPct` with the 10.4 mark (muted, no mark under the floor); `avg_minutes` labelled "avg minutes"; "stopped here". | the selected row. "Stopped here" is `stopped` of `GET /openers?prefix=<sel>` when `branches > 0`, else the row's `games`. |
-| Replay list | Header: prefix icons at 20 px and "{n} player-games", n from `X-Total-Count`. `ReplayTable` compact form, 25 rows, paged by `page`. Focus player: the opener's owner. | `GET /openers/replays?prefix=<sel>` (api.md 3.6) |
+| Figures | `games` labelled "games"; win rate via `fmtPct` with the 10.4 mark (muted, no mark under the floor); `avg_minutes` labelled "avg minutes"; "stopped here". | the selected row. "Stopped here" is `stopped` of `GET /openers?prefix=<sel>` when `branches > 0`, else the row's `games`. |
+| Replay list | Header: prefix icons at 20 px and "{n} games", n from `X-Total-Count`. `ReplayTable` compact form, 25 rows, paged by `page`. Focus player: the opener's owner. | `GET /openers/replays?prefix=<sel>` (api.md 3.6) |
 
-- One count, one label: node and list both count player-games, so the list header equals the node (872 for Tree of Ages; api.md A14). A mirror game where both players hold the prefix lists twice, once per owner. The screen never shows a bare number.
+- One count, one label: node and list both count games, so the list header equals the node (api.md A14). A game where both players hold the prefix counts once and lists once, from the lower player slot (Daniel 2026-10-02). The screen never shows a bare number.
 - The list's progress bar sits inside the panel only. The tree stays live.
 
 ### 10.4 Inline marks
@@ -693,9 +701,9 @@ One `GET /stats` feeds the page (api.md 3.7, A8). Every panel shows the same coh
 | Panel | Form | Axes and scales | Palette | Tooltip |
 |---|---|---|---|---|
 | Matchups | Horizontal bar from 0, one row per unordered race pair ("Night Elf v Orc"). Not a 5 x 5 heatmap: the API sends each pair twice, and a heatmap needs a diverging ramp (D10). | y: `scaleBand` over pairs, rows 28 px. x: `scaleLinear([0, 1])`, a reference line at 50 %. `axisBottom` ticks at 0, 25, 50, 75 and 100 % (0, 50 and 100 % below 480 px); labels via `fmtPct`. Race icons name the sides. Value label at the bar tip, `fmtPct(x, 1)`. | `win` only (D10). `decided` under 10: no bar, muted label. Mirror rows below a gap: games only (`wins` null), muted. | "Night Elf won 2 of 2 decided games v Orc. 2 games." Focusable rows. |
-| Hero picks | Horizontal bar list, one block per race (small multiples), Random included. Shares pass 100 % (1-3 heroes per player, api.md 3.7), so no pie or stack. | Per block: rows 24 px with a 20 px hero icon and name. x: `scaleLinear([0, 1])` in every block. No tick axis: value at the tip via `fmtPct`. Block title: race icon and "{player_games} player-games". | `magnitude` | "Demon Hunter: 3 of 3 Night Elf player-games (100%)". Top 8 per race, then "Show all". |
+| Hero picks | Horizontal bar list, one block per race (small multiples), Random included. Shares pass 100 % (1-3 heroes per player, api.md 3.7), so no pie or stack. | Per block: rows 24 px with a 20 px hero icon and name. x: `scaleLinear([0, 1])` in every block. No tick axis: value at the tip via `fmtPct`. Block title: race icon and "{player_games} players". | `magnitude` | "Demon Hunter: 3 of 3 Night Elf players (100%)". Top 8 per race, then "Show all". |
 | Game length | Column chart over ordered buckets | x: `scaleBand` over bucket index, labels "0-5" … "60+" (last bucket folds, api.md 3.7). y: `scaleLinear([0, max]).nice()`, integer ticks only. Every k-th bucket labelled, k from width. | `magnitude` | "5-10 min: 2 games". Hit area: full band height. |
-| APM | Same component. Up to 21 buckets (width 25, cap 500). | Labels "0", "25" … "500+" | `magnitude` | "75-100 APM: 1 player-game" |
+| APM | Same component. Up to 21 buckets (width 25, cap 500). | Labels "0", "25" … "500+" | `magnitude` | "75-100 APM: 1 player" |
 
 - Mark specs (dataviz `marks-and-anatomy.md`): bars at most 24 px thick, 4 px rounded at the data end, square at the baseline; 2 px surface gap; hairline grid in the border colour; axis text 13 px, medium emphasis, lining tabular digits.
 - Decided (D10): matchup bars start at 0 on `[0, 1]`. The dev-set matchups run 45.3 % to 53.2 %: 28 px apart on a 358 px plot, and the label at each tip carries the rest.
@@ -720,7 +728,7 @@ One `GET /replays/{id}` (api.md 3.8, A9).
 
 ### 12.1 Layout
 
-- Order: title (`map`) with a "Download replay" button (or "No file") at the right; players line; meta line; two player cards side by side; "APM per minute" with legend and chart/table toggle; "Build orders" with kind chips and chart/list toggle; chat.
+- Order: title (`map`) with a "Download replay" button (or "No file") at the right; players line; meta line; two player cards side by side; "Game Timeline" with kind chips and a chart/list toggle, which holds the APM chart (12.4) and the build timeline (12.3) on one game-time axis; chat.
 - Fixture example `dcd3…`: Concealed Hill, 15:37, NvO, Patch 2.00, no GNL series. thanks#11187 (N, Won, 140 APM, `Edem` Demon Hunter level 4, skills `AEim` 2:22, `AEmb` 4:06, `AEmb` 6:40, `AEim` 11:54) v Okeanos#22605 (O, 89 APM, `Ofar` Far Seer level 3, skills at 2:17, 6:49, 9:58). Chat: 0:09 thanks#11187 "glhf".
 
 ### 12.2 Parts and fields
@@ -729,7 +737,7 @@ One `GET /replays/{id}` (api.md 3.8, A9).
 |---|---|
 | Title | `map`, "Unknown map" when `""` |
 | Players line | two `PlayerName` (`{name} {race}`), "v" between, `mdi-trophy` after the winner |
-| Meta line | `duration_ms` as `m:ss`, `matchup`, `version`, `gnl` as text "GNL S{series_id} G{game_no}" |
+| Meta line | `duration_ms` as `m:ss`, the matchup in the players line's order (one race letter per player, "OvN"; the API's `matchup` is in letter order), `version`, `gnl` as text "GNL S{series_id} G{game_no}" |
 | Download | `download_url`; "No file" when null |
 | Player card | 2 px key in `series-1` or `series-2`, `PlayerName`, "Won" with `mdi-trophy` or "Lost", in ink. `apm` as the card figure. `heroes[]` in `slot` order: 40 px icon, name, "Level {final_level}". Under each hero its skill trail: the `hero_skill` events with that `hero_code`, 24 px icons in time order, `m:ss` under each. |
 | APM chart | `players[].apm_per_minute` (12.4) |
@@ -739,46 +747,53 @@ One `GET /replays/{id}` (api.md 3.8, A9).
 
 - Decided: the GNL series shows as text, no link. Why: the gnl route `/match/:id` is member-only and needs a match id the warehouse does not have. A link waits for the dims loader.
 - Decided: hide private chat. Why: the route is public and cached for 1 hour. The API sends only `mode = 'All'` lines (api.md 3.8), so there is no "Private" chip.
-- Names come from `/mappings` through `objects.js`. A code with no name shows the code.
+- Names come from the mappings model through `getObjects` (`web/src/lib/api.ts`). A code with no mappings row reads "Unknown skill", "Unknown hero" and so on by kind, on a "?" tile. Parser follow-up: map AHpa, AHcr, ANcp and AUa2 (seen in the patch 3.0 replays) and the hero the parser leaves with an empty code.
 - Skills sit in two places on purpose: the card answers "which skills, in what order"; the Heroes lane answers "when, against the build".
 
 ### 12.3 Build timeline
 
-Section title "Build orders". Two views behind a `v-btn-toggle` (`mdi-chart-timeline`, `mdi-format-list-bulleted`). The chart is the default at md and up. The list is the default below md and is the chart's table view (section 13).
+The reader asks: what did each player build, when, and how did the two builds compare at the same moment? Section title "Game Timeline" (`GameTimeline.tsx`). Two views behind a "Chart" / "List" toggle in the title bar. The chart is the default at md and up. The list is the default below md and is the chart's table view (section 13).
 
-Flagged repeats: the API leaves out rows with `is_repeat = 1` (same code, same player, under 1000 ms after the previous same-code order, for tier halls, research and hero training; PR 2; api.md 3.8). `events[]` has no flag field, so neither view filters. The kept row carries the first order time.
+Merging: orders of one object by one player up to 60 s after the first of them become one mark, "Wisp ×5" (`orders.ts`). The mark sits at the first order time; its tooltip and its list row give every time. On the 31-minute Shallow Grave game this keeps each Units lane at 2 or 3 rows.
 
-Chart (`BuildTimeline.vue`), a swimlane:
+Tier-ups: the first order of Keep/Castle (`hkee`/`hcas`), Stronghold/Fortress (`ostr`/`ofrt`), Tree of Ages/Eternity (`etoa`/`etoe`) or Halls of the Dead/Black Citadel (`unp1`/`unp2`). All eight are `building` rows in the mappings model and in the orders of 6 to 37 games.
+
+Flagged repeats: dbt flags `is_repeat` on `player_order_events` (same code, same player, under 1000 ms after the previous same-code order, for tier halls, research and hero training; api.md "Repeat flag"), and the API's events read leaves out `is_repeat = 1` (`REPLAY_SQL` in `api/compile.py`). `events[]` has no flag field, so neither view filters. The kept row carries the first order time.
+
+Chart (`TimelineChart.tsx`), a swimlane under the APM chart:
 
 | Item | Spec |
 |---|---|
 | Form | One block per player, lower `player_id` first. One lane per kind: Buildings, Units, Upgrades, Heroes, Items. A lane whose chip is off is not drawn. The Heroes lane holds `hero_trained`, `hero_skill`, `hero_retrained` (api.md 3.8). |
 | Block header | 2 px key in `series-1` or `series-2` and `PlayerName` |
-| x | Game minute, `scaleLinear([0, duration_ms / 60000], [gutter, width - 88])`. The same `gutter` as the APM chart. `axisBottom` on whole minutes as `m:00`, thinned by the density rule. A hairline grid line per tick. |
+| x | Game minute, `scaleLinear([0, duration_ms / 60000], [88, width - 88])`, the APM chart's scale: same 88 px gutter, same width. Whole-minute ticks as `m:00`, thinned by the density rule, under the APM plot and under the last block. A hairline grid line per tick. |
 | Lane label | Kind name, 13 px, medium emphasis, in the gutter |
-| Marks | The event's 24 px command-card icon, centred on its time |
+| Marks | The mark's 24 px command-card icon, centred on its first time. A merged mark carries "×N" in its bottom-right corner, on `banner` with `on-banner` ink. |
+| Tier ticks | A dashed ink line at 60% across the block and a 12 px label, "**T2** ordered 4:12", right of the tick, or left of it when the next label or the right edge is too close |
 | Stacking | First fit per lane: an icon takes the first row whose last icon ends at least 1 px before its left edge, else a new row. Row pitch 24 + 3 px. Lane height = rows × 27 + 5 px, at least one row. A hairline separates lanes. |
-| Hit targets | The icon: 24 px, `tabindex="0"`, `alt` = "{name} ordered at m:ss" |
-| Tooltip | Hover and focus: the name, then "Ordered at m:ss". A skill: "{hero} skill at m:ss". `hero_trained`: "Trained by m:ss" (the first cast, api.md 3.8). `hero_retrained`: "Retrained at m:ss". |
-| Width | At least 760 px. Below that the chart scrolls in its own `overflow-x: auto` box. |
+| Keyboard | Each block is one tab stop. Left and Right walk its marks in time order; Escape leaves. Each mark is `role="img"` with its tooltip text as its name. |
+| Tooltip | Hover and focus: the name with its count, then "Ordered at m:ss, m:ss". A skill: "{hero} skill at m:ss". `hero_trained`: "Trained by m:ss" (the first cast, api.md 3.8). `hero_retrained`: "Retrained at m:ss". |
+| Rule | A hover or focus anywhere on the APM plot or the lanes draws one vertical rule from the APM plot top to the last lane, at the APM minute or the mark's time. Over empty lane space it shows `m:ss` on the bottom axis. |
+| Width | At least 760 px. Below that the APM chart and the lanes scroll together in one `overflow-x: auto` box. |
 
 List (the table view):
 
-- md and up: one list on one time axis. Player 1 left, player 2 right, time in a centre gutter. Events at the same `time_ms` share a row. Column heads are the two `PlayerName`s with keys.
-- Below md: two `v-tabs`, one per player (`PlayerName` in each tab). Each tab: time, 24 px icon, name. A hero row carries its skill trail.
+- First the APM table (12.4), then "Build Orders".
+- md and up: one list per player, side by side, each under a sticky head with the key, `PlayerName` and the "Ordered" column head over the times. Below md: two tabs, a tab for each player, the "Ordered" head above the list.
+- A row: time, 24 px icon, name with "×N"; a merged row lists every time under it; a hero row carries its skill trail and a "Trained by" chip (its time is the first skill point); a retrain carries a "Retrained" chip; the tier-up row carries a "T2" or "T3" chip.
 
 ### 12.4 APM chart
 
 | Item | Spec |
 |---|---|
 | Form | Line chart, two series: change over time for two players |
-| Axes | x: game minute, `scaleLinear([0, n - 1])`, `ticks(max(2, round(width / 90)))`. Left edge at the timeline's `gutter`. y: `scaleLinear([0, max]).nice()`, 4 ticks, hairline grid. |
+| Axes | x: the timeline's scale (12.3); minute k's point sits at the middle of its span. y: `scaleLinear([0, max]).nice()`, 4 ticks, hairline grid, labelled "APM" in the gutter. |
 | Marks | `d3-shape` `line()`, 2 px, round join and cap. 8 px end dot with a 2 px surface ring. |
 | Identity | Legend above the plot, in the card body (the title bar holds only the title and the view toggle): 2 px line key and `PlayerName`. Direct labels at the line ends; they drop when the end values sit within 16 px. |
 | Palette | `series-1` for the lower `player_id`, `series-2` for the other |
 | Tooltip | A vertical crosshair snaps to the nearest minute. One tooltip lists both APMs, value first. The plot is focusable; Left and Right move the crosshair. |
-| Size | 200 px plot plus a 28 px x-axis band. Width from `useWidth`. |
-| Table view | Minute rows with both APM values |
+| Size | 160 px plot plus a 28 px x-axis band. Width from a `ResizeObserver`, at least 760 px. |
+| Table view | In the list view: a column per minute, a row per player, the player heads sticky at the left; it scrolls in its own box |
 
 ### 12.5 States
 
@@ -792,8 +807,7 @@ List (the table view):
 ### 12.6 390 px
 
 - Player cards stack. Skill trails wrap.
-- The timeline opens on the list, in two tabs. The chart stays one toggle away, in its scroll box.
-- The APM chart keeps full width. Direct labels drop; the legend stays.
+- The timeline opens on the list: the APM table, then the build lists in two tabs. The chart stays one toggle away; the APM chart and the lanes scroll together in their box, and the legend stays above it.
 
 ## 13. Chart and format rules that apply everywhere
 

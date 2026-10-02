@@ -2,7 +2,7 @@
 name = "w3warehouse-parse"
 version = "0.1.0"
 edition = "2021"
-description = "Backend replay tooling for w3warehouse (parse / mappings / S3 drain), via the w3grs Rust port of w3gjs."
+description = "Backend replay tooling for w3warehouse (parse / mappings / S3-to-ClickHouse drain), via the w3grs Rust port of w3gjs."
 license = "MIT"
 
 [lib]
@@ -22,16 +22,19 @@ name = "drain"
 path = "src/bin/drain.rs"
 
 [dependencies]
-# Upstream w3grs plus one patch that keeps unknown object codes; see the fork's README.
-w3grs = { git = "https://github.com/tanghyd/w3grs", rev = "a93fe880deea6d303552fe77822db384cab352ba" }
+# tanghyd/w3grs main, upstream w3grs plus three patches: unknown object codes are kept, every
+# leave block and the saver's player id are serialized, and a building placement keeps its x
+# and y. See the fork's README.
+w3grs = { git = "https://github.com/tanghyd/w3grs", rev = "476fd35d30af72c91464eb0ee6862af1a1a58fe6" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# drain (S3 object-store worker) only:
+# drain (S3 list and get, ClickHouse over HTTP) only:
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
 aws-sdk-s3 = "1"
 aws-smithy-types = "1"
 futures = "0.3"
-chrono = { version = "0.4", default-features = false, features = ["clock"] }
+# Plain HTTP to ClickHouse on the compose network: no TLS, no HTTP/2.
+reqwest = { version = "0.12", default-features = false }
 
 [profile.release]
 # Replay parsing is CPU-bound; let the optimiser go hard. lto=thin is the cheap

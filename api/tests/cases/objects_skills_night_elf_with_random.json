@@ -1,0 +1,410 @@
+{
+  "route": "/objects",
+  "request": {
+    "kind": "skill",
+    "race": [
+      "NE",
+      "RN"
+    ],
+    "filters": {
+      "replay_id": [
+        "0ddbb4abacfb6b62d88223ac6bb3902edc0bdc3a2eac55e29ffe367405cffa60",
+        "92336fe5a392d0043442e75ad4a5097086d6451a35b3d68d99c3093e65b8d8f6",
+        "dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8"
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "groups": [
+        {
+          "source": {
+            "code": "Edem",
+            "name": "Demon Hunter"
+          },
+          "objects": [
+            {
+              "code": "AEim",
+              "name": "Immolation",
+              "games": 3
+            },
+            {
+              "code": "AEmb",
+              "name": "Mana Burn",
+              "games": 3
+            },
+            {
+              "code": "AEev",
+              "name": "Evasion",
+              "games": 0
+            },
+            {
+              "code": "AEme",
+              "name": "Metamorphosis",
+              "games": 0
+            }
+          ]
+        },
+        {
+          "source": {
+            "code": "Ekee",
+            "name": "Keeper of the Grove"
+          },
+          "objects": [
+            {
+              "code": "AEer",
+              "name": "Entangling Roots",
+              "games": 2
+            },
+            {
+              "code": "AEah",
+              "name": "Thorns Aura",
+              "games": 1
+            },
+            {
+              "code": "AEfn",
+              "name": "Force of Nature",
+              "games": 0
+            },
+            {
+              "code": "AEtq",
+              "name": "Tranquility",
+              "games": 0
+            }
+          ]
+        },
+        {
+          "source": {
+            "code": "Ewar",
+            "name": "Warden"
+          },
+          "objects": [
+            {
+              "code": "AEbl",
+              "name": "Blink",
+              "games": 0
+            },
+            {
+              "code": "AEfk",
+              "name": "Fan of Knives",
+              "games": 0
+            },
+            {
+              "code": "AEsh",
+              "name": "Shadow Strike",
+              "games": 0
+            },
+            {
+              "code": "AEsv",
+              "name": "Spirit of Vengeance",
+              "games": 0
+            }
+          ]
+        },
+        {
+          "source": {
+            "code": "Emoo",
+            "name": "Priestess of the Moon"
+          },
+          "objects": [
+            {
+              "code": "AEst",
+              "name": "Scout",
+              "games": 0
+            },
+            {
+              "code": "AHfa",
+              "name": "Searing Arrows",
+              "games": 0
+            },
+            {
+              "code": "AEsf",
+              "name": "Starfall",
+              "games": 0
+            },
+            {
+              "code": "AEar",
+              "name": "Trueshot Aura",
+              "games": 0
+            }
+          ]
+        },
+        {
+          "source": {
+            "code": "Nngs",
+            "name": "Naga Sea Witch"
+          },
+          "objects": [
+            {
+              "code": "ANfa",
+              "name": "Frost Arrows",
+              "games": 1
+            },
+            {
+              "code": "ANfl",
+              "name": "Forked Lightning",
+              "games": 0
+            },
+            {
+              "code": "ANms",
+              "name": "Mana Shield",
+              "games": 0
+            },
+            {
+              "code": "ANto",
+              "name": "Tornado",
+              "games": 0
+            }
+          ]
+        },
+        {
+          "source": {
+            "code": "Nalc",
+            "name": "Goblin Alchemist"
+          },
+          "objects": [
+            {
+              "code": "ANab",
+              "name": "Acid Bomb",
+              "games": 0
+            },
+            {
+              "code": "ANcr",
+              "name": "Chemical Rage",
+              "games": 0
+            },
+            {
+              "code": "ANhs",
+              "name": "Healing Spray",
+              "games": 0
+            },
+            {
+              "code": "ANtm",
+              "name": "Transmute",
+              "games": 0
+            }
+          ]
+        },
+        {
+          "source": {
+            "code": "Nbrn",
+            "name": "Dark Ranger"
+          },
+          "objects": [
+            {
+              "code": "ANba",
+              "name": "Black Arrow",
+              "games": 0
+            },
+            {
+              "code": "ANch",
+              "name": "Charm",
+              "games": 0
+            },
+            {
+              "code": "ANdr",
+              "name": "Life Drain",
+              "games": 0
+            },
+            {
+              "code": "ANsi",
+              "name": "Silence",
+              "games": 0
+            }
+          ]
+        },
+        {
+          "source": {
+            "code": "Npbm",
+            "name": "Pandaren Brewmaster"
+          },
+          "objects": [
+            {
+              "code": "ANbf",
+              "name": "Breath of Fire",
+              "games": 0
+            },
+            {
+              "code": "ANdb",
+              "name": "Drunken Brawler",
+              "games": 0
+            },
+            {
+              "code": "ANdh",
+              "name": "Drunken Haze",
+              "games": 0
+            },
+            {
+              "code": "ANef",
+              "name": "Storm Earth and Fire",
+              "games": 0
+            }
+          ]
+        },
+        {
+          "source": {
+            "code": "Nplh",
+            "name": "Pit Lord"
+          },
+          "objects": [
+            {
+              "code": "ANca",
+              "name": "Cleaving Attack",
+              "games": 0
+            },
+            {
+              "code": "ANdo",
+              "name": "Doom",
+              "games": 0
+            },
+            {
+              "code": "ANht",
+              "name": "Howl of Terror",
+              "games": 0
+            },
+            {
+              "code": "ANrf",
+              "name": "Rain of Fire",
+              "games": 0
+            }
+          ]
+        },
+        {
+          "source": {
+            "code": "Ntin",
+            "name": "Goblin Tinker"
+          },
+          "objects": [
+            {
+              "code": "ANc1",
+              "name": "Cluster Rockets",
+              "games": 0
+            },
+            {
+              "code": "ANc2",
+              "name": "Cluster Rockets",
+              "games": 0
+            },
+            {
+              "code": "ANc3",
+              "name": "Cluster Rockets",
+              "games": 0
+            },
+            {
+              "code": "ANcs",
+              "name": "Cluster Rockets",
+              "games": 0
+            },
+            {
+              "code": "ANeg",
+              "name": "Engineering Upgrade",
+              "games": 0
+            },
+            {
+              "code": "ANs1",
+              "name": "Pocket Factory",
+              "games": 0
+            },
+            {
+              "code": "ANs2",
+              "name": "Pocket Factory",
+              "games": 0
+            },
+            {
+              "code": "ANs3",
+              "name": "Pocket Factory",
+              "games": 0
+            },
+            {
+              "code": "ANsy",
+              "name": "Pocket Factory",
+              "games": 0
+            },
+            {
+              "code": "ANg1",
+              "name": "Robo-Goblin",
+              "games": 0
+            },
+            {
+              "code": "ANg2",
+              "name": "Robo-Goblin",
+              "games": 0
+            },
+            {
+              "code": "ANg3",
+              "name": "Robo-Goblin",
+              "games": 0
+            },
+            {
+              "code": "ANrg",
+              "name": "Robo-Goblin",
+              "games": 0
+            }
+          ]
+        },
+        {
+          "source": {
+            "code": "Nfir",
+            "name": "Firelord"
+          },
+          "objects": [
+            {
+              "code": "ANia",
+              "name": "Incinerate",
+              "games": 0
+            },
+            {
+              "code": "ANic",
+              "name": "Incinerate",
+              "games": 0
+            },
+            {
+              "code": "ANso",
+              "name": "Soul Burn",
+              "games": 0
+            },
+            {
+              "code": "ANlm",
+              "name": "Summon Lava Spawn",
+              "games": 0
+            },
+            {
+              "code": "ANvc",
+              "name": "Volcano",
+              "games": 0
+            }
+          ]
+        },
+        {
+          "source": {
+            "code": "Nbst",
+            "name": "Beastmaster"
+          },
+          "objects": [
+            {
+              "code": "ANst",
+              "name": "Stampede",
+              "games": 0
+            },
+            {
+              "code": "ANsg",
+              "name": "Summon Bear",
+              "games": 0
+            },
+            {
+              "code": "ANsw",
+              "name": "Summon Hawk",
+              "games": 0
+            },
+            {
+              "code": "ANsq",
+              "name": "Summon Quilbeast",
+              "games": 0
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
