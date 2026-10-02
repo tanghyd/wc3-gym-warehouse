@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time setup of a fresh Ubuntu 24.04 box for the warehouse, run as root by `just box::bootstrap <ip>`.
+# One-time setup of a fresh Ubuntu 24.04 box for the warehouse, run as root by `just deploy bootstrap <ip>`.
 # Safe to run again: every step checks its state first or rewrites the same file.
 set -euo pipefail
 
@@ -71,4 +71,4 @@ fi
 # The repo over https with no credentials, so the box can pull but never push.
 [ -d "$home/wc3-gym-warehouse/.git" ] || sudo -u warehouse git -C "$home" clone -q "$repo" wc3-gym-warehouse
 
-echo "bootstrap done: next, BOX_SSH=warehouse@<this host> in .env, then just box::env"
+echo "bootstrap done: next, BOX_SSH=warehouse@<this host> in .env, then just deploy env"

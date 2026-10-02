@@ -270,12 +270,17 @@ function FilterEditor(props: { k: string; view: View; cat: Catalog; counts: Reco
 function Checklist({ k, view, cat, filters }: { k: string; view: View; cat: Catalog; filters: Filters }) {
   const { go } = useContext(Nav);
   const [values, setValues] = useState<{ value: string; label: string; icon: string | null; games: number }[] | null>(null);
+  const [failed, setFailed] = useState(false);
   const [q, setQ] = useState("");
   // the scope without this filter, so every value can be checked; read again only when it changes
   const scope = JSON.stringify(Object.fromEntries(Object.entries(filters).filter(([d]) => d !== k)));
   useEffect(() => {
     let live = true;
-    loadValues(k, JSON.parse(scope)).then((v) => live && setValues(v));
+    setFailed(false);
+    loadValues(k, JSON.parse(scope)).then(
+      (v) => live && setValues(v),
+      () => live && setFailed(true),
+    );
     return () => {
       live = false;
     };
@@ -293,7 +298,9 @@ function Checklist({ k, view, cat, filters }: { k: string; view: View; cat: Cata
   return (
     <div className="flex w-72 max-w-full flex-col gap-2 p-1">
       <input type="search" className="field" placeholder="Find by name" aria-label={`Find a ${cat.labels[k].toLowerCase()}`} value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
-      {values === null ? (
+      {failed ? (
+        <p className="px-2 py-1 text-sm text-muted">Could not load the values. Close and open again.</p>
+      ) : values === null ? (
         <p className="px-2 py-1 text-sm text-muted">Loading…</p>
       ) : (
         <ul className="picker-list" aria-label={cat.labels[k]}>

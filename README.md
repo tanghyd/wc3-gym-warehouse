@@ -25,13 +25,15 @@ The replay inspector is at http://localhost:3000, the API at http://localhost:80
 | `just dbt <args>` | any dbt command in the dbt container, such as `build`, `test` or `docs generate` |
 | `just local::docs` | writes dbt's docs site (models, columns, tests, lineage) into the target volume that http://localhost:8080 serves |
 | `just local::upload-replays <folder> <date> [dest]` | copies every `.w3g` under a folder changed since a date into the bucket's `replays/<dest>/` (default `local`), except `LastReplay.w3g` (a copy of the latest game), such as `just local::upload-replays /home/daniel/warcraft/w3warehouse/data/w3g/replay_service 2000-01-01 w3warehouse-ladder`; then `just ingest` |
-| `just ingest` | one drain pass (`just drain-once`), then `just dbt build` when the drain inserted a document or the last build failed; a host cron runs it |
+| `just ingest` | one drain pass (`just drain-once`), then `just dbt build` when `ingest.docs` holds a document newer than the marts or the last build failed; a host cron runs it |
 | `just local::mc <args>` | the MinIO client against the local bucket, aliased `local`, such as `just local::mc ls -r local/warehouse/preview/replays/goldens` |
 | `just local::drain-test` | the drain's unit tests and parser goldens, in its image |
 | `just local::mappings` | rewrites `dbt/seeds/mappings_melee.csv` from the parser's tables, after a w3grs bump |
 | `just local::api-test` | the API tests in its container: compiler goldens, then the live cases and the oracles |
 | `just local::api-cases-update` | rewrites the answers in `api/tests/cases/` from the live stack |
 | `just local::api-lock` | rewrites `api/uv.lock` after an `api/pyproject.toml` change, in the API image |
+| `just local::schema` | applies `infrastructure/docker/clickhouse/ingest.sql` to the running ClickHouse (every statement is `IF NOT EXISTS`); `just up` runs it |
+| `just local::e2e [args]` | the Playwright tests against the running stack, such as `just local::e2e --grep chat` |
 | `just local::reset` | drops every volume |
 
 ## How it fits together
@@ -131,6 +133,8 @@ The catalog lives on the dbt models. `meta.semantic` in `dbt/models/marts/marts.
 
 | Route | Answers |
 |---|---|
+| `GET /health`, `GET /ready` | the process answers; ClickHouse answers and the catalog loads |
+| `GET /replays/{id}` | one replay: header, players, timeline events, chat |
 | `GET /catalog` | every semantic model: its dimensions with types, its measures, and the labels, types, parts and notes of what a page shows |
 | `POST /query` | measures grouped by dimensions, under filters and an optional build order |
 | `POST /objects` | a step picker's groups for a kind (building, unit, hired, upgrade, hero, skill, item) and a side's race values, each object with the games in scope in which a player of the side ordered it |
@@ -156,12 +160,14 @@ POST /search
 ```
 POST /query
 { "dimensions": ["opponent_race"], "measures": ["games", "win_rate"],
-  "filters": { "race": ["N"], "minutes": { "gte": 10 } },
+  "filters": { "race": ["NE"], "minutes": { "gte": 10 } },
   "steps": [ { "type": "building", "code": "eaom" },
              { "type": "building", "code": "edob", "within_prev_s": 30 } ] }
 ```
 
-A filter is a list of values or a `{gte, lte}` range. A step names an event type and object code. A step may bound the gap since the previous step (`within_prev_s`) and its own game time (`from_min`, `to_min`). Steps compile to `sequenceMatch` over `replay_events`. Every request value travels as a ClickHouse query parameter; names must come from the catalog.
+A filter is a list of values or a `{gte, lte}` range; a range applies to a number or a time, and a value must fit its dimension's type, else the API answers 400 before any query runs. Values are capped at 100 characters, name lists at 20, filters at 20 keys. A step names an event type and object code. A step may bound the gap since the previous step (`within_prev_s`) and its own game time (`from_min`, `to_min`). Steps compile to `sequenceMatch` over `replay_events`. Every request value travels as a ClickHouse query parameter; names must come from the catalog.
+
+Every answer carries `X-Request-Id` (send your own to keep it), and every error carries `detail` and `request_id`. A ClickHouse failure answers a fixed message: 400 when the request hits the profile's read or result cap or a value does not fit, 503 with `Retry-After` when the server is busy or more than six queries are in flight, 504 on a timeout, 502 otherwise; the server's text is in the API log under the request id. Each query reaches ClickHouse with a `query_id` built from the request id and a `User-Agent` naming the endpoint, so `system.query_log` shows which endpoint ran what.
 
 ```
 POST /strategies/stats
@@ -195,9 +201,8 @@ Grafana is at http://localhost:3001, anonymous admin by default (the `GF_AUTH_*`
 
 ## Not here yet
 
-- The swimlane chart of the build orders (`docs/design/frontend.md` 12.3). The inspector shows the list view.
 - Creep routes. A replay holds commands, and a creep death alone cannot say whether the player cleared the camp or an enemy stole it. That waits for stat-events maps.
-- Stat-events. A future parser output adds a section to the parsed document, and dbt gets a staging model for it.
+- Stat-events. A second ingest table the drain writes in the same pass, and its own dbt models behind a selector; [docs/roadmap.md](docs/roadmap.md) has the design and the state of the map script.
 - `replays.source_key` (design S5).
 - Hosting. No box runs the stack yet. [docs/deploy.md](docs/deploy.md) is the runbook for one Hetzner box, driven by `just deploy *`: the inspector over an ssh forward, the `tunnel` profile (cloudflared) off until a domain exists.
 - The inspector on Vercel. Its server would call the API over a public route with a shared secret; not built. A rate limit and token rotation come first ([docs/deploy.md](docs/deploy.md#later-the-inspector-on-vercel)).
