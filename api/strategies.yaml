@@ -5,7 +5,7 @@
 #   race        HU, OC, NE or UD: the race whose player-games the preset counts
 #   parent_id   a variant's parent; the variant holds the parent's steps, then its own
 #   steps       one group of POST /search steps (api/compile.py SearchStep): kind, codes,
-#               count, from_s, to_s, link, within_s, nth, negate
+#               count, exactly, from_s, to_s, link, within_s, nth, before, negate
 #   source      w3warehouse: the 24 builds of w3warehouse (dev, services/api/src/api/builds.py),
 #               with their expansion times: fast by 6:00 Human, 9:00 Night Elf, 10:30 Orc,
 #               8:00 Undead, late to 15:00 (Orc 18:00). gym-replays: added here.
@@ -259,6 +259,7 @@
     - {kind: building, codes: [ostr]}                # Stronghold before any Barracks
     - {kind: building, codes: [obar], link: then}
     - {kind: unit, codes: [ogru], count: 2, link: then}   # Grunt x2
+    - {kind: building, codes: [obar], negate: true, before: 2}   # no Barracks before the Stronghold
   full:
     - {kind: hero, codes: [Ofar], nth: 1}
     - {kind: building, codes: [oalt]}
@@ -319,6 +320,7 @@
     - {kind: building, codes: [ovln]}
     - {kind: building, codes: [ostr], link: then}
     - {kind: building, codes: [obar], link: then}
+    - {kind: building, codes: [obar], negate: true, before: 2}   # no Barracks before the Stronghold
   full:
     - {kind: building, codes: [oalt]}
     - {kind: building, codes: [otrb], link: then}
@@ -427,6 +429,7 @@
     - {kind: building, codes: [edob]}                # Hunter's Hall
     - {kind: unit, codes: [esen], link: then}        # Huntress
     - {kind: building, codes: [etoa], link: then}
+    - {kind: building, codes: [eaom], exactly: true, before: 4}   # one Ancient of War before the Tree of Ages
   full:
     - {kind: hero, codes: [Ekee], nth: 1}
     - {kind: building, codes: [eate]}
@@ -572,6 +575,7 @@
     - {kind: building, codes: [unp1]}
     - {kind: building, codes: [usep], link: then}    # 2nd Crypt after the tech
     - {kind: unit, codes: [ugar], count: 3, link: then}   # Gargoyle x3
+    - {kind: building, codes: [uzig], exactly: true, before: 2}   # one Ziggurat before the Halls of the Dead
   full:
     - {kind: hero, codes: [Udea], nth: 1}
     - {kind: building, codes: [uzig]}

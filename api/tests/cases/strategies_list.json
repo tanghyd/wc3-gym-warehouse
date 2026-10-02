@@ -1089,6 +1089,14 @@
               ],
               "count": 2,
               "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "obar"
+              ],
+              "before": 2,
+              "negate": true
             }
           ]
         },
@@ -1194,6 +1202,14 @@
                 "obar"
               ],
               "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "obar"
+              ],
+              "before": 2,
+              "negate": true
             }
           ]
         },
@@ -1408,6 +1424,14 @@
                 "etoa"
               ],
               "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "eaom"
+              ],
+              "exactly": true,
+              "before": 4
             }
           ]
         },
@@ -1725,6 +1749,14 @@
               ],
               "count": 3,
               "link": "then"
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "uzig"
+              ],
+              "exactly": true,
+              "before": 2
             }
           ]
         },

@@ -209,6 +209,13 @@
         },
         {
           "player_id": 1,
+          "time_ms": 70844,
+          "event_type": "hero_trained",
+          "code": "Edem",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
           "time_ms": 71711,
           "event_type": "unit",
           "code": "ewsp",
@@ -219,6 +226,13 @@
           "time_ms": 74187,
           "event_type": "unit",
           "code": "ewsp",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 74311,
+          "event_type": "hero_trained",
+          "code": "Ofar",
           "hero_code": null
         },
         {
@@ -301,13 +315,6 @@
         {
           "player_id": 2,
           "time_ms": 137034,
-          "event_type": "hero_trained",
-          "code": "Ofar",
-          "hero_code": null
-        },
-        {
-          "player_id": 2,
-          "time_ms": 137034,
           "event_type": "hero_skill",
           "code": "AOsf",
           "hero_code": "Ofar"
@@ -317,13 +324,6 @@
           "time_ms": 137312,
           "event_type": "unit",
           "code": "ewsp",
-          "hero_code": null
-        },
-        {
-          "player_id": 1,
-          "time_ms": 142254,
-          "event_type": "hero_trained",
-          "code": "Edem",
           "hero_code": null
         },
         {
@@ -636,6 +636,20 @@
         },
         {
           "player_id": 1,
+          "time_ms": 412093,
+          "event_type": "hero_trained",
+          "code": "Ekee",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 431702,
+          "event_type": "hero_trained",
+          "code": "Oshd",
+          "hero_code": null
+        },
+        {
+          "player_id": 1,
           "time_ms": 437913,
           "event_type": "unit",
           "code": "edoc",
@@ -693,13 +707,6 @@
         {
           "player_id": 1,
           "time_ms": 483708,
-          "event_type": "hero_trained",
-          "code": "Ekee",
-          "hero_code": null
-        },
-        {
-          "player_id": 1,
-          "time_ms": 483708,
           "event_type": "hero_skill",
           "code": "AEer",
           "hero_code": "Ekee"
@@ -730,13 +737,6 @@
           "time_ms": 504456,
           "event_type": "upgrade",
           "code": "Reuv",
-          "hero_code": null
-        },
-        {
-          "player_id": 2,
-          "time_ms": 505264,
-          "event_type": "hero_trained",
-          "code": "Oshd",
           "hero_code": null
         },
         {
@@ -779,6 +779,13 @@
           "time_ms": 566516,
           "event_type": "upgrade",
           "code": "Resw",
+          "hero_code": null
+        },
+        {
+          "player_id": 2,
+          "time_ms": 568684,
+          "event_type": "hero_trained",
+          "code": "Otch",
           "hero_code": null
         },
         {
@@ -891,13 +898,6 @@
           "time_ms": 642873,
           "event_type": "item",
           "code": "oven",
-          "hero_code": null
-        },
-        {
-          "player_id": 2,
-          "time_ms": 647143,
-          "event_type": "hero_trained",
-          "code": "Otch",
           "hero_code": null
         },
         {
@@ -1143,22 +1143,6 @@
           "time_ms": 899518,
           "event_type": "unit",
           "code": "edoc",
-          "hero_code": null
-        }
-      ],
-      "repeats": [
-        {
-          "player_id": 1,
-          "time_ms": 164642,
-          "event_type": "building",
-          "code": "etoa",
-          "hero_code": null
-        },
-        {
-          "player_id": 1,
-          "time_ms": 833754,
-          "event_type": "upgrade",
-          "code": "Resw",
           "hero_code": null
         }
       ],

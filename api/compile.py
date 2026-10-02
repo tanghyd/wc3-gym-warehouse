@@ -232,6 +232,7 @@ def sequence_sql(steps: list[Step], params: Params, races: list[str | int | floa
     where += [
         f"has({params.add('Array(String)', types)}, event_type)",
         f"has({params.add('Array(String)', codes)}, subject_code)",
+        "is_repeat = 0",
     ]
     if len(steps) == 1:  # one step needs no ordering: its condition is the whole test
         where.append(_step_condition(steps[0], params))
@@ -285,18 +286,21 @@ type Code = Annotated[str, Field(pattern=r"^[A-Za-z0-9_]{1,8}$")]
 
 class SearchStep(BaseModel):
     """One step of a side: at least `count` orders of any of `codes`, each inside the game time
-    window. A `then` step comes after the step above, within `within_s` when set. `nth` asks a
-    hero step for the side's 1st, 2nd or 3rd hero. `negate` turns an `and` step into "did not
-    happen"."""
+    window; `exactly` makes the count exact. A `then` step comes after the step above, all its
+    orders within `within_s` of it when set. `nth` asks a hero step for the side's 1st, 2nd or
+    3rd hero. `before` keeps the orders before the order that completes step `before` of the
+    group. `negate` turns an `and` step into "did not happen"."""
 
     kind: Literal["building", "unit", "upgrade", "item", "hero", "skill"]
     codes: Annotated[list[Code], Field(min_length=1, max_length=40)]
     count: Annotated[int, Field(ge=1, le=9)] = 1
+    exactly: bool = False
     from_s: Annotated[int, Field(ge=0, le=36000)] | None = None
     to_s: Annotated[int, Field(ge=0, le=36000)] | None = None
     link: Literal["and", "then"] = "and"
     within_s: Annotated[int, Field(ge=1, le=7200)] | None = None
     nth: Annotated[int, Field(ge=1, le=3)] | None = None
+    before: Annotated[int, Field(ge=1, le=8)] | None = None
     negate: bool = False
 
 
@@ -332,42 +336,38 @@ class SearchRequest(BaseModel):
     offset: Annotated[int, Field(ge=0, le=100000)] = 0
 
 
-# sequenceMatch takes at most 32 conditions; a chain's pattern stays under that many orders.
-MAX_CHAIN_ORDERS = 32
+# A time no order reaches: the end of a chain step when the step above has none.
+NEVER_MS = 4294967295
 
 
-def chains(group: Group) -> list[list[SearchStep]]:
-    """A group split into chains: an `and` step starts one, each `then` step joins the one above."""
-    out: list[list[SearchStep]] = []
-    for i, s in enumerate(group.steps):
+def chains(group: Group) -> list[list[int]]:
+    """A group split into chains of step indexes: an `and` step starts one, each `then` step joins
+    the one above. A `before` step is in no chain: it bounds the step it names."""
+    steps = group.steps
+    out: list[list[int]] = []
+    for i, s in enumerate(steps):
+        below_then = i + 1 < len(steps) and steps[i + 1].link == "then"
         if s.link == "then" and i == 0:
             raise BadRequest("the first step of a group has no step above to come after")
         if s.within_s is not None and s.link != "then":
             raise BadRequest("within_s goes with link then")
         if s.nth is not None and s.kind != "hero":
             raise BadRequest("nth goes with kind hero")
-        if s.negate and (s.link == "then" or (i + 1 < len(group.steps) and group.steps[i + 1].link == "then")):
+        if s.negate and s.exactly:
+            raise BadRequest("a step that did not happen has no exact count")
+        if s.negate and (s.link == "then" or below_then):
             raise BadRequest("a step that did not happen links to no other step")
-        if s.link == "then":
-            out[-1].append(s)
+        if s.before is not None:
+            if s.link == "then" or below_then:
+                raise BadRequest("a step before another step links to no other step")
+            anchor = steps[s.before - 1] if s.before <= len(steps) else None
+            if s.before == i + 1 or anchor is None or anchor.negate or anchor.before is not None:
+                raise BadRequest("before names another step of the group, one that happened")
+        elif s.link == "then":
+            out[-1].append(i)
         else:
-            out.append([s])
-    for chain in out:
-        if len(chain) > 1 and sum(s.count for s in chain) > MAX_CHAIN_ORDERS:
-            raise BadRequest(f"a then chain counts at most {MAX_CHAIN_ORDERS} orders")
+            out.append([i])
     return out
-
-
-def chain_pattern(chain: list[SearchStep]) -> str:
-    """sequenceMatch's pattern: each step's condition once per counted order, joined by `.*`
-    (any gap), and `(?t<=ms)` before a step that must follow the one above within that time.
-    A repeated condition matches another order each time."""
-    pattern = ""
-    for i, s in enumerate(chain, start=1):
-        if i > 1:
-            pattern += ".*" if s.within_s is None else f"(?t<={s.within_s * 1000})"
-        pattern += ".*".join([f"(?{i})"] * s.count)
-    return pattern
 
 
 def _event_condition(s: SearchStep, params: Params) -> str:
@@ -375,6 +375,8 @@ def _event_condition(s: SearchStep, params: Params) -> str:
         f"has({params.add('Array(String)', array(EVENT_TYPES[s.kind]))}, event_type)",
         f"has({params.add('Array(String)', array(s.codes))}, subject_code)",
     ]
+    if s.nth is not None:  # a hero_trained row's seq is the hero's place in player_games.heroes
+        parts.append(f"seq = {s.nth}")
     if s.from_s is not None:
         parts.append(f"time_ms >= {s.from_s * 1000}")
     if s.to_s is not None:
@@ -382,22 +384,58 @@ def _event_condition(s: SearchStep, params: Params) -> str:
     return " AND ".join(parts)
 
 
-def _chain_sql(chain: list[SearchStep], races: list[str], params: Params) -> str:
-    """(replay_id, player_id) pairs whose orders hold the chain: one step `count` times, or the
-    steps in order."""
+def _before_condition(s: SearchStep, i: int) -> str:
+    """The condition that step i, a `before` step, holds before `e`, the time the step it names is complete."""
+    n = f"arrayCount(y -> y < e, t{i})"
+    return f"{n} = 0" if s.negate else f"{n} = {s.count}" if s.exactly else f"{n} >= {s.count}"
+
+
+def _chain_sql(steps: list[SearchStep], chain: list[int], races: list[str], params: Params) -> str:
+    """(replay_id, player_id) pairs whose orders hold the chain of step indexes: each step a block
+    of `count` orders after the order that completes the step above, all within `within_s` of it
+    when set, and each `before` step that names a chain step true before that step completes."""
+    bounds = {k: [b for b, s in enumerate(steps) if s.before == k + 1] for k in chain}
     where = [f"has({params.add('Array(String)', array(races))}, race)"] if races else []  # race leads the sort key
-    if len(chain) == 1:
-        s = chain[0]
-        sql = f"SELECT replay_id, player_id FROM {EVENTS} WHERE {' AND '.join([*where, _event_condition(s, params)])} GROUP BY replay_id, player_id"
-        return sql + (f" HAVING count() >= {s.count}" if s.count > 1 else "")
+    first = steps[chain[0]]
+    if len(chain) == 1 and not bounds[chain[0]]:  # one block of orders: a count
+        sql = f"SELECT replay_id, player_id FROM {EVENTS} WHERE {' AND '.join([*where, _event_condition(first, params), 'is_repeat = 0'])} GROUP BY replay_id, player_id"
+        if first.exactly:
+            return sql + f" HAVING count() = {first.count}"
+        return sql + (f" HAVING count() >= {first.count}" if first.count > 1 else "")
+    used = chain + [b for k in chain for b in bounds[k]]
     where += [
-        f"has({params.add('Array(String)', array(sorted({t for s in chain for t in EVENT_TYPES[s.kind]})))}, event_type)",
-        f"has({params.add('Array(String)', array(sorted({c for s in chain for c in s.codes})))}, subject_code)",
+        f"has({params.add('Array(String)', array(sorted({t for i in used for t in EVENT_TYPES[steps[i].kind]})))}, event_type)",
+        f"has({params.add('Array(String)', array(sorted({c for i in used for c in steps[i].codes})))}, subject_code)",
+        "is_repeat = 0",
     ]
-    conditions = ", ".join(_event_condition(s, params) for s in chain)
+    # Per player: t, the sorted times of each step's orders. f, the times at which each chain step
+    # can be complete: a block of `count` orders after the earliest f above, or after any f above
+    # and within `within_s` of it, where c counts this step's orders up to each f above.
+    cols = [f"arraySort(groupArrayIf(time_ms, {_event_condition(steps[i], params)})) AS t{i}" for i in used]
+    holds = []
+    above = None
+    for k in chain:
+        s = steps[k]
+        if above is None:
+            ends = f"arraySlice(t{k}, {s.count})"
+        elif s.within_s is None:
+            ends = f"arraySlice(arrayFilter(x -> x > if(empty(f{above}), {NEVER_MS}, f{above}[1]), t{k}), {s.count})"
+        else:
+            cols.append(f"arrayMap(e -> arrayCount(y -> y <= e, t{k}), f{above}) AS c{k}")
+            ends = (
+                f"arrayFilter((x, i) -> arrayExists((e, c) -> x > e AND x <= e + {s.within_s * 1000} AND i >= c + {s.count},"
+                f" f{above}, c{k}), t{k}, arrayEnumerate(t{k}))"
+            )
+        if bounds[k]:
+            ends = f"arrayFilter(e -> {' AND '.join(_before_condition(steps[b], b) for b in bounds[k])}, {ends})"
+        cols.append(f"{ends} AS f{k}")
+        if s.exactly:
+            holds.append(f"length(t{k}) <= {s.count}")
+        above = k
+    holds.append(f"notEmpty(f{above})")
     return (
-        f"SELECT replay_id, player_id FROM {EVENTS} WHERE {' AND '.join(where)} GROUP BY replay_id, player_id"
-        f" HAVING sequenceMatch('{chain_pattern(chain)}')(time_ms, {conditions})"
+        f"SELECT replay_id, player_id FROM (SELECT replay_id, player_id, {', '.join(cols)}"
+        f" FROM {EVENTS} WHERE {' AND '.join(where)} GROUP BY replay_id, player_id) WHERE {' AND '.join(holds)}"
     )
 
 
@@ -405,12 +443,12 @@ def _group_condition(group: Group, races: list[str], params: Params) -> str:
     """The condition a player_games row of the side's player meets when the group holds."""
     parts = []
     for chain in chains(group):
-        s = chain[0]
-        heroes = [f"has({params.add('Array(String)', array(h.codes))}, heroes[{h.nth}])" for h in chain if h.nth]
-        if len(chain) == 1 and s.nth and s.from_s is None and s.to_s is None and s.count == 1:
-            condition = heroes[0]  # "1st hero X" alone reads the heroes array, no orders
+        s = group.steps[chain[0]]
+        bounded = any(t.before == chain[0] + 1 for t in group.steps)
+        if len(chain) == 1 and not bounded and s.nth and s.from_s is None and s.to_s is None and s.count == 1 and not s.exactly:
+            condition = f"has({params.add('Array(String)', array(s.codes))}, heroes[{s.nth}])"  # "1st hero X" alone reads the heroes array, no orders
         else:
-            condition = " AND ".join([*heroes, f"(replay_id, player_id) IN ({_chain_sql(chain, races, params)})"])
+            condition = f"(replay_id, player_id) IN ({_chain_sql(group.steps, chain, races, params)})"
         parts.append(f"NOT ({condition})" if s.negate else condition)
     return " AND ".join(parts)
 
@@ -481,24 +519,19 @@ LEFT JOIN (
 ) AS h ON h.player_id = p.player_id
 ORDER BY p.player_id""",
     # The timeline: orders (custom-map `unknown` codes and repeat clicks left out), skill
-    # points under their hero, retrains, and each hero's first skill point as its arrival.
-    # seq 0 sorts hero_trained before the first skill at the same ms.
+    # points under their hero (repeat clicks left out), retrains, and each hero at the order
+    # that trained it, as replay_events times it. seq 0 sorts hero_trained before a skill at the same ms.
     "events": """SELECT player_id, time_ms, event_type, code, hero_code FROM (
     SELECT player_id, time_ms, kind AS event_type, object_code AS code, CAST(NULL, 'Nullable(String)') AS hero_code, seq
     FROM w3g.player_order_events WHERE replay_id = {id:String} AND kind != 'unknown' AND is_repeat = 0
     UNION ALL
     SELECT player_id, time_ms, if(event_type = 'retraining', 'hero_retrained', 'hero_skill'),
            if(event_type = 'retraining', hero_id, ability_id), hero_id, seq
-    FROM w3g.hero_ability_events WHERE replay_id = {id:String}
+    FROM w3g.hero_ability_events WHERE replay_id = {id:String} AND is_repeat = 0
     UNION ALL
-    SELECT player_id, min(time_ms), 'hero_trained', hero_id, NULL, 0
-    FROM w3g.hero_ability_events WHERE replay_id = {id:String}
-    GROUP BY player_id, hero_id
+    SELECT player_id, trained_ms, 'hero_trained', hero_id, NULL, 0
+    FROM w3g.player_heroes WHERE replay_id = {id:String}
 )
-ORDER BY time_ms, player_id, seq""",
-    # The repeat clicks the timeline leaves out. A search counts them, so step marks read them too.
-    "repeats": """SELECT player_id, time_ms, kind AS event_type, object_code AS code, CAST(NULL, 'Nullable(String)') AS hero_code
-FROM w3g.player_order_events WHERE replay_id = {id:String} AND kind != 'unknown' AND is_repeat = 1
 ORDER BY time_ms, player_id, seq""",
     # The page is public, so private chat stays out.
     "chat": """SELECT time_ms, player_id, mode, message FROM w3g.chat

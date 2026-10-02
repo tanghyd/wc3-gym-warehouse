@@ -20,7 +20,6 @@ from compile import (
     compile_objects,
     compile_query,
     SearchStep,
-    chain_pattern,
     compile_search,
     compile_strategies,
     race_pair,
@@ -54,7 +53,7 @@ def test_query_groups_filters_and_matches_steps() -> None:
         "SELECT race, count() AS games, countIf(result = 'win') AS wins FROM w3g.player_games"
         " WHERE has({p0:Array(String)}, map) AND minutes >= {p1:Float64} AND has({p2:Array(UInt32)}, apm)"
         " AND (replay_id, player_id) IN (SELECT replay_id, player_id FROM w3g.replay_events"
-        " WHERE has({p3:Array(String)}, event_type) AND has({p4:Array(String)}, subject_code)"
+        " WHERE has({p3:Array(String)}, event_type) AND has({p4:Array(String)}, subject_code) AND is_repeat = 0"
         " GROUP BY replay_id, player_id HAVING sequenceMatch('(?1)(?t<=30000)(?2)')(time_ms,"
         " event_type = {p5:String} AND subject_code = {p6:String},"
         " event_type = {p7:String} AND subject_code = {p8:String} AND time_ms <= 240000))"
@@ -121,10 +120,16 @@ def ss(kind: str, *codes: str, **kw: object) -> dict[str, object]:
     return {"kind": kind, "codes": list(codes), **kw}
 
 
-def test_a_then_chain_repeats_a_counted_step_and_bounds_only_its_gap() -> None:
-    chain = [SearchStep(**ss("hero", "Edem")), SearchStep(**ss("unit", "earc", count=3, link="then", within_s=90))]
-    assert chain_pattern(chain) == "(?1)(?t<=90000)(?2).*(?2).*(?2)"
-    assert chain_pattern([SearchStep(**ss("unit", "earc", count=2)), SearchStep(**ss("building", "eaom", link="then"))]) == "(?1).*(?1).*(?2)"
+def test_every_step_reads_orders_that_are_not_repeat_clicks() -> None:
+    groups = [{"steps": [ss("building", "etoa", count=2)]},
+              {"steps": [ss("hero", "Edem"), ss("skill", "AEmb", link="then"), ss("building", "edob", negate=True, before=1)]}]
+    _, rows, _ = compile_search(SearchRequest(player={"groups": groups}), PG)
+    assert rows.count("FROM w3g.replay_events WHERE") == rows.count("is_repeat = 0") == 2
+
+
+def test_an_nth_hero_step_with_a_window_times_that_hero() -> None:
+    _, rows, _ = compile_search(SearchRequest(player={"groups": [{"steps": [ss("hero", "Nngs", "Npbm", nth=1, from_s=480)]}]}), PG)
+    assert "heroes[" not in rows and "seq = 1 AND time_ms >= 480000" in rows
 
 
 def test_search_counts_the_scope_and_matches_any_group() -> None:
@@ -146,7 +151,7 @@ def test_search_counts_the_scope_and_matches_any_group() -> None:
     assert "countIf(m) AS games" in stats and "count() AS scope_games" in stats
     assert params["p1"] == "[('NE',0),('NE',1)]" and params["p2"] == "[('OC',0)]"
     # group 1: a 1st hero alone reads the heroes array; Archer x5 by 6:00 counts orders
-    assert "(has({p4:Array(String)}, heroes[1]) AND (replay_id, player_id) IN (SELECT replay_id, player_id FROM w3g.replay_events WHERE has({p5:Array(String)}, race) AND has({p6:Array(String)}, event_type) AND has({p7:Array(String)}, subject_code) AND time_ms <= 360000 GROUP BY replay_id, player_id HAVING count() >= 5))" in rows
+    assert "(has({p4:Array(String)}, heroes[1]) AND (replay_id, player_id) IN (SELECT replay_id, player_id FROM w3g.replay_events WHERE has({p5:Array(String)}, race) AND has({p6:Array(String)}, event_type) AND has({p7:Array(String)}, subject_code) AND time_ms <= 360000 AND is_repeat = 0 GROUP BY replay_id, player_id HAVING count() >= 5))" in rows
     # group 2: no Tree of Life by 9:00; the groups are alternatives
     assert ") OR (NOT ((replay_id, player_id) IN (SELECT replay_id, player_id FROM w3g.replay_events WHERE " in rows
     # the opponent's steps hold on his own row
@@ -160,7 +165,11 @@ def test_search_counts_the_scope_and_matches_any_group() -> None:
     [ss("unit", "earc", within_s=30)],  # within needs then
     [ss("unit", "earc", nth=1)],  # nth needs a hero
     [ss("unit", "earc", negate=True), ss("unit", "esen", link="then")],  # a step that did not happen has no then
-    [ss("unit", "earc", count=9), ss("unit", "esen", count=9, link="then"), ss("unit", "edry", count=9, link="then"), ss("unit", "edoc", count=9, link="then")],
+    [ss("unit", "earc", negate=True, exactly=True)],  # nor an exact count
+    [ss("unit", "earc", before=1)],  # before names another step
+    [ss("unit", "earc"), ss("unit", "esen", before=3)],  # of the group
+    [ss("unit", "earc", negate=True), ss("unit", "esen", before=1)],  # that happened
+    [ss("unit", "earc"), ss("unit", "esen", before=1), ss("unit", "edry", link="then")],  # and links to no other step
 ])
 def test_step_links_that_mean_nothing_are_refused(steps: list[dict[str, object]]) -> None:
     with pytest.raises(BadRequest):
