@@ -276,9 +276,10 @@ def compile_query(req: QueryRequest, model: Model) -> tuple[str, dict[str, str]]
     conds = _row_conditions(model, req.filters, req.steps, params)
     source = model.table + (" WHERE " + " AND ".join(conds) if conds else "")
     if req.measures and model.takes_steps:
-        # shown is 1 on the lower player slot of each game in a result row, so a game whose two players fall in one row counts once there
+        # per game in a result row: shown is 1 on its lower player slot, seats counts its players there (2 for a mirror)
         part = ", ".join([*req.dimensions, "replay_id"])
-        source = f"(SELECT *, row_number() OVER (PARTITION BY {part} ORDER BY player_id) = 1 AS shown FROM {source})"
+        source = (f"(SELECT *, row_number() OVER (PARTITION BY {part} ORDER BY player_id) = 1 AS shown,"
+                  f" count() OVER (PARTITION BY {part}) AS seats FROM {source})")
     sql = f"SELECT {'DISTINCT ' if not req.measures else ''}{', '.join(select)} FROM {source}"
     if req.measures and req.dimensions:
         sql += " GROUP BY " + ", ".join(req.dimensions)

@@ -71,6 +71,7 @@
         },
         "measures": [
           "games",
+          "mirrors",
           "wins",
           "losses",
           "win_rate",
@@ -102,6 +103,7 @@
           "opener_6": "Sixth building",
           "minutes_5": "Minutes",
           "games": "Games",
+          "mirrors": "Mirrors",
           "record": "Record",
           "avg_minutes": "Avg length",
           "avg_apm": "Avg APM",
@@ -110,6 +112,7 @@
         },
         "types": {
           "games": "count",
+          "mirrors": "count",
           "record": "record",
           "avg_minutes": "average",
           "avg_apm": "average",

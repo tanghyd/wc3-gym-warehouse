@@ -51,7 +51,8 @@ def test_query_groups_filters_and_matches_steps() -> None:
     sql, params = compile_query(req, PG)
     assert sql == (
         "SELECT race, count() AS games, countIf(result = 'win') AS wins"
-        " FROM (SELECT *, row_number() OVER (PARTITION BY race, replay_id ORDER BY player_id) = 1 AS shown FROM w3g.player_games"
+        " FROM (SELECT *, row_number() OVER (PARTITION BY race, replay_id ORDER BY player_id) = 1 AS shown,"
+        " count() OVER (PARTITION BY race, replay_id) AS seats FROM w3g.player_games"
         " WHERE has({p0:Array(String)}, map) AND minutes >= {p1:Float64} AND has({p2:Array(UInt32)}, apm)"
         " AND (replay_id, player_id) IN (SELECT replay_id, player_id FROM w3g.replay_events"
         " WHERE has({p3:Array(String)}, event_type) AND has({p4:Array(String)}, subject_code) AND is_repeat = 0"

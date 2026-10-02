@@ -41,14 +41,17 @@ models:
           # reads it: count (adds up across rows), distinct (does not add up), record or average.
           # parts names the summed measures a record or an average is made of, so a page can
           # combine rows and still print it exactly. A record has no SQL of its own.
-          # The API adds the column shown, 1 on one player of each game in a result row (the lower
-          # player slot when both fall in it), so the game measures count each game once per row.
+          # The API adds two columns per game in a result row: shown, 1 on one of its players there (the
+          # lower player slot when both fall in it), so the game measures count each game once per row;
+          # and seats, its players there. A mirror (seats = 2) adds no win or loss: either player could
+          # be the row's. wins and losses are null when every game of a row is a mirror.
           measures:
             games: {sql: countIf(shown), label: Games, type: count}
-            wins: countIf(shown AND result = 'win')
-            losses: countIf(shown AND result = 'loss')
+            mirrors: {sql: "countIf(shown AND seats = 2)", label: Mirrors, type: count}
+            wins: if(countIf(seats = 1) = 0, NULL, countIf(seats = 1 AND result = 'win'))
+            losses: if(countIf(seats = 1) = 0, NULL, countIf(seats = 1 AND result = 'loss'))
             record: {label: Record, type: record, parts: [wins, losses]}
-            win_rate: round(countIf(shown AND result = 'win') / nullIf(countIf(shown AND result != 'unknown'), 0), 3)
+            win_rate: round(countIf(seats = 1 AND result = 'win') / nullIf(countIf(seats = 1 AND result != 'unknown'), 0), 3)
             avg_minutes: {sql: "round(avgIf(duration_ms, shown) / 60000, 1)", label: Avg length, type: average, parts: [minutes_total, games]}
             avg_apm: {sql: "round(avg(apm))", label: Avg APM, type: average, parts: [apm_total, apm_players]}
             players: {sql: "uniqExact(player)", label: Players, type: distinct}

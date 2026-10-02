@@ -1,8 +1,8 @@
--- Games, wins and losses by race over three games: a Night Elf mirror, Human against Night Elf and
--- Orc against Undead. A game counts once in a row: the mirror's two players fall in the NE row and
--- count one game there with the result of the lower player slot (shown); each other game counts once
--- in each of its two rows with that player's result. apm_players counts every player of a row.
--- The mirror is picked with its lower player slot losing, so reading the other player changes the row.
+-- Games, mirrors, wins and losses by race over three games: a Night Elf mirror, Human against Night
+-- Elf and Orc against Undead. A game counts once in a row. The mirror's two players both fall in the
+-- NE row: one game there, a mirror, with no win or loss. Each other game counts once in each of its
+-- two rows with that player's result. apm_players counts every player of a row.
+-- The mirror is picked with its lower player slot losing, so reading either of its players changes the row.
 WITH
 players AS (
     SELECT p.replay_id AS replay_id, p.player_id AS player_id, p.race AS race, p.random AS random,
@@ -19,14 +19,16 @@ chosen AS (
         FROM games WHERE (races = ['NE', 'NE'] AND low_result = 'loss') OR races IN (['HU', 'NE'], ['OC', 'UD']))
     WHERE k = 1
 ),
--- shown: the lower player slot of each game in a race row
-shown AS (
-    SELECT race, replay_id, argMin(result, player_id) AS result, count() AS players
+-- per game in a race row: its players there, and the result when it has one player there
+seated AS (
+    SELECT race, replay_id, count() AS players, if(count() = 1, any(result), '') AS result
     FROM players WHERE replay_id IN (SELECT replay_id FROM chosen) GROUP BY race, replay_id
 )
 SELECT (SELECT toJSONString(arraySort(groupArray(replay_id))) FROM chosen) AS replay_ids,
-       toJSONString(groupArray(map('race', race, 'games', toString(games), 'wins', toString(wins), 'losses', toString(losses), 'apm_players', toString(apm_players)))) AS rows
+       toJSONString(groupArray(map('race', race, 'games', toString(games), 'mirrors', toString(mirrors), 'wins', toString(wins),
+                                   'losses', toString(losses), 'apm_players', toString(apm_players)))) AS rows
 FROM (
-    SELECT race, count() AS games, countIf(result = 'win') AS wins, countIf(result = 'loss') AS losses, sum(players) AS apm_players
-    FROM shown GROUP BY race ORDER BY race
+    SELECT race, count() AS games, countIf(players = 2) AS mirrors, countIf(result = 'win') AS wins,
+           countIf(result = 'loss') AS losses, sum(players) AS apm_players
+    FROM seated GROUP BY race ORDER BY race
 )
