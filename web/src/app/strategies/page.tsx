@@ -108,7 +108,7 @@ export default async function StrategiesPage({ searchParams }: PageProps<"/strat
                 const parent = p.parent_id ? figures.get(p.parent_id) : undefined;
                 const pct = share(f, parent ? parent.games : stats.scope.games);
                 const kids = depth === 0 ? variants(p).length : 0;
-                // a game that fits both ways adds no result; null wins (every game does) prints the em dash
+                // a mirror adds no result; null wins (every game is one) prints the em dash
                 const [score, percent] = record(f.wins ?? 0, f.losses ?? 0).split(" (");
                 const first = p.steps[0];
                 const rule = (

@@ -48,9 +48,9 @@ export type Filters = Record<string, (string | number)[] | { gte?: number; lte?:
 
 /** One player of a listed game: his race value, his result and his heroes in pick order. */
 export type SidePlayer = { name: string; race: string; won: boolean | null; heroes: { code: string; level: number }[] };
-/** One game: both, when either player fits the Player side and the other the Opponent side; the lower player slot shows. */
+/** One game: both, when it is a mirror (a game both players fit); the lower player slot shows. */
 export type GameRow = { replay_id: string; map: string; duration_ms: number; both: boolean; player: SidePlayer; opponent: SidePlayer };
-/** Games counted, their summed length and those that fit both ways; wins and losses count the games that fit one way only, null when there is none. */
+/** Games counted, their summed length and the mirrors (both); wins and losses count the other games, null when there is none. */
 export type Tally = { games: number; wins: number | null; losses: number | null; duration_ms_total: number; both: number };
 export type SearchSide = { race: string[]; name: string | null; opened_with: string[]; groups: { steps: ReturnType<typeof apiStep>[] }[]; outcome?: "win" | "loss" | null };
 export type SearchRequest = { filters: Filters; player: SearchSide; opponent: SearchSide; sort: string; limit: number; offset: number };

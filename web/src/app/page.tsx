@@ -18,7 +18,7 @@ const KEYS = {
 } as const;
 
 
-/** A player of a row on one line: race icon, then name, its battle tag number quiet; `both` tags a game either player fits. */
+/** A player of a row on one line: race icon, then name, its battle tag number quiet; `both` tags a mirror (a game both players fit). */
 function Who({ p, both = false }: { p: SidePlayer; both?: boolean }) {
   const i = p.name.indexOf("#");
   return (
@@ -29,8 +29,8 @@ function Who({ p, both = false }: { p: SidePlayer; both?: boolean }) {
         {i > 0 && <span className="tag">{p.name.slice(i)}</span>}
       </span>
       {both && (
-        <span className="both" title="Either player fits the Player side">
-          both
+        <span className="both" title="Both players fit the Player side, so the game adds no result">
+          mirror
         </span>
       )}
     </span>
@@ -250,17 +250,17 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                 <span className="s-l">Games</span>
                 <span className="s-v">{fmt(sum.games)}</span>
                 <span className="s-n">{narrowed && scope.games ? `${Math.round((100 * sum.games) / scope.games)}% of ${fmt(scope.games)} ${scopeWords}` : scopeWords === "games" ? "All games" : scopeWords.replace(/ games$/, "")}</span>
-                {/* games either player fits add no result; said only when some games fit one way */}
-                {sum.both > 0 && sum.both < sum.games && <span className="s-n">{fmt(sum.both)} fit both ways</span>}
+                {/* mirrors add no result; said only when some games are not mirrors */}
+                {sum.both > 0 && sum.both < sum.games && <span className="s-n">{fmt(sum.both)} {sum.both === 1 ? "mirror" : "mirrors"}, no result</span>}
               </div>
-              {/* a record of the games that fit one way: the API answers null when every game fits both ways */}
+              {/* a record of the games that are not mirrors: the API answers null when every game is a mirror */}
               {sum.wins !== null && sum.losses !== null && (
                 <div className="stat">
                   <span className="s-l">Player record</span>
                   <span className="s-v">{record(sum.wins, sum.losses)}</span>
                   {narrowed && scope.wins !== null && scope.losses !== null && (
                     <span className="s-n">
-                      Of {fmt(scope.games - scope.both)} one way: {record(scope.wins, scope.losses)}
+                      Of {fmt(scope.games - scope.both)}, mirrors aside: {record(scope.wins, scope.losses)}
                     </span>
                   )}
                 </div>
@@ -294,7 +294,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                     {replays.map((r) => (
                       <tr key={`${r.replay_id}-${r.player.name}`}>
                         <td className="c-p">
-                          {/* the tag only beside a record: with every game fitting both ways it says nothing */}
+                          {/* the tag only beside a record: when every game is a mirror it says nothing */}
                           <Who p={r.player} both={r.both && sum.wins !== null} />
                         </td>
                         <td className="c-ph">
