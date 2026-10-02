@@ -31,7 +31,6 @@ from compile import (
     compile_search,
     compile_strategies,
     race_value,
-    records,
     tuples,
 )
 
@@ -148,11 +147,14 @@ def _won(team_id: int, winning_team_id: int) -> bool | None:
     return None if winning_team_id < 0 else team_id == winning_team_id
 
 
-def _tally(s: dict[str, Any], prefix: str, record: bool) -> dict[str, Any]:
-    """Games and summed length, and wins and losses when the sides have a record, else null."""
+def _tally(s: dict[str, Any], prefix: str) -> dict[str, Any]:
+    """Games, summed length and the games that fit both ways. Wins and losses count the games that
+    fit one way only, and are null when there is none: every game fits both ways."""
+    record = s[f"{prefix}games"] > s[f"{prefix}both_sides"]
     return {
         "games": s[f"{prefix}games"], "wins": s[f"{prefix}wins"] if record else None,
         "losses": s[f"{prefix}losses"] if record else None, "duration_ms_total": s[f"{prefix}duration_ms_total"],
+        "both": s[f"{prefix}both_sides"],
     }
 
 
@@ -177,12 +179,11 @@ def search(req: SearchRequest) -> dict[str, Any]:
     rows = run(rows_sql, params)
     pairs = tuples((r["replay_id"], r["opponent_id"]) for r in rows)
     opponents = {(o["replay_id"], o["player_id"]): o for o in run(OPPONENTS_SQL, {"pairs": pairs})} if rows else {}
-    summary_record, scope_record = records(req)
     return {
         "total": s["games"],
-        # both: games where either player fits the Player side and the other the Opponent side
-        "summary": _tally(s, "", summary_record) | {"both": s["both_sides"]},
-        "scope": _tally(s, "scope_", scope_record),
+        # both: games either player can sit on the Player side of; they add no win or loss
+        "summary": _tally(s, ""),
+        "scope": _tally(s, "scope_"),
         "replays": [
             {
                 "replay_id": r["replay_id"], "map": r["map"], "duration_ms": r["duration_ms"], "both": bool(r["both_sides"]),
@@ -232,16 +233,16 @@ def strategies() -> dict[str, Any]:
 
 @app.post("/strategies/stats")
 def strategy_stats(req: StrategiesRequest) -> dict[str, Any]:
-    """Games, wins, losses and summed length of the games in scope with a player of the race, and
-    of each of its presets, in one statement. The scope has no record when both races are the same."""
+    """Games, wins, losses, summed length and the games that fit both ways, of the games in scope
+    with a player of the race and of each of its presets, in one statement."""
     try:
         sql, ids, params = compile_strategies(req, PRESETS, model("player_games"))
     except BadRequest as e:
         raise HTTPException(400, str(e)) from e
     s = run(sql, params)[0]
     return {
-        "scope": _tally(s, "", sorted(req.race) != sorted(req.opponent_race)),
-        "strategies": [{"id": i} | _tally(s, f"s{n}_", True) for n, i in enumerate(ids)],
+        "scope": _tally(s, ""),
+        "strategies": [{"id": i} | _tally(s, f"s{n}_") for n, i in enumerate(ids)],
         "sql": sql,
         "params": params,
     }

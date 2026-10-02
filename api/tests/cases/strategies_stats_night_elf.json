@@ -23,7 +23,8 @@
         "games": 3,
         "wins": 3,
         "losses": 0,
-        "duration_ms_total": 1747119
+        "duration_ms_total": 1747119,
+        "both": 0
       },
       "strategies": [
         {
@@ -31,98 +32,112 @@
           "games": 3,
           "wins": 3,
           "losses": 0,
-          "duration_ms_total": 1747119
+          "duration_ms_total": 1747119,
+          "both": 0
         },
         {
           "id": "ne-kotg",
           "games": 0,
-          "wins": 0,
-          "losses": 0,
-          "duration_ms_total": 0
+          "wins": null,
+          "losses": null,
+          "duration_ms_total": 0,
+          "both": 0
         },
         {
           "id": "ne-potm",
           "games": 0,
-          "wins": 0,
-          "losses": 0,
-          "duration_ms_total": 0
+          "wins": null,
+          "losses": null,
+          "duration_ms_total": 0,
+          "both": 0
         },
         {
           "id": "ne-warden",
           "games": 0,
-          "wins": 0,
-          "losses": 0,
-          "duration_ms_total": 0
+          "wins": null,
+          "losses": null,
+          "duration_ms_total": 0,
+          "both": 0
         },
         {
           "id": "ne-expand",
           "games": 1,
           "wins": 1,
           "losses": 0,
-          "duration_ms_total": 406000
+          "duration_ms_total": 406000,
+          "both": 0
         },
         {
           "id": "ne-tavern",
           "games": 0,
-          "wins": 0,
-          "losses": 0,
-          "duration_ms_total": 0
+          "wins": null,
+          "losses": null,
+          "duration_ms_total": 0,
+          "both": 0
         },
         {
           "id": "ne-tower-rush",
           "games": 0,
-          "wins": 0,
-          "losses": 0,
-          "duration_ms_total": 0
+          "wins": null,
+          "losses": null,
+          "duration_ms_total": 0,
+          "both": 0
         },
         {
           "id": "demon-hunter-fast-tech-bears",
           "games": 1,
           "wins": 1,
           "losses": 0,
-          "duration_ms_total": 937219
+          "duration_ms_total": 937219,
+          "both": 0
         },
         {
           "id": "firelord-fast-expo",
           "games": 0,
-          "wins": 0,
-          "losses": 0,
-          "duration_ms_total": 0
+          "wins": null,
+          "losses": null,
+          "duration_ms_total": 0,
+          "both": 0
         },
         {
           "id": "1-aow-fast-hunts-tech",
           "games": 0,
-          "wins": 0,
-          "losses": 0,
-          "duration_ms_total": 0
+          "wins": null,
+          "losses": null,
+          "duration_ms_total": 0,
+          "both": 0
         },
         {
           "id": "naga-archer-talon-push",
           "games": 0,
-          "wins": 0,
-          "losses": 0,
-          "duration_ms_total": 0
+          "wins": null,
+          "losses": null,
+          "duration_ms_total": 0,
+          "both": 0
         },
         {
           "id": "tavern-hero-first",
           "games": 0,
-          "wins": 0,
-          "losses": 0,
-          "duration_ms_total": 0
+          "wins": null,
+          "losses": null,
+          "duration_ms_total": 0,
+          "both": 0
         },
         {
           "id": "24-food-proxy-expo",
           "games": 0,
-          "wins": 0,
-          "losses": 0,
-          "duration_ms_total": 0
+          "wins": null,
+          "losses": null,
+          "duration_ms_total": 0,
+          "both": 0
         },
         {
           "id": "mass-talons-vs-orc",
           "games": 0,
-          "wins": 0,
-          "losses": 0,
-          "duration_ms_total": 0
+          "wins": null,
+          "losses": null,
+          "duration_ms_total": 0,
+          "both": 0
         }
       ]
     }

@@ -498,19 +498,6 @@ def _own_conditions(side: Side, params: Params) -> list[str]:
     return out
 
 
-def _side_terms(side: Side) -> tuple[object, ...]:
-    """What a side asks of its player, for comparing two sides."""
-    return sorted(side.race), side.name or None, side.opened_with, [g.model_dump() for g in side.groups]
-
-
-def records(req: SearchRequest) -> tuple[bool, bool]:
-    """Whether the matches and the scope have a record: only when something tells the Player side
-    from the Opponent side. The scope's sides differ by race values or name; the matches' also by
-    openers, steps or the outcome. With equal sides a game's two seatings both fit, so a record says nothing."""
-    p, o = _side_terms(req.player), _side_terms(req.opponent)
-    return req.player.outcome is not None or p != o, p[:2] != o[:2]
-
-
 def compile_search(req: SearchRequest, model: Model) -> tuple[str, str, dict[str, str]]:
     """Two statements over player_games, one result row per game.
 
@@ -518,8 +505,10 @@ def compile_search(req: SearchRequest, model: Model) -> tuple[str, str, dict[str
     side. `scope` holds the replay filters, both sides' races and names. `match` adds the Player's
     outcome, openers and steps, and the Opponent's openers and steps through his own row
     (opponent_id). A game matches when one of its two rows does; when both do it is still one game,
-    shown from its lower player slot and marked `both_sides`. The stats statement counts the scope
-    and the matches in one pass; the rows statement lists one page of the matches."""
+    shown from its lower player slot and marked `both_sides`. Wins and losses count only the games
+    that fit one way: in a game that fits both ways either player can sit on the Player side, so it
+    adds no result. The scope counts the same way by its seatings. The stats statement counts the
+    scope and the matches in one pass; the rows statement lists one page of the matches."""
     params = Params()
     scope = replay_filters(model, req.filters, params)
     scope += race_condition(req.player.race, params)
@@ -535,15 +524,15 @@ def compile_search(req: SearchRequest, model: Model) -> tuple[str, str, dict[str
 
     where = f" WHERE {' AND '.join(scope)}" if scope else ""
     m = " AND ".join(match) or "1"
-    # per game: its seatings in scope (seated) and the matching ones (hits), each result read from the lower player slot
+    # per game: its seatings in scope (seated) and the matching ones (hits); a result counts only from a game's one seating
     stats = f"""SELECT
-    countIf(hits > 0) AS games, countIf(hits > 0 AND hit_result = 'win') AS wins, countIf(hits > 0 AND hit_result = 'loss') AS losses,
+    countIf(hits > 0) AS games, countIf(hits = 1 AND hit_result = 'win') AS wins, countIf(hits = 1 AND hit_result = 'loss') AS losses,
     sumIf(game_ms, hits > 0) AS duration_ms_total, countIf(hits = 2) AS both_sides,
-    count() AS scope_games, countIf(seated_result = 'win') AS scope_wins, countIf(seated_result = 'loss') AS scope_losses,
-    sum(game_ms) AS scope_duration_ms_total
+    count() AS scope_games, countIf(seated = 1 AND seated_result = 'win') AS scope_wins, countIf(seated = 1 AND seated_result = 'loss') AS scope_losses,
+    sum(game_ms) AS scope_duration_ms_total, countIf(seated = 2) AS scope_both_sides
 FROM (
-    SELECT replay_id, any(duration_ms) AS game_ms, argMin(result, player_id) AS seated_result,
-           countIf(m) AS hits, argMinIf(result, player_id, m) AS hit_result
+    SELECT replay_id, any(duration_ms) AS game_ms, count() AS seated, any(result) AS seated_result,
+           countIf(m) AS hits, anyIf(result, m) AS hit_result
     FROM (SELECT replay_id, player_id, result, duration_ms, {m} AS m FROM {PLAYER_GAMES}{where})
     GROUP BY replay_id
 )"""
@@ -647,10 +636,10 @@ class StrategiesRequest(BaseModel):
 
 
 def compile_strategies(req: StrategiesRequest, presets: dict[str, Preset], model: Model) -> tuple[str, list[str], dict[str, str]]:
-    """One statement over the games in scope with a player of the race: games, wins, losses and
-    length, for the scope and for each preset of the race. A preset's condition is its whole group,
-    as a Player side of POST /search reads it, and a game counts once with its result read as the
-    search reads it, so a preset's figures are the search's summary."""
+    """One statement over the games in scope with a player of the race: games, wins, losses, length
+    and the games that fit both ways, for the scope and for each preset of the race. A preset's
+    condition is its whole group, as a Player side of POST /search reads it, and a game counts once
+    with its result read as the search reads it, so a preset's figures are the search's summary."""
     races = sorted({race_pair(v)[0] for v in req.race})
     if len(races) != 1 or races[0] not in RANDOM_OF:
         raise BadRequest("race takes one race: HU, OC, NE or UD, alone or with its Random value")
@@ -660,14 +649,18 @@ def compile_strategies(req: StrategiesRequest, presets: dict[str, Preset], model
     scope += race_condition(req.opponent_race, params, "opponent_race", "opponent_random")
     ids = [i for i, p in presets.items() if p.race == races[0]]
     conds = [f"({_group_condition(Group(steps=preset_steps(presets[i], presets)), races, params)}) AS s{n}" for n, i in enumerate(ids)]
-    # per game: whether a seating holds each preset (gN) and its result from the lower such player slot (rN)
-    games = ["any(duration_ms) AS game_ms", "argMin(result, player_id) AS seated_result"]
-    figures = ["count() AS games", "countIf(seated_result = 'win') AS wins", "countIf(seated_result = 'loss') AS losses", "sum(game_ms) AS duration_ms_total"]
+    # per game: its seatings in scope, the ones that hold each preset (gN) and that seating's result (rN); a result counts only from one seating
+    games = ["any(duration_ms) AS game_ms", "count() AS seated", "any(result) AS seated_result"]
+    figures = [
+        "count() AS games", "countIf(seated = 1 AND seated_result = 'win') AS wins", "countIf(seated = 1 AND seated_result = 'loss') AS losses",
+        "sum(game_ms) AS duration_ms_total", "countIf(seated = 2) AS both_sides",
+    ]
     for n in range(len(ids)):
-        games += [f"max(s{n}) AS g{n}", f"argMinIf(result, player_id, s{n}) AS r{n}"]
+        games += [f"countIf(s{n}) AS g{n}", f"anyIf(result, s{n}) AS r{n}"]
         figures += [
-            f"countIf(g{n}) AS s{n}_games", f"countIf(g{n} AND r{n} = 'win') AS s{n}_wins",
-            f"countIf(g{n} AND r{n} = 'loss') AS s{n}_losses", f"sumIf(game_ms, g{n}) AS s{n}_duration_ms_total",
+            f"countIf(g{n} > 0) AS s{n}_games", f"countIf(g{n} = 1 AND r{n} = 'win') AS s{n}_wins",
+            f"countIf(g{n} = 1 AND r{n} = 'loss') AS s{n}_losses", f"sumIf(game_ms, g{n} > 0) AS s{n}_duration_ms_total",
+            f"countIf(g{n} = 2) AS s{n}_both_sides",
         ]
     inner = ", ".join(["replay_id", "player_id", "result", "duration_ms", *conds])
     rows = ",\n    ".join(figures)

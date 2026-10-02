@@ -2,7 +2,7 @@
 -- skill level. A retraining starts every skill again at 0, a repeat click under 1000 ms gives no level,
 -- and a normal skill stops at level 3, so a 4th point is no level. Read from the raw points, not `level`.
 WITH
--- player-games in games that arrived as one file and where both players gave orders
+-- each player in games that arrived as one file and where both players gave orders
 ok AS (
     SELECT replay_id, player_id, player FROM w3g.player_games
     WHERE replay_id IN (SELECT replay_id FROM w3g.replays WHERE game_key IN (SELECT game_key FROM w3g.replays GROUP BY game_key HAVING count() = 1))

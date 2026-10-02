@@ -70,7 +70,7 @@ seeds:
       Units and upgrades by the building that trains or researches them, heroes by altar or
       Tavern, mercenaries by camp, items by shop. Kept by hand from the game's tech tree and
       checked against the orders: each unit or upgrade source is ordered before its object in
-      97% or more of the player-games that order it, except a starting hall. A Marketplace
+      97% or more of the players who order it, except a starting hall. A Marketplace
       item is one the replays show bought only there.
     data_tests:
       - unique:

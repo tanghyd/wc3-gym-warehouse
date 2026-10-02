@@ -1,6 +1,6 @@
 -- Hero Demon Hunter, then Learned Mana Burn, picked Night Elf: every point of his skill comes after his training order.
 WITH
--- player-games of a picked NE in games that arrived as one file and where both players gave orders
+-- each player of a picked NE in games that arrived as one file and where both players gave orders
 ok AS (
     SELECT replay_id, player_id, player FROM w3g.player_games
     WHERE race = 'NE' AND random = 0

@@ -23,7 +23,6 @@ from compile import (
     compile_search,
     compile_strategies,
     race_pair,
-    records,
     sequence_pattern,
 )
 
@@ -162,7 +161,9 @@ def test_search_counts_the_scope_and_matches_any_group() -> None:
     assert f"FROM w3g.player_games WHERE {scope})" in stats
     # one result per game: a game matches when one of its two seatings does, and counts once
     assert "GROUP BY replay_id" in stats and "countIf(hits > 0) AS games" in stats and "countIf(hits = 2) AS both_sides" in stats
-    assert "argMinIf(result, player_id, m) AS hit_result" in stats and "count() AS scope_games" in stats
+    # a result counts only from a game that fits one way: in one that fits both ways either player can sit on the Player side
+    assert "countIf(hits = 1 AND hit_result = 'win') AS wins" in stats and "anyIf(result, m) AS hit_result" in stats
+    assert "countIf(seated = 1 AND seated_result = 'loss') AS scope_losses" in stats and "countIf(seated = 2) AS scope_both_sides" in stats
     assert "WHERE seat = 1" in rows and "count() OVER (PARTITION BY replay_id) = 2 AS both_sides" in rows
     assert params["p1"] == "[('NE',0),('NE',1)]" and params["p2"] == "[('OC',0)]"
     # group 1: a 1st hero alone reads the heroes array; Archer x5 by 6:00 counts orders
@@ -173,22 +174,6 @@ def test_search_counts_the_scope_and_matches_any_group() -> None:
     assert "(replay_id, opponent_id) IN (SELECT replay_id, player_id FROM w3g.player_games WHERE ((has({p" in rows
     assert rows.endswith("ORDER BY duration_ms, replay_id\nLIMIT 25 OFFSET 25")
     assert params["p3"] == "win"
-
-
-@pytest.mark.parametrize(("player", "opponent", "want"), [
-    ({}, {}, (False, False)),  # every game fits both ways round
-    ({"race": ["NE"]}, {"race": ["NE"]}, (False, False)),  # a mirror
-    ({"race": ["NE", "RN"]}, {"race": ["RN", "NE"]}, (False, False)),  # the same race values in another order
-    ({"race": ["NE", "RN"]}, {"race": ["NE"]}, (True, True)),  # Include Random on one side only
-    ({"race": ["NE"]}, {}, (True, True)),
-    ({"name": "Medusa#31315"}, {}, (True, True)),
-    ({"outcome": "win"}, {}, (True, False)),  # the outcome tells the matches apart, not the scope
-    ({"groups": [{"steps": [ss("hero", "Edem", nth=1)]}]}, {}, (True, False)),
-    ({"groups": [{"steps": [ss("hero", "Edem", nth=1)]}]}, {"groups": [{"steps": [ss("hero", "Edem", nth=1)]}]}, (False, False)),
-    ({"opened_with": ["eate"]}, {}, (True, False)),
-])
-def test_a_record_needs_sides_that_differ(player: dict[str, object], opponent: dict[str, object], want: tuple[bool, bool]) -> None:
-    assert records(SearchRequest(player=player, opponent=opponent)) == want
 
 
 @pytest.mark.parametrize("steps", [
@@ -229,9 +214,10 @@ def test_strategy_stats_count_each_preset_of_the_race_in_one_statement() -> None
     req = StrategiesRequest(race=["UD", "RU"], opponent_race=["NE"], filters={"minutes": {"gte": 2}})
     sql, ids, params = compile_strategies(req, PRESETS, PG)
     assert ids == [i for i, p in PRESETS.items() if p.race == "UD"]
-    assert sql.count("countIf(g") == 3 * len(ids) and sql.count("sumIf(game_ms, g") == len(ids)
-    # per game: a preset holds when a seating holds it, its result from the lower such player slot
-    assert sql.count("max(s") == len(ids) and sql.count("argMinIf(result, player_id, s") == len(ids) and "GROUP BY replay_id" in sql
+    assert sql.count("countIf(g") == 4 * len(ids) and sql.count("sumIf(game_ms, g") == len(ids)
+    # per game: the seatings that hold a preset, and a result only from a game where one seating holds it
+    assert len(re.findall(r"countIf\(s\d+\) AS g\d+", sql)) == len(ids) and sql.count("anyIf(result, s") == len(ids) and "GROUP BY replay_id" in sql
+    assert sql.count(" = 1 AND r") == 2 * len(ids) and "countIf(seated = 1 AND seated_result = 'win') AS wins" in sql
     assert "FROM w3g.player_games WHERE minutes >= {p0:Float64} AND has({p1:Array(Tuple(String, UInt8))}, (race, random))" in sql
     assert params["p1"] == "[('UD',0),('UD',1)]" and params["p2"] == "[('NE',0)]"
     # the late expo: the Crypt Lord first of its parent, an expansion 8:00 to 15:00 and none by 8:00

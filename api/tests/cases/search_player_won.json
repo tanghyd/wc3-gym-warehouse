@@ -28,7 +28,8 @@
         "games": 2,
         "wins": 2,
         "losses": 0,
-        "duration_ms_total": 809900
+        "duration_ms_total": 809900,
+        "both": 0
       },
       "replays": [
         {

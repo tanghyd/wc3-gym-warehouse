@@ -21,7 +21,7 @@ near AS (
     WHERE e.kind = 'building' AND e.x IS NOT NULL AND arrayMin(ds) <= 1500
     GROUP BY e.replay_id, e.player_id
 ),
--- per player-game: the opponent's start (0 when none), by his own placements, else the start the player does not hold
+-- per player of a game: the opponent's start (0 when none), by his own placements, else the start the player does not hold
 pg AS (
     SELECT g.replay_id AS replay_id, g.player_id AS player_id, g.player AS player, g.map AS mp,
            multiIf(o.si > 0, o.si, length(S[mp]) = 2 AND p.si > 0, 3 - p.si, 0) AS opp_si

@@ -6,7 +6,7 @@ bars AS (
     SELECT replay_id, player_id, min(time_ms) AS bar FROM w3g.player_order_events
     WHERE kind = 'building' AND object_code = 'hbar' AND is_repeat = 0 GROUP BY replay_id, player_id
 ),
--- per player-game: the opponent's seed start, and the seed starts of the map that are not his
+-- per player of a game: the opponent's seed start, and the seed starts of the map that are not his
 pg AS (
     SELECT g.replay_id AS replay_id, g.player_id AS player_id, g.player AS player, o.x AS ox, o.y AS oy,
            arrayFilter(s -> s != (o.x, o.y), m.starts) AS others

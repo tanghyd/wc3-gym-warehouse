@@ -18,16 +18,17 @@
       "total": 0,
       "summary": {
         "games": 0,
-        "wins": 0,
-        "losses": 0,
+        "wins": null,
+        "losses": null,
         "duration_ms_total": 0,
         "both": 0
       },
       "scope": {
         "games": 0,
-        "wins": 0,
-        "losses": 0,
-        "duration_ms_total": 0
+        "wins": null,
+        "losses": null,
+        "duration_ms_total": 0,
+        "both": 0
       },
       "replays": []
     }
