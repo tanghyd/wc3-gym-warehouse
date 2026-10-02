@@ -24,18 +24,27 @@
 //! listing's LastModified as `source_last_modified` (a replay header holds no date,
 //! so this is when the replay was added) and `parse_version`.
 //!
-//! Within a pass, objects are fetched and parsed DRAIN_CONCURRENCY at a time.
+//! Within a pass, objects are fetched and parsed DRAIN_CONCURRENCY at a time. Each
+//! source of each pass ends with a row in `ingest.runs` (counts, times, the error when it
+//! stopped early), which Grafana reads for the age of the last pass.
 use std::collections::HashMap;
+use std::time::{Duration, SystemTime};
 
+use aws_sdk_s3::config::timeout::TimeoutConfig;
 use aws_sdk_s3::config::{BehaviorVersion, Credentials, Region};
 use aws_sdk_s3::Client;
 use aws_smithy_types::date_time::Format;
+use aws_smithy_types::error::display::DisplayErrorContext;
+use aws_smithy_types::DateTime;
 use futures::stream::{self, StreamExt};
 use serde::{Deserialize, Serialize};
 use w3warehouse_parse::PARSE_VERSION;
 
 /// Rows per INSERT: 500 documents of about 8 KB each.
 const BATCH: usize = 500;
+/// An object over this size is not read: a replay is well under 1 MB, so this is the
+/// wrong file or a corrupt one, and reading it whole could exhaust the container.
+const MAX_OBJECT_BYTES: u64 = 32 * 1024 * 1024;
 
 /// One bucket the drain reads.
 #[derive(Debug, PartialEq)]
@@ -54,7 +63,10 @@ struct Source {
 /// W3WAREHOUSE_SOURCE2_* set when W3WAREHOUSE_SOURCE2_BUCKET is set.
 fn sources(env: impl Fn(&str) -> Option<String>) -> Vec<Source> {
     let read = |set: &str, prefix: String| {
-        let var = |name: &str, default: &str| env(&format!("{set}_{name}")).unwrap_or(default.to_string());
+        // compose passes an unset variable as "", so empty means unset
+        let var = |name: &str, default: &str| {
+            env(&format!("{set}_{name}")).filter(|v| !v.trim().is_empty()).unwrap_or(default.to_string())
+        };
         let scheme = if var("SECURE", "false") == "true" { "https" } else { "http" };
         Source {
             bucket: var("BUCKET", "warehouse"),
@@ -93,20 +105,37 @@ async fn main() {
         std::process::exit(2);
     }
     let ch = ClickHouse {
-        http: reqwest::Client::new(),
+        // A request that never answers would hold the cron's lock for ever. The longest
+        // request is one INSERT of BATCH documents.
+        http: reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(120))
+            .build()
+            .expect("a reqwest client with no TLS always builds"),
         url: env_or("CLICKHOUSE_URL", "http://clickhouse:8123"),
         password: env_or("CLICKHOUSE_INGEST_PASSWORD", ""),
     };
-    let concurrency = env_or("DRAIN_CONCURRENCY", "16").parse().unwrap_or(16);
+    // 0 would wait for ever in buffer_unordered; a typo gets the default.
+    let concurrency = env_or("DRAIN_CONCURRENCY", "16").parse::<usize>().ok().filter(|n| (1..=64).contains(n)).unwrap_or(16);
     let mut tally = Tally::default();
     let mut failed = false;
     for src in sources(|k| std::env::var(k).ok()) {
-        if let Err(e) = drain_source(&ch, &src, concurrency, &mut tally).await {
+        let mut run = RunRow::start(&src.bucket);
+        if let Err(e) = drain_source(&ch, &src, concurrency, &mut run).await {
             log(&format!("{}: {e}; the next run retries", src.bucket));
+            run.error = e;
             failed = true;
         }
+        run.finished_at = now();
+        tally.docs += run.inserted as usize;
+        tally.failed += run.failed as usize;
+        tally.retry += run.retry as usize;
+        // The pass record is for Grafana; failing to write it is logged, never fatal.
+        if let Err(e) = ch.insert("ingest.runs", std::slice::from_ref(&run)).await {
+            log(&format!("could not record the pass in ingest.runs: {e}"));
+        }
     }
-    // `just local::ingest` reads this line: dbt builds when a document was inserted.
+    // For people; `just local::ingest` decides the dbt build from ingest.docs, not from this line.
     log(&format!(
         "inserted {} doc(s), {} failed parse(s), {} to retry",
         tally.docs, tally.failed, tally.retry
@@ -123,26 +152,81 @@ struct Tally {
     retry: usize,
 }
 
+/// An ingest.runs row: one source of one pass.
+#[derive(Serialize)]
+struct RunRow {
+    source: String,
+    started_at: String,
+    finished_at: String,
+    parse_version: u32,
+    /// Objects the listing returned.
+    listed: u32,
+    /// Objects that were new or changed.
+    todo: u32,
+    /// Documents inserted.
+    inserted: u32,
+    /// Objects whose parse failed.
+    failed: u32,
+    /// Objects whose GET or INSERT failed; the next pass retries them.
+    retry: u32,
+    /// Why the pass stopped early, empty when it finished.
+    error: String,
+}
+
+impl RunRow {
+    fn start(source: &str) -> Self {
+        RunRow {
+            source: source.to_string(),
+            started_at: now(),
+            finished_at: String::new(),
+            parse_version: PARSE_VERSION,
+            listed: 0,
+            todo: 0,
+            inserted: 0,
+            failed: 0,
+            retry: 0,
+            error: String::new(),
+        }
+    }
+}
+
+/// The time now as RFC 3339 in UTC, the form the ingest tables read into DateTime64.
+fn now() -> String {
+    DateTime::from(SystemTime::now()).fmt(Format::DateTime).unwrap_or_default()
+}
+
 /// One source: read its ingest.files rows, LIST, parse what changed, INSERT in batches.
-async fn drain_source(ch: &ClickHouse, src: &Source, concurrency: usize, tally: &mut Tally) -> Result<(), String> {
+async fn drain_source(ch: &ClickHouse, src: &Source, concurrency: usize, run: &mut RunRow) -> Result<(), String> {
     let seen = ch.seen(&src.bucket).await?;
+    let newer = seen.values().filter(|s| s.parse_version > PARSE_VERSION).count();
+    if newer > 0 {
+        log(&format!(
+            "{} row(s) carry a PARSE_VERSION above {PARSE_VERSION}: this drain is older than the last one, so it leaves them alone",
+            newer
+        ));
+    }
     let client = &s3_client(src);
     let listed = list_prefix(client, &src.bucket, &src.prefix).await?;
-    let n = listed.len();
+    run.listed = listed.len() as u32;
+    let mut other = 0usize;
     let todo: Vec<Listed> = listed
         .into_iter()
         .filter(|o| {
-            if !o.key.ends_with(".w3g") {
-                log(&format!("skipping {}: not a .w3g", o.key));
+            // The client rewrites LastReplay.w3g after every game, so its ETag never settles.
+            let name = o.key.rsplit('/').next().unwrap_or(&o.key);
+            if !name.to_ascii_lowercase().ends_with(".w3g") || name == "LastReplay.w3g" {
+                other += 1;
                 return false;
             }
             needs_parse(o, seen.get(&o.key))
         })
         .collect();
+    run.todo = todo.len() as u32;
     log(&format!(
-        "{}/{}: {n} listed, {} in ingest.files, {} to parse",
+        "{}/{}: {} listed, {other} skipped (not a .w3g, or LastReplay.w3g), {} in ingest.files, {} to parse",
         src.bucket,
         src.prefix,
+        run.listed,
         seen.len(),
         todo.len()
     ));
@@ -159,13 +243,13 @@ async fn drain_source(ch: &ClickHouse, src: &Source, concurrency: usize, tally: 
         for (key, outcome) in batch {
             match outcome {
                 Ok((file, doc)) => {
-                    tally.failed += usize::from(!file.error.is_empty());
+                    run.failed += u32::from(!file.error.is_empty());
                     files.push(file);
                     docs.extend(doc);
                 }
                 Err(e) => {
                     log(&format!("error on {key}, the next run retries: {e}"));
-                    tally.retry += 1;
+                    run.retry += 1;
                 }
             }
         }
@@ -173,12 +257,13 @@ async fn drain_source(ch: &ClickHouse, src: &Source, concurrency: usize, tally: 
         // repeated docs collapse on (source, key).
         ch.insert("ingest.docs", &docs).await?;
         ch.insert("ingest.files", &files).await?;
-        tally.docs += docs.len();
+        run.inserted += docs.len() as u32;
     }
     Ok(())
 }
 
 /// One object of a bucket listing.
+#[derive(Clone)]
 struct Listed {
     key: String,
     /// The ETag, quotes stripped.
@@ -200,12 +285,13 @@ struct Seen {
     parse_version: u32,
 }
 
-/// True when a listed object has no current row: no row, another size or PARSE_VERSION,
-/// or another ETag (LastModified when the listing gives no ETag). A failed parse has a
-/// row, so it waits for such a change like any other key.
+/// True when a listed object has no current row: no row, another size, an older
+/// PARSE_VERSION, or another ETag (LastModified when the listing gives no ETag). A failed
+/// parse has a row, so it waits for such a change like any other key. A row from a newer
+/// drain is left alone, so an older image rolled back does not re-parse everything for ever.
 fn needs_parse(o: &Listed, seen: Option<&Seen>) -> bool {
     seen.is_none_or(|s| {
-        s.parse_version != PARSE_VERSION
+        s.parse_version < PARSE_VERSION
             || s.size != o.size
             || if o.etag.is_empty() { s.modified_ms != o.modified_ms } else { s.etag != o.etag }
     })
@@ -253,9 +339,9 @@ struct DocRow {
 }
 
 /// GET and parse one object: its ingest.files row, and its ingest.docs row when the
-/// parse gave a document. Err is a failed GET.
+/// parse gave a document. Err is a failed GET. An object over MAX_OBJECT_BYTES, or one
+/// whose parse panics, gets an error row like any other failed parse.
 async fn process_one(client: &Client, src: &Source, o: &Listed) -> Result<(FileRow, Option<DocRow>), String> {
-    let bytes = get_object(client, &src.bucket, &o.key).await?;
     // DateTime64 cannot read "", so a listing with no time stores the epoch.
     let modified = if o.modified.is_empty() { "1970-01-01T00:00:00Z" } else { &o.modified };
     let mut file = FileRow {
@@ -268,7 +354,21 @@ async fn process_one(client: &Client, src: &Source, o: &Listed) -> Result<(FileR
         replay_id: String::new(),
         error: String::new(),
     };
-    match parsed_doc(&bytes, o) {
+    if o.size > MAX_OBJECT_BYTES {
+        log(&format!("parse FAILED {}: {} bytes is over the {MAX_OBJECT_BYTES} byte cap", o.key, o.size));
+        file.error = format!("{} bytes is over the {MAX_OBJECT_BYTES} byte cap", o.size);
+        return Ok((file, None));
+    }
+    let bytes = get_object(client, &src.bucket, &o.key).await?;
+    // The parse is CPU work: a blocking thread keeps the fetches going and turns a parser
+    // panic into this file's error instead of the end of the pass.
+    let listed = o.clone();
+    let parsed = match tokio::task::spawn_blocking(move || parsed_doc(&bytes, &listed)).await {
+        Ok(result) => result,
+        Err(e) if e.is_panic() => Err("the parser panicked".to_string()),
+        Err(e) => Err(e.to_string()),
+    };
+    match parsed {
         Ok((replay_id, doc)) => {
             log(&format!("parsed {} → {replay_id}", o.key));
             file.replay_id = replay_id;
@@ -366,12 +466,19 @@ impl ClickHouse {
 
 fn s3_client(src: &Source) -> Client {
     let creds = Credentials::new(&src.access_key, &src.secret_key, None, None, "w3warehouse-env");
+    // The SDK retries three times but never gives up on a request that hangs.
+    let timeouts = TimeoutConfig::builder()
+        .connect_timeout(Duration::from_secs(5))
+        .operation_attempt_timeout(Duration::from_secs(30))
+        .operation_timeout(Duration::from_secs(90))
+        .build();
     let conf = aws_sdk_s3::Config::builder()
         .behavior_version(BehaviorVersion::latest())
         .region(Region::new("us-east-1")) // dummy; MinIO and R2 ignore it
         .endpoint_url(&src.endpoint)
         .force_path_style(true) // MinIO needs path-style addressing
         .credentials_provider(creds)
+        .timeout_config(timeouts)
         .build();
     Client::from_conf(conf)
 }
@@ -385,7 +492,7 @@ async fn list_prefix(client: &Client, bucket: &str, prefix: &str) -> Result<Vec<
         if let Some(t) = &token {
             req = req.continuation_token(t);
         }
-        let resp = req.send().await.map_err(|e| format!("LIST {bucket}/{prefix}: {e}"))?;
+        let resp = req.send().await.map_err(|e| format!("LIST {bucket}/{prefix}: {}", DisplayErrorContext(&e)))?;
         for obj in resp.contents() {
             if let Some(k) = obj.key() {
                 let modified = obj.last_modified();
@@ -414,8 +521,8 @@ async fn get_object(client: &Client, bucket: &str, key: &str) -> Result<Vec<u8>,
         .key(key)
         .send()
         .await
-        .map_err(|e| format!("GET: {e}"))?;
-    let data = resp.body.collect().await.map_err(|e| format!("GET: {e}"))?;
+        .map_err(|e| format!("GET: {}", DisplayErrorContext(&e)))?;
+    let data = resp.body.collect().await.map_err(|e| format!("GET: {}", DisplayErrorContext(&e)))?;
     Ok(data.into_bytes().to_vec())
 }
 
@@ -466,6 +573,13 @@ mod tests {
         assert!(needs_parse(&o, Some(&seen(&o.key, "e1", 10, PARSE_VERSION))));
         let o = listed("preview/replays/a.w3g", "e1", 10);
         assert!(needs_parse(&o, Some(&seen(&o.key, "e1", 10, PARSE_VERSION - 1))));
+    }
+
+    #[test]
+    fn a_row_from_a_newer_drain_is_left_alone() {
+        // An older image rolled back must not re-parse every file on every pass.
+        let o = listed("preview/replays/a.w3g", "e1", 10);
+        assert!(!needs_parse(&o, Some(&seen(&o.key, "e1", 10, PARSE_VERSION + 1))));
     }
 
     #[test]
@@ -521,6 +635,21 @@ mod tests {
                 prefix: "preview/replays/".into(),
             }]
         );
+    }
+
+    #[test]
+    fn an_empty_variable_is_unset() {
+        // compose passes an unset variable as "": the default applies, and an empty
+        // second bucket adds no source.
+        let env: HashMap<&str, &str> = HashMap::from([
+            ("W3WAREHOUSE_S3_ENDPOINT", ""),
+            ("W3WAREHOUSE_S3_BUCKET", " "),
+            ("W3WAREHOUSE_SOURCE2_BUCKET", ""),
+        ]);
+        let got = sources(|k| env.get(k).map(|v| v.to_string()));
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].endpoint, "http://minio:9000");
+        assert_eq!(got[0].bucket, "warehouse");
     }
 
     #[test]
