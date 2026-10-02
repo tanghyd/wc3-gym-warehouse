@@ -3,7 +3,7 @@ set working-directory := '..'
 
 ssh := 'ssh "${BOX_SSH:?set BOX_SSH in .env, such as warehouse@203.0.113.7}"'
 
-# set up a fresh Ubuntu 24.04 box as root, such as `just box::bootstrap 203.0.113.7`
+# set up a fresh Ubuntu 24.04 box as root, such as `just deploy bootstrap 203.0.113.7`
 bootstrap host:
     scp infrastructure/box/bootstrap.sh root@{{host}}:/root/bootstrap.sh
     ssh root@{{host}} bash /root/bootstrap.sh
@@ -14,7 +14,7 @@ env:
     {{ssh}} 'cat > wc3-gym-warehouse/.env && chmod 600 wc3-gym-warehouse/.env' < .env.box
 
 # check out a pushed branch on the box, build and start the services of the box's COMPOSE_PROFILES, queue a marts rebuild, prune old images; waits for a running ingest pass
-deploy branch='main':
+up branch='main':
     {{ssh}} 'cd wc3-gym-warehouse && flock /tmp/ingest.lock sh -c "git fetch -q origin {{branch}} && git checkout -q -B {{branch}} FETCH_HEAD && docker compose up -d --build --remove-orphans && mkdir -p data && touch data/dbt-build-pending && docker image prune -f && docker builder prune -f --filter until=168h"'
 
 # one drain pass on the box, then dbt build when it inserted documents or one is pending; waits for the cron's pass
@@ -32,3 +32,7 @@ open:
 # the containers, the disk, the last ingest passes and the last dbt build's summary
 status:
     {{ssh}} 'cd wc3-gym-warehouse && docker compose ps --format "table {{{{.Service}}\t{{{{.Status}}"; df -h /; tail -n 20 ~/ingest.log; grep "Summary:" ~/ingest.log | tail -n 1'
+
+# stop every container on the box and drop the cron line; the ClickHouse volume and the clone stay, so `up` then `cron` restores it
+down:
+    {{ssh}} 'crontab -l 2>/dev/null | grep -vF "just ingest" | crontab -; cd wc3-gym-warehouse && flock /tmp/ingest.lock docker compose down'

@@ -3,7 +3,7 @@
 set dotenv-load
 
 mod local 'just/local.just'
-mod box 'just/box.just'
+mod deploy 'just/deploy.just'
 
 alias up := local::up
 alias down := local::down
