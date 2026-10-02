@@ -285,7 +285,7 @@ models:
     description: >-
       Every order and hero skill per player as one time-ordered stream, the table
       build-order steps match against. It unions player_order_events,
-      hero_ability_events and one hero_trained row per hero. {{ doc('order_is_a_command') }}
+      hero_ability_events and one hero_trained row per hero, timed by its training order. {{ doc('order_is_a_command') }}
     data_tests:
       - unique:
           name: replay_events_one_row_per_event
@@ -330,7 +330,10 @@ models:
       - name: seq
         description: >-
           {{ doc('seq') }} For an order, its position within the player's list of that
-          kind. For hero_skill, within the hero's skill list. 0 for hero_trained.
+          kind. For hero_skill, within the hero's skill list. For hero_trained, the hero's place in
+          player_games.heroes (1 for the first hero), or 0 for a hero with no code.
+      - name: is_repeat
+        description: The is_repeat flag of the order or skill point, 0 on hero_trained. Searches read only rows with 0.
 
   - name: replay_players
     description: One row per player per replay, with the player's slot, team, race, APM and action counts. Observers are not players and never appear.
@@ -471,6 +474,8 @@ models:
         description: "{{ doc('time_ms') }}"
       - name: seq
         description: "{{ doc('seq') }} Numbered within the hero's skill list."
+      - name: is_repeat
+        description: 1 on a skill point under 1000 ms after the same hero's previous point in that skill, else 0, the rule of player_order_events.is_repeat.
 
   - name: player_heroes
     description: One row per hero a player spent a skill point on, with its level at the end of the game.
@@ -494,6 +499,8 @@ models:
         description: "{{ doc('hero_id') }}"
       - name: final_level
         description: The hero's level at the end of the game, the sum of its skill levels after any retraining.
+      - name: trained_ms
+        description: Game time of the order that trained the hero, the player's last order of its code at or before its first skill point. The first skill point when no such order exists.
 
   - name: player_group_hotkeys
     description: One row per control group (0-9) a player touched, with how often it was assigned and recalled.
