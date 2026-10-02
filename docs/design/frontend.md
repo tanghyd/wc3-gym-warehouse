@@ -643,7 +643,7 @@ md and up: the tree (7 of 12 columns) and the selection panel (5 of 12, `positio
 | Win rate | `wins / games` through `fmtPct`, plus the win bar (10.4). Below `WIN_RATE_FLOOR`: `text-medium-emphasis`, no bar. |
 | Avg min | `avg_minutes`, one decimal |
 | Replay button (`mdi-play-box-multiple`, `aria-label` "Show games") | sets `sel`, moves focus to the panel's replay list; on phones scrolls to it |
-| "Stopped here" row | `stopped`, shown when above 0. Children plus stopped sum to the parent (api.md A7). |
+| "Stopped here" row | `stopped`, shown when above 0. Children plus stopped are the parent's games, or more: a game where both players hold the prefix and then part ways counts once in each player's row (api.md A7, A14). |
 
 ### 10.3 Selection panel
 

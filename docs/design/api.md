@@ -435,7 +435,7 @@ Response:
 | `race` | GNL id | Echo |
 | `prefix` | array of codes | Echo |
 | `total` | integer | Games in which a player's opener starts with `prefix`, a game where both players' do once |
-| `stopped` | integer | Part of `total` whose opener ends exactly at `prefix`. `sum(rows[].games) + stopped = total`. |
+| `stopped` | integer | Part of `total` whose opener ends exactly at `prefix`. `sum(rows[].games) + stopped` is `total`, or more: a game where both players hold `prefix` and then part ways counts once in each player's row. |
 | `rows[].code` | string | Building at depth `len(prefix) + 1` |
 | `rows[].games` | integer | Games, a game where both players opened this way once |
 | `rows[].wins` | integer | Games that player won |
@@ -638,7 +638,7 @@ Errors: 404 `No game with this id` (the story text); 503, 504, 500 per 2.6.
 | A4 | `/mappings` derives `race` | `mappings.race` is empty for upgrades and skills (F); index.html gets `AHfa`, `Rwdm` wrong. |
 | A5 | Race ids: the GNL ids `HU OC NE UD RANDOM` on the wire, the stored letters `H O N U R` in SQL | Decided 2026-09-11 (Daniel). The app speaks one race id (gnl backend `app/models/enums.py:4-9`); the API maps id to letter when it parses a request and letter to id when it hydrates a response (rust.md 4.4). Storage and `matchup` keep the letters, so no re-parse. |
 | A6 | `max-age` tiers (2.7), no ETags | 60 s staleness is invisible next to minutes of ingest (PLAN.md:54). |
-| A7 | Openers carry `stopped`; story 2 reads "children plus stopped sum to the parent" | 59 stopped at `prefix=eate,eaom` (F; queries.md 3.5). |
+| A7 | Openers carry `stopped`; story 2 reads "children plus stopped are the parent's games, or more" | 59 stopped at `prefix=eate,eaom` (F; queries.md 3.5). |
 | A8 | `/stats`: one route, one cohort | Story 3 states one cohort size; charts are small. |
 | A9 | `/replays/{id}`: one route | The page shows almost all of it at once. |
 | A10 | `http_wait_end_of_query = 1` | One error path: a failure is a non-200 with the code header. Exists on 26.9 (default 0); PR 2 re-checks on 26.8. |

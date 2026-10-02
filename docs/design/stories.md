@@ -75,7 +75,7 @@ Done when:
 - [ ] Each row shows building ordered, games, win rate, average minutes and branch count.
 - [ ] A click opens the next building in place, to depth 6 (index.html:448).
 - [ ] Win rate stays grey under 10 games (index.html:446). The floor sits in two places; tests pin both.
-- [ ] Children plus stopped sum to the parent.
+- [ ] Children plus stopped are the parent's games, or more: a game where both players hold the prefix and then part ways counts once in each player's row.
 - [ ] A row's replay button lists its games.
 
 | Review | Fixtures | Full load |
