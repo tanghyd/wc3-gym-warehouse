@@ -6,10 +6,11 @@
   on-by-default system logs.)
 -->
 <clickhouse>
-    <!-- The default 0.9 lets ClickHouse take 90% of the machine's RAM; 0.8 leaves
-         room for the other containers and the page cache. A ratio adapts to any
-         machine size. Per-query caps live in the api and grafana profiles (users.xml). -->
-    <max_server_memory_usage_to_ram_ratio>0.8</max_server_memory_usage_to_ram_ratio>
+    <!-- compose.yaml caps the container at 3 GiB (measured 1.11 GiB resident, 1.68 GiB
+         peak). 2.5 GiB leaves the rest for memory the server does not track, so a big
+         query fails with MEMORY_LIMIT_EXCEEDED before the kernel kills the server.
+         Per-query caps live in the api and grafana profiles (users.xml). -->
+    <max_server_memory_usage>2684354560</max_server_memory_usage>
 
     <!-- Server-side query cache, off unless a query sets use_query_cache. Bound
          it so cached results cannot crowd query memory on a shared machine. -->

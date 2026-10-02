@@ -20,6 +20,8 @@ services:
       W3WAREHOUSE_S3_SECRET_KEY: "${W3WAREHOUSE_S3_SECRET_KEY}"
     restart: unless-stopped
     stop_grace_period: 60s          # the 10s default SIGKILL truncates the flush
+    # Measured resident 1.11 GiB, peak 1.68 GiB on 1,746 replays. tuning.xml caps the server at 2.5 GiB.
+    mem_limit: 3g
     # Loopback only. The tunnel reaches ClickHouse over the compose network.
     ports:
       - "127.0.0.1:${CLICKHOUSE_HTTP_PORT:-8123}:8123"
@@ -56,6 +58,7 @@ services:
       W3WAREHOUSE_S3_PREFIX: "${W3WAREHOUSE_S3_PREFIX:-}"
       WORKER_POLL_MS: "${WORKER_POLL_MS:-60000}"
     restart: unless-stopped
+    mem_limit: 512m
 
   # One-shot: `just dbt <args>`. Loads new parsed docs and builds the marts.
   dbt:
@@ -95,6 +98,7 @@ services:
     volumes:
       - dbt_target:/target:ro
     restart: unless-stopped
+    mem_limit: 512m
     depends_on:
       clickhouse:
         condition: service_healthy
@@ -107,6 +111,7 @@ services:
     volumes:
       - dbt_target:/usr/share/nginx/html:ro
     restart: unless-stopped
+    mem_limit: 512m
 
   # The replay inspector (web/). It reads the API over the compose network. Loopback only.
   web:
@@ -118,6 +123,7 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     restart: unless-stopped
+    mem_limit: 512m
     depends_on: [api]
 
   # One-shot: `just local::e2e`. Playwright tests of web/, run as you because it
@@ -161,6 +167,7 @@ services:
       - ./infrastructure/docker/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ./infrastructure/docker/grafana/dashboards:/etc/grafana/dashboards:ro
     restart: unless-stopped
+    mem_limit: 768m                 # measured 450 MiB idle
     depends_on:
       clickhouse:
         condition: service_healthy
@@ -175,6 +182,7 @@ services:
       MINIO_ROOT_PASSWORD: "${W3WAREHOUSE_S3_SECRET_KEY}"
     volumes:
       - minio_data:/data
+    mem_limit: 1g                   # measured 578 MiB
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 3s
@@ -217,6 +225,7 @@ services:
       TUNNEL_TOKEN: "${TUNNEL_TOKEN:-}"
     network_mode: "service:clickhouse"
     restart: unless-stopped
+    mem_limit: 512m
     depends_on:
       clickhouse:
         condition: service_healthy

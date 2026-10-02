@@ -2,11 +2,12 @@
 -- the bucket.parsed_docs source: an S3 table over the `parsed_docs` named collection
 -- (infrastructure/docker/clickhouse/named-collections.xml), which the on-run-start
 -- hook in dbt_project.yml creates. The URL glob and the keys come from the server's
--- env, so no secret lands in compiled SQL or the query log.
+-- env, so no secret lands in compiled SQL or the query log. The glob takes every parse
+-- version (parsed/v*/), and the version column keeps the newest copy of a replay.
 -- A ReplacingMergeTree on replay_id with parse_version as its version: a second copy
 -- of a document collapses into one row, and a document at a newer parse version
 -- replaces the older one. Both happen at a merge, so every reader reads the table
--- with SETTINGS final = 1.
+-- FINAL: valid_replays, which every mart reads, and Grafana.
 -- A re-run loads a document only when its replay is not loaded at the same or a newer
 -- parse version. The drain writes parsed/v<N>/dt=<date>/<replay_id>.json, so the path
 -- gate skips a loaded document before ClickHouse fetches it, and the document gate
