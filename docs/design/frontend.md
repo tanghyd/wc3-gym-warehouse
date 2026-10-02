@@ -417,7 +417,7 @@ html, body { font-family: var(--font-body); font-variant-numeric: lining-nums ta
 | Focus | 2 px `primary` outline, 2 px offset |
 | Tooltip | Vuetify's default: `surface-variant`, `on-surface-variant` text, 13 px. Light on dark in the light theme, dark on light in the dark theme. |
 
-- Command-card icons are 64 x 64 PNGs (`file frontend/icons/btn3m1-result.png`). Sizes: 40 px in the picker and opener path tiles, 28 px in step lists and opener trails, 24 px in the timeline and skill trails, 20 px on phones. `rounded="sm"`, no border.
+- Command-card icons are 64 x 64 PNGs (`file frontend/icons/btn3m1-result.png`). Sizes: 40 px in the picker and opener path tiles, 28 px in step lists and opener trails, 24 px in the timeline, skill trails and the games list (8.2), 20 px on phones. `rounded="sm"`, no border.
 - Decided: `ObjectIcon.vue` falls back to `mdi-help-box-outline` at the same size, name in the tooltip. Why: 3 of 649 named codes have no icon (`orbr` Reinforced Orc Burrow, `uzg1` Spirit Tower, `nits` Ice Troll Berserker).
 - Race marks: `RaceIcon.vue` from gnl, 1.4 em square with a tooltip (gnl: `RaceIcon.vue:2-14, 21`).
 - Player names: the GNL app standard is `{flag} {name} {race} {mmr}`. The warehouse has no country and no MMR until the dims loader, so `PlayerName` shows `{name} {race}` and has no flag or MMR slot (section 7).
@@ -506,23 +506,26 @@ Rejected:
 - A "Clear" text button shows when any key is set.
 - 390 px: one `v-expansion-panels` titled "Filters" with a count badge. Open when no key is set, closed once a result shows. Fields in a two-column grid.
 
-### 8.2 Replay table (`ReplayTable.vue`)
+### 8.2 Games list (`table.games` in `web/src/app/page.tsx`)
 
-`v-data-table-server`, 25 rows, total from `X-Total-Count`. Search results and the openers panel use it. No column sorts: rows come in the API's one fixed order (api.md 2.4, A2).
+One player-game a row, 25 a page, in the order of the sort menu. Decided (Daniel 2026-10-02): a row is one text line, so a screen stacks many games. A 24 px hero icon and 5 px of padding set its height (35 px with the hairline).
 
-| Column | Source (api.md 2.5) |
+| Column | Cell |
 |---|---|
-| Map | `map`, "Unknown map" when `""` |
-| Matchup | `matchup` |
-| Players | The `focus_player_id` player, "v", the other. No focus player: `players[]` order (by `player_id`). Each a `PlayerName`. The winner in `font-weight-medium`. |
-| Length | `duration_ms` as `m:ss`, right-aligned |
-| Result | The focus player: "Won" or "Lost" plus the dot (6.6). Blank when `won` is null or no focus player. Focus is Player 1 on search, the opener's owner in the panel. |
-| GNL | `gnl` as "S{series_id} G{game_no}", text only, blank when null |
-| File | `mdi-download` icon button to `download_url` (stories D1); "No file" when null |
+| Player | Race icon (18 px), then the name in Cardo 700 with its battle tag number ("#2726") at 400 in medium emphasis, cut with an ellipsis, the full tag in its title |
+| Heroes | The Player's heroes in pick order, 24 px command-card icons 10 px apart, the final level on each icon's corner |
+| Result | The Player's result: a 10 px `win` or `loss` square and "Won" or "Lost" in ink; "No result" in medium emphasis |
+| Opponent | As Player |
+| Heroes | The Opponent's heroes, as above |
+| Map | The link to `/replays/:id`, cut with an ellipsis, the full name in its title. Sorts by map. |
+| Length | `duration_ms` as `m:ss`, right-aligned. Sorts by length. |
 
-- Row key: `replay_id` plus `focus_player_id`. The openers list can hold one game twice, once per owner (api.md 2.5, 3.6).
-- A row click goes to `/replays/:id`. The file button stops the click.
-- Compact form (390 px, and the openers panel at every width): one cell per row. Line 1: focus player, "v", other. Line 2: map, length, result. File button at the right edge. Decided: PR 10 tries the Vuetify `mobile` prop of `v-data-table-server` first; custom one-cell rows only if it falls short.
+- `table-layout: fixed`: the hero columns are 120 px, Result 84 px, Length 80 px, and Player, Opponent and Map share the rest, so each column starts at the same x on every row.
+- Text 15 px on a 20 px line; heads 14 px, 700, medium emphasis, the sorted head's link in `primary-text`. Hairline under each row, no zebra, hover in `surface-light` (6.4).
+- The hero icons are the row's bold mark (1, 6.4); every other cell is plain text.
+- A departure from `PlayerName` (7): the race icon comes before the name here, so the race marks line up in a column.
+- 390 px: no heads; two lines per row on fixed columns (name, 84 px heroes, 60 px, 42 px), so the heroes line up down the list. Line 1: Player, his heroes, result, length. Line 2: "v", Opponent, his heroes, the map at the right over the last two columns. Hero icons 20 px, 8 px apart. Names drop the battle tag number.
+- The row has no date: the search answer carries none (`api/compile.py`, the `rows` query).
 
 ### 8.3 States (`StateBlock.vue`)
 

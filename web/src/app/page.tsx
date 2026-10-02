@@ -3,7 +3,7 @@ import { type Filters, getObjects, getPresets, type Objects, pickerValues, raceC
 import { parseRaces, raceLabel } from "@/lib/races";
 import { apiStep, decodeGroups, HALLS, type Groups, played, type Step, stepObject } from "@/lib/steps";
 import { presetSteps, urlStep } from "@/lib/strategies";
-import { fmt, mss, PlayerName, record } from "@/lib/ui";
+import { fmt, mss, RaceIcon, record } from "@/lib/ui";
 import { type DraftStep, type LoadPreset, Sides, type SideState } from "./Sides";
 import { SortSelect } from "./SortSelect";
 
@@ -17,27 +17,37 @@ const KEYS = {
 } as const;
 
 
-/** A player of a row: name and race icon, under it his heroes in pick order with their final levels. */
-function Who({ p, objects }: { p: SidePlayer; objects: Objects }) {
+/** A player of a row on one line: race icon, then name, its battle tag number quiet. */
+function Who({ p }: { p: SidePlayer }) {
+  const i = p.name.indexOf("#");
   return (
-    <>
-      <PlayerName name={p.name} race={p.race} className="max-w-full" />
-      {p.heroes.length > 0 && (
-        <ul aria-label="Heroes" className="heroes">
-          {p.heroes.map((h, i) => {
-            const label = `${objects[h.code]?.name ?? "Unknown hero"}, level ${h.level}`;
-            return (
-              <li key={i} title={label}>
-                {objects[h.code]?.icon ? <img src={objects[h.code].icon!} width={22} height={22} alt={label} /> : <span role="img" aria-label={label} className="tile empty" style={{ ["--s" as string]: "20px" }} />}
-                <span className="lv" aria-hidden>
-                  {h.level}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </>
+    <span className="who">
+      <RaceIcon race={p.race} size="18px" />
+      <span className="font-name truncate" title={p.name}>
+        {i > 0 ? p.name.slice(0, i) : p.name}
+        {i > 0 && <span className="tag">{p.name.slice(i)}</span>}
+      </span>
+    </span>
+  );
+}
+
+/** A player's heroes in pick order, each a command-card icon with its final level on the corner. */
+function Heroes({ p, objects }: { p: SidePlayer; objects: Objects }) {
+  if (!p.heroes.length) return null;
+  return (
+    <ul aria-label={`Heroes of ${p.name}`} className="heroes">
+      {p.heroes.map((h, i) => {
+        const label = `${objects[h.code]?.name ?? "Unknown hero"}, level ${h.level}`;
+        return (
+          <li key={i} title={label}>
+            {objects[h.code]?.icon ? <img src={objects[h.code].icon!} width={24} height={24} alt={label} /> : <span role="img" aria-label={label} className="none" />}
+            <span className="lv" aria-hidden>
+              {h.level}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -250,15 +260,17 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                 <thead>
                   <tr>
                     <th scope="col" className="c-p">Player</th>
+                    <th scope="col" className="c-ph">Heroes</th>
+                    <th scope="col" className="c-r">Result</th>
                     <th scope="col" className="c-o">Opponent</th>
+                    <th scope="col" className="c-oh">Heroes</th>
                     <th scope="col" className="c-m" aria-sort={ariaSort("map")}>
-                      <Link href={sortLink("map")} className="text-on-surface">
+                      <Link href={sortLink("map")}>
                         Map
                       </Link>
                     </th>
-                    <th scope="col" className="c-r">Result</th>
-                    <th scope="col" className="c-l text-right" aria-sort={ariaSort("duration")}>
-                      <Link href={sortLink("duration")} className="text-on-surface">
+                    <th scope="col" className="c-l" aria-sort={ariaSort("duration")}>
+                      <Link href={sortLink("duration")}>
                         Length
                       </Link>
                     </th>
@@ -268,22 +280,28 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                   {replays.map((r) => (
                     <tr key={`${r.replay_id}-${r.player.name}`}>
                       <td className="c-p">
-                        <Who p={r.player} objects={heroes} />
+                        <Who p={r.player} />
                       </td>
-                      <td className="c-o">
-                        <span className="vs">v</span>
-                        <Who p={r.opponent} objects={heroes} />
-                      </td>
-                      <td className="c-m">
-                        {/* no prefetch: it runs generateMetadata, a full replay read per row */}
-                        <Link href={gameHref(r)} prefetch={false}>
-                          {r.map || "Unknown map"}
-                        </Link>
+                      <td className="c-ph">
+                        <Heroes p={r.player} objects={heroes} />
                       </td>
                       <td className="c-r">
                         <ResultMark won={r.player.won} />
                       </td>
-                      <td className="c-l text-right">{mss(r.duration_ms)}</td>
+                      <td className="c-o">
+                        <span className="vs">v</span>
+                        <Who p={r.opponent} />
+                      </td>
+                      <td className="c-oh">
+                        <Heroes p={r.opponent} objects={heroes} />
+                      </td>
+                      <td className="c-m">
+                        {/* no prefetch: it runs generateMetadata, a full replay read per row */}
+                        <Link href={gameHref(r)} prefetch={false} title={r.map || undefined}>
+                          {r.map || "Unknown map"}
+                        </Link>
+                      </td>
+                      <td className="c-l">{mss(r.duration_ms)}</td>
                     </tr>
                   ))}
                 </tbody>
