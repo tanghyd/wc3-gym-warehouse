@@ -100,3 +100,38 @@ seeds:
         description: The object code of the source, such as eaom for Ancient of War. Its first letter names the race (h o e u), n a neutral source.
       - name: source_name
         description: The source's display name, such as Ancient of War or Tavern.
+
+  - name: start_locations
+    description: >-
+      The start locations of each map the replays carry, keyed by replays.map. A replay holds no
+      start position, so player_starts reads it from where a player builds against these points.
+      source 'map file' is a start location (sloc unit) of the W3Champions map archive in
+      wc3-gnl-website map-sources/, as its creep-route catalogues list them (12 maps, 28 rows).
+      source 'cluster' is the mean of the players' first buildings around one start, for the 4 maps
+      with no archive there (Boulder Vale 1.7, Concealed Hill, Northern Isles, Springtime 1.3). On
+      the 12 maps with a file that mean lies 99 to 382 units from the file start. Kept by hand.
+    data_tests:
+      - unique:
+          name: start_locations_one_row_per_slot
+          description: A map lists each slot once.
+          arguments:
+            column_name: "map || ':' || toString(slot)"
+    columns:
+      - name: map
+        description: The map as replays.map names it, such as Echo Isles 2.2.
+        data_tests:
+          - not_null:
+              description: Every row names its map.
+      - name: slot
+        description: The start's number on its map. The map file's player slot of the start location, or 0 and 1 for a cluster.
+      - name: x
+        description: The start's map x in game units.
+      - name: y
+        description: The start's map y in game units.
+      - name: source
+        description: map file or cluster, as above.
+        data_tests:
+          - accepted_values:
+              description: A start comes from a map file or a cluster.
+              arguments:
+                values: [map file, cluster]

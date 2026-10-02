@@ -19,3 +19,5 @@ data_tests:
     description: Every picker object has a name in mappings, and every melee skill sits under a hero.
   - name: every_player_gave_an_order
     description: Every player in replay_players has a row in player_order_events, because valid_replays leaves out a game in which a player gave no order.
+  - name: start_locations_two_or_four_per_map
+    description: Every map in the start_locations seed has 2 or 4 start locations, as the 1v1 and 1v1-2v2 maps do.
