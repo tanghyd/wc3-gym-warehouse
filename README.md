@@ -199,4 +199,4 @@ Grafana is at http://localhost:3001, anonymous admin by default (the `GF_AUTH_*`
 - Creep routes. A replay holds commands, and a creep death alone cannot say whether the player cleared the camp or an enemy stole it. That waits for stat-events maps.
 - Stat-events. A future parser output adds a section to the parsed document, and dbt gets a staging model for it.
 - `replays.source_key` (design S5).
-- Hosting. No box runs the stack yet. The `prod` profile's tunnel publishes the inspector only.
+- Hosting. No box runs the stack yet. [docs/deploy.md](docs/deploy.md) is the runbook for one Hetzner box, driven by `just box::*`: the inspector over an ssh forward, the `tunnel` profile (cloudflared) off until a domain exists.
