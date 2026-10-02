@@ -73,6 +73,7 @@ services:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.dbt
     profiles: ["tools"]
+    mem_limit: 1g
     environment:
       CLICKHOUSE_HOST: clickhouse
       CLICKHOUSE_PASSWORD: "${CLICKHOUSE_PASSWORD:-}"
@@ -140,6 +141,7 @@ services:
     profiles: ["tools"]
     init: true
     shm_size: 1gb                   # Chromium runs out of the 64 MB default on long pages
+    mem_limit: 2g                   # Chromium needs more than the dbt cap
     working_dir: /e2e
     environment:
       HOME: /tmp
@@ -202,6 +204,7 @@ services:
   minio-setup:
     image: minio/mc
     profiles: ["local"]
+    mem_limit: 256m
     environment:
       BUCKET: "${W3WAREHOUSE_S3_BUCKET}"
       PREFIX: "${W3WAREHOUSE_S3_PREFIX:-}"
@@ -240,3 +243,10 @@ volumes:
   dbt_target:
   dbt_cache:
   grafana_data:
+
+# A fixed subnet, so users.xml can name it for the `default` and `ingest` users.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
