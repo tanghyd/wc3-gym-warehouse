@@ -345,6 +345,10 @@ models:
         description: The is_repeat flag of the order or skill point, 0 on hero_trained. Searches read only rows with 0.
       - name: level
         description: The skill level a hero_skill point gives, from hero_ability_events.level, 0 on every other row. A skill step of count N matches a point with level N or more.
+      - name: x
+        description: The map x of a building placement (player_order_events.x), NULL on every other row. A forward step reads it.
+      - name: y
+        description: The map y of a building placement (player_order_events.y), NULL on every other row.
 
   - name: replay_players
     description: One row per player per replay, with the player's slot, team, race, APM and action counts. Observers are not players and never appear.

@@ -6,6 +6,7 @@
 -- is_repeat carries the repeat flag of orders and skill points (0 on hero_trained).
 -- level is the skill level a hero_skill point gives (hero_ability_events.level), 0 on every other row.
 -- race is the player's played race from replay_players.
+-- x and y are the map point of a building placement (player_order_events), NULL on every other row.
 -- The sort key leads with what a sequence filter names (race, type, object).
 {{ config(order_by='(race, event_type, subject_code, replay_id, player_id, time_ms, seq)') }}
 
@@ -20,7 +21,9 @@ SELECT
     e.detail        AS detail,
     e.seq           AS seq,
     e.is_repeat     AS is_repeat,
-    e.level         AS level
+    e.level         AS level,
+    e.x             AS x,
+    e.y             AS y
 FROM (
     SELECT
         o.replay_id                                   AS replay_id,
@@ -32,7 +35,9 @@ FROM (
         toLowCardinality('')                          AS detail,
         o.seq                                         AS seq,
         o.is_repeat                                   AS is_repeat,
-        toUInt8(0)                                    AS level
+        toUInt8(0)                                    AS level,
+        o.x                                           AS x,
+        o.y                                           AS y
     FROM {{ ref('player_order_events') }} AS o
     -- Join on (code, kind) so a code listed under two kinds cannot double a row.
     LEFT JOIN {{ ref('mappings') }} AS m ON m.code = o.object_code AND m.kind = o.kind
@@ -47,7 +52,9 @@ FROM (
         toLowCardinality(coalesce(nullIf(mh.name, ''), h.hero_id)) AS detail,
         h.seq                                         AS seq,
         h.is_repeat                                   AS is_repeat,
-        h.level                                       AS level
+        h.level                                       AS level,
+        CAST(NULL, 'Nullable(Float32)')              AS x,
+        CAST(NULL, 'Nullable(Float32)')              AS y
     FROM {{ ref('hero_ability_events') }} AS h
     LEFT JOIN {{ ref('mappings') }} AS ma ON ma.code = h.ability_id AND ma.kind = 'hero_skill'
     LEFT JOIN {{ ref('mappings') }} AS mh ON mh.code = h.hero_id AND mh.kind = 'hero'
@@ -62,7 +69,9 @@ FROM (
         toLowCardinality('')                          AS detail,
         toUInt32(if(f.hero_id = '', 0, f.nth))        AS seq,
         toUInt8(0)                                    AS is_repeat,
-        toUInt8(0)                                    AS level
+        toUInt8(0)                                    AS level,
+        CAST(NULL, 'Nullable(Float32)')              AS x,
+        CAST(NULL, 'Nullable(Float32)')              AS y
     FROM (
         SELECT *, countIf(hero_id != '') OVER (PARTITION BY replay_id, player_id ORDER BY hero_slot
                                                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS nth

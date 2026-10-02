@@ -69,6 +69,13 @@
           "duration_ms_total": 0
         },
         {
+          "id": "ne-tower-rush",
+          "games": 0,
+          "wins": 0,
+          "losses": 0,
+          "duration_ms_total": 0
+        },
+        {
           "id": "demon-hunter-fast-tech-bears",
           "games": 1,
           "wins": 1,

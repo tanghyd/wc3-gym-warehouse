@@ -15,6 +15,7 @@ import yaml
 from fastapi import FastAPI, HTTPException
 
 from compile import (
+    FORWARD_UNITS,
     OPPONENTS_SQL,
     REPLAY_SQL,
     BadRequest,
@@ -207,7 +208,7 @@ def replay(replay_id: str) -> dict[str, Any]:
         "winning_team_id": h["winning_team_id"], "version": h["version"],
         "patch": h["patch"], "download_url": None,
         "players": players,
-        "events": run(REPLAY_SQL["events"], p),
+        "events": run(REPLAY_SQL["events"], {**p, "forward_units": str(FORWARD_UNITS)}),
         "chat": run(REPLAY_SQL["chat"], p),
     }
 

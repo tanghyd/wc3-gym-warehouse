@@ -132,6 +132,16 @@ def test_an_nth_hero_step_with_a_window_times_that_hero() -> None:
     assert "heroes[" not in rows and "seq = 1 AND time_ms >= 480000" in rows
 
 
+def test_a_forward_step_counts_placements_near_the_opponent_start() -> None:
+    groups = [{"steps": [ss("building", "hwtw", count=3, to_s=240), ss("building", "hwtw", count=2, to_s=240, forward=True)]}]
+    _, rows, params = compile_search(SearchRequest(player={"race": ["HU"], "groups": groups}), PG)
+    join = "FROM w3g.replay_events INNER JOIN (SELECT replay_id, player_id, opp_start_x, opp_start_y FROM w3g.player_games) AS g USING (replay_id, player_id) WHERE"
+    # only the forward step's chain joins the opponent's start, and its count reads forward placements alone
+    assert rows.count(join) == 1 and rows.count("FROM w3g.replay_events WHERE") == 1
+    bound = next(k for k, v in params.items() if v == "3000")
+    assert f"time_ms <= 240000 AND sqrt(pow(x - opp_start_x, 2) + pow(y - opp_start_y, 2)) < {{{bound}:Float64}} AND is_repeat = 0 GROUP BY replay_id, player_id HAVING count() >= 2" in rows
+
+
 def test_search_counts_the_scope_and_matches_any_group() -> None:
     req = SearchRequest(
         filters={"map": ["Echo Isles"]},
@@ -170,6 +180,7 @@ def test_search_counts_the_scope_and_matches_any_group() -> None:
     [ss("unit", "earc"), ss("unit", "esen", before=3)],  # of the group
     [ss("unit", "earc", negate=True), ss("unit", "esen", before=1)],  # that happened
     [ss("unit", "earc"), ss("unit", "esen", before=1), ss("unit", "edry", link="then")],  # and links to no other step
+    [ss("unit", "earc", forward=True)],  # forward needs a building
 ])
 def test_step_links_that_mean_nothing_are_refused(steps: list[dict[str, object]]) -> None:
     with pytest.raises(BadRequest):
@@ -187,7 +198,7 @@ PRESETS = check_presets([Preset(**p) for p in yaml.safe_load((Path(__file__).par
 
 def test_the_presets_file_holds_the_three_sources() -> None:
     sources = [p.source for p in PRESETS.values()]
-    assert (sources.count("w3warehouse"), sources.count("gym-replays"), sources.count("wc3-gnl-website")) == (24, 14, 32)
+    assert (sources.count("w3warehouse"), sources.count("gym-replays"), sources.count("wc3-gnl-website")) == (24, 16, 32)
     # a variant holds its parent's steps, then its own
     late = PRESETS["ud-cl-necro-mw-late"]
     assert late.parent_id == "ud-cl-necro-mw" and len(PRESETS[late.parent_id].steps) == 3

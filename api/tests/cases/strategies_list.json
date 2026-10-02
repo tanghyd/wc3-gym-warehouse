@@ -489,6 +489,15 @@
               ],
               "count": 3,
               "to_s": 240
+            },
+            {
+              "kind": "building",
+              "codes": [
+                "hwtw"
+              ],
+              "count": 2,
+              "to_s": 240,
+              "forward": true
             }
           ]
         },
@@ -602,6 +611,25 @@
           ]
         },
         {
+          "id": "or-tower-rush",
+          "name": "Tower rush",
+          "race": "OC",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "owtw"
+              ],
+              "count": 2,
+              "to_s": 300,
+              "forward": true
+            }
+          ]
+        },
+        {
           "id": "ne-dh",
           "name": "Demon Hunter first",
           "race": "NE",
@@ -707,6 +735,25 @@
                 "Ntin"
               ],
               "nth": 1
+            }
+          ]
+        },
+        {
+          "id": "ne-tower-rush",
+          "name": "Tower rush",
+          "race": "NE",
+          "parent_id": null,
+          "source": "gym-replays",
+          "vs_races": [],
+          "steps": [
+            {
+              "kind": "building",
+              "codes": [
+                "etrp"
+              ],
+              "count": 2,
+              "to_s": 300,
+              "forward": true
             }
           ]
         },
@@ -843,7 +890,8 @@
                 "hwtw"
               ],
               "count": 2,
-              "link": "then"
+              "link": "then",
+              "forward": true
             }
           ]
         },

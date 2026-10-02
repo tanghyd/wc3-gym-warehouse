@@ -5,7 +5,7 @@
 #   race        HU, OC, NE or UD: the race whose player-games the preset counts
 #   parent_id   a variant's parent; the variant holds the parent's steps, then its own
 #   steps       one group of POST /search steps (api/compile.py SearchStep): kind, codes,
-#               count, exactly, from_s, to_s, link, within_s, nth, before, negate
+#               count, exactly, from_s, to_s, link, within_s, nth, before, negate, forward
 #   source      w3warehouse: the 24 builds of w3warehouse (dev, services/api/src/api/builds.py),
 #               with their expansion times: fast by 6:00 Human, 9:00 Night Elf, 10:30 Orc,
 #               8:00 Undead, late to 15:00 (Orc 18:00). gym-replays: added here.
@@ -55,11 +55,12 @@
 - {id: hu-mk, name: Mountain King first, race: HU, source: w3warehouse, steps: [{kind: hero, codes: [Hmkg], nth: 1}]}
 - {id: hu-pala, name: Paladin first, race: HU, source: w3warehouse, steps: [{kind: hero, codes: [Hpal], nth: 1}]}
 - {id: hu-blm, name: Blood Mage first, race: HU, source: w3warehouse, steps: [{kind: hero, codes: [Hblm], nth: 1}]}
-# Measured 2026-10-02, games of 2 minutes or more: 62 Human player-games, 38 of them with a
-# Scout Tower over 3000 units from their first building. Orc Watch Tower x2 by 4:00 (31 games,
-# 3 far from home) and Undead Nerubian Tower x2 by 4:00 (39 games, 17 far) are mostly towers at
-# home, so they get no preset.
-- {id: hu-tower-rush, name: Tower rush, race: HU, source: gym-replays, steps: [{kind: building, codes: [hwtw], count: 3, to_s: 240}]}
+# Tower rush: 2 or more forward towers in the window, forward meaning under 3,000 units from the
+# opponent's start location (player_starts). Measured 2026-10-02 on 1,706 games: 25 of the 60
+# picked Humans with 3 Scout Towers by 4:00. Orc and Night Elf below. No Undead preset: a Ziggurat is also the farm.
+- {id: hu-tower-rush, name: Tower rush, race: HU, source: gym-replays, steps: [
+    {kind: building, codes: [hwtw], count: 3, to_s: 240},
+    {kind: building, codes: [hwtw], count: 2, to_s: 240, forward: true}]}
 
 # Orc
 - {id: or-bm, name: Blademaster first, race: OC, source: w3warehouse, steps: [{kind: hero, codes: [Obla], nth: 1}]}
@@ -68,6 +69,8 @@
 - {id: or-sh, name: Shadow Hunter first, race: OC, source: w3warehouse, steps: [{kind: hero, codes: [Oshd], nth: 1}]}
 - {id: or-expand, name: Expanding Orc, race: OC, source: w3warehouse, steps: [{kind: building, codes: [ogre], to_s: 630}]}
 - {id: or-tavern, name: Tavern hero first, race: OC, source: gym-replays, steps: [{kind: hero, codes: [Nalc, Nbrn, Nbst, Nfir, Nngs, Npbm, Nplh, Ntin], nth: 1}]}
+# 2 or more forward Watch Towers by 5:00: 6 player-games, 4 picked Orc and 2 Random
+- {id: or-tower-rush, name: Tower rush, race: OC, source: gym-replays, steps: [{kind: building, codes: [owtw], count: 2, to_s: 300, forward: true}]}
 
 # Night Elf
 - {id: ne-dh, name: Demon Hunter first, race: NE, source: w3warehouse, steps: [{kind: hero, codes: [Edem], nth: 1}]}
@@ -76,6 +79,8 @@
 - {id: ne-warden, name: Warden first, race: NE, source: w3warehouse, steps: [{kind: hero, codes: [Ewar], nth: 1}]}
 - {id: ne-expand, name: Expanding Night Elf, race: NE, source: w3warehouse, steps: [{kind: building, codes: [etol], to_s: 540}]}
 - {id: ne-tavern, name: Tavern hero first, race: NE, source: gym-replays, steps: [{kind: hero, codes: [Nalc, Nbrn, Nbst, Nfir, Nngs, Npbm, Nplh, Ntin], nth: 1}]}
+# 2 or more forward Ancient Protectors by 5:00: 2 player-games
+- {id: ne-tower-rush, name: Tower rush, race: NE, source: gym-replays, steps: [{kind: building, codes: [etrp], count: 2, to_s: 300, forward: true}]}
 
 # The wc3-gnl-website build orders, from threads/warehouse-dbt-prototype/redesign/website-builds/presets.yaml
 # (2026-10-02): its core is the steps.
@@ -113,7 +118,7 @@
     - {kind: building, codes: [hbar]}                # Barracks
     - {kind: unit, codes: [hfoo], link: then}        # Footman
     - {kind: building, codes: [hbar], link: then}    # 2nd Barracks
-    - {kind: building, codes: [hwtw], count: 2, link: then}   # Scout Tower x2
+    - {kind: building, codes: [hwtw], count: 2, link: then, forward: true}   # Scout Tower x2, forward
 
 - id: archmage-one-camp-into-expansion
   name: Archmage One Camp into Expansion

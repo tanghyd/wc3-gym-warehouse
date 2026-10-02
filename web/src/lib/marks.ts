@@ -3,11 +3,14 @@
 // an "and" step and the "then" steps under it, each a block of `count` orders after the order that
 // completes the step above, all within the gap of a "then within" step; a skill step's count is a level,
 // one point that takes the skill there; nth reads the heroes in pick order; a "before" step bounds the
-// step it names; a negated step holds when its chain finds nothing.
-import type { GameEvent } from "./api";
+// step it names; a negated step holds when its chain finds nothing; a forward step keeps the placements
+// the replay API flags forward (under 3,000 units from the opponent's start), as the search does.
+import type { GameEvent as ApiEvent } from "./api";
 import type { apiStep } from "./steps";
 
-type ApiStep = ReturnType<typeof apiStep>;
+type ApiStep = ReturnType<typeof apiStep> & { forward?: boolean };
+/** An order of GET /replays/{id}: `forward` is 1 on a building placement a forward step keeps. */
+type GameEvent = ApiEvent & { forward?: number };
 /** One order a step matched: the step's number in its group and the event. */
 export type Hit = { n: number; event_type: string; code: string; time_ms: number };
 
@@ -30,7 +33,8 @@ const fits = (e: GameEvent, s: ApiStep, heroes: string[], level = s.count) =>
   (s.kind !== "skill" || e.level >= level) &&
   (s.nth == null || e.code === heroes[s.nth - 1]) &&
   (s.from_s == null || e.time_ms >= s.from_s * 1000) &&
-  (s.to_s == null || e.time_ms <= s.to_s * 1000);
+  (s.to_s == null || e.time_ms <= s.to_s * 1000) &&
+  (!s.forward || e.forward === 1);
 const hit = (n: number, e: GameEvent): Hit => ({ n, event_type: e.event_type, code: e.code, time_ms: e.time_ms });
 
 /**

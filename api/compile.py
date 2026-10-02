@@ -9,6 +9,13 @@ from pydantic import BaseModel, Field
 
 EVENTS = "w3g.replay_events"
 PLAYER_GAMES = "w3g.player_games"
+# A building placement is forward when it lies under this many map units from the opponent's start location.
+FORWARD_UNITS = 3000
+
+
+def forward_condition(bound: str) -> str:
+    """A placement (x, y) under `bound` from the opponent's start (opp_start_x, opp_start_y); NULL when either is unknown."""
+    return f"sqrt(pow(x - opp_start_x, 2) + pow(y - opp_start_y, 2)) < {bound}"
 
 # The replay_events.event_type values a build-order step can name.
 type StepType = Literal["building", "unit", "item", "upgrade", "unknown", "hero_trained", "hero_skill"]
@@ -290,7 +297,8 @@ class SearchStep(BaseModel):
     the skill to level `count` or more, and with `exactly` the skill's highest level. A `then` step
     comes after the step above, all its orders within `within_s` of it when set. `nth` asks a hero
     step for the side's 1st, 2nd or 3rd hero. `before` keeps the orders before the order that
-    completes step `before` of the group. `negate` turns an `and` step into "did not happen"."""
+    completes step `before` of the group. `negate` turns an `and` step into "did not happen".
+    `forward` keeps a building step's placements under FORWARD_UNITS from the opponent's start."""
 
     kind: Literal["building", "unit", "upgrade", "item", "hero", "skill"]
     codes: Annotated[list[Code], Field(min_length=1, max_length=40)]
@@ -303,6 +311,7 @@ class SearchStep(BaseModel):
     nth: Annotated[int, Field(ge=1, le=3)] | None = None
     before: Annotated[int, Field(ge=1, le=8)] | None = None
     negate: bool = False
+    forward: bool = False
 
 
 class Group(BaseModel):
@@ -354,6 +363,8 @@ def chains(group: Group) -> list[list[int]]:
             raise BadRequest("within_s goes with link then")
         if s.nth is not None and s.kind != "hero":
             raise BadRequest("nth goes with kind hero")
+        if s.forward and s.kind != "building":
+            raise BadRequest("forward goes with kind building")
         if s.negate and s.exactly:
             raise BadRequest("a step that did not happen has no exact count")
         if s.negate and (s.link == "then" or below_then):
@@ -390,6 +401,8 @@ def _event_condition(s: SearchStep, params: Params, level: int | None = None) ->
         parts.append(f"time_ms >= {s.from_s * 1000}")
     if s.to_s is not None:
         parts.append(f"time_ms <= {s.to_s * 1000}")
+    if s.forward:  # opp_start_x and opp_start_y come from the player_games join of _chain_sql
+        parts.append(forward_condition(params.add("Float64", str(FORWARD_UNITS))))
     return " AND ".join(parts)
 
 
@@ -409,14 +422,17 @@ def _chain_sql(steps: list[SearchStep], chain: list[int], races: list[str], para
     of `count` orders after the order that completes the step above, all within `within_s` of it
     when set, and each `before` step that names a chain step true before that step completes."""
     bounds = {k: [b for b, s in enumerate(steps) if s.before == k + 1] for k in chain}
+    used = chain + [b for k in chain for b in bounds[k]]
+    events = EVENTS
+    if any(steps[i].forward for i in used):  # each order row gets its player-game's opponent start
+        events += f" INNER JOIN (SELECT replay_id, player_id, opp_start_x, opp_start_y FROM {PLAYER_GAMES}) AS g USING (replay_id, player_id)"
     where = [f"has({params.add('Array(String)', array(races))}, race)"] if races else []  # race leads the sort key
     first = steps[chain[0]]
     if len(chain) == 1 and not bounds[chain[0]]:  # one block of orders: a count
-        sql = f"SELECT replay_id, player_id FROM {EVENTS} WHERE {' AND '.join([*where, _event_condition(first, params), 'is_repeat = 0'])} GROUP BY replay_id, player_id"
+        sql = f"SELECT replay_id, player_id FROM {events} WHERE {' AND '.join([*where, _event_condition(first, params), 'is_repeat = 0'])} GROUP BY replay_id, player_id"
         if first.exactly:  # a skill step names the highest level, any other step the number of orders
             return sql + (f" HAVING max(level) = {first.count}" if first.kind == "skill" else f" HAVING count() = {first.count}")
         return sql + (f" HAVING count() >= {first.count}" if _need(first) > 1 else "")
-    used = chain + [b for k in chain for b in bounds[k]]
     where += [
         f"has({params.add('Array(String)', array(sorted({t for i in used for t in EVENT_TYPES[steps[i].kind]})))}, event_type)",
         f"has({params.add('Array(String)', array(sorted({c for i in used for c in steps[i].codes})))}, subject_code)",
@@ -451,7 +467,7 @@ def _chain_sql(steps: list[SearchStep], chain: list[int], races: list[str], para
     holds.append(f"notEmpty(f{above})")
     return (
         f"SELECT replay_id, player_id FROM (SELECT replay_id, player_id, {', '.join(cols)}"
-        f" FROM {EVENTS} WHERE {' AND '.join(where)} GROUP BY replay_id, player_id) WHERE {' AND '.join(holds)}"
+        f" FROM {events} WHERE {' AND '.join(where)} GROUP BY replay_id, player_id) WHERE {' AND '.join(holds)}"
     )
 
 
@@ -537,16 +553,20 @@ ORDER BY p.player_id""",
     # The timeline: orders (custom-map `unknown` codes and repeat clicks left out), skill
     # points under their hero (repeat clicks left out), retrains, and each hero at the order
     # that trained it, as replay_events times it. seq 0 sorts hero_trained before a skill at the same ms.
-    # level is the skill level a skill point gives, 0 on every other row.
-    "events": """SELECT player_id, time_ms, event_type, code, hero_code, level FROM (
-    SELECT player_id, time_ms, kind AS event_type, object_code AS code, CAST(NULL, 'Nullable(String)') AS hero_code, toUInt8(0) AS level, seq
-    FROM w3g.player_order_events WHERE replay_id = {id:String} AND kind != 'unknown' AND is_repeat = 0
+    # level is the skill level a skill point gives, 0 on every other row. forward is 1 on a building
+    # placement a forward step keeps, read as the search reads it (player_games.opp_start_x, _y), else 0.
+    "events": """SELECT player_id, time_ms, event_type, code, hero_code, level, forward FROM (
+    SELECT player_id, time_ms, kind AS event_type, object_code AS code, CAST(NULL, 'Nullable(String)') AS hero_code, toUInt8(0) AS level, seq,
+           toUInt8(ifNull(""" + forward_condition("{forward_units:Float64}") + """, 0)) AS forward
+    FROM w3g.player_order_events
+    LEFT JOIN (SELECT player_id, opp_start_x, opp_start_y FROM w3g.player_games WHERE replay_id = {id:String}) AS g USING (player_id)
+    WHERE replay_id = {id:String} AND kind != 'unknown' AND is_repeat = 0
     UNION ALL
     SELECT player_id, time_ms, if(event_type = 'retraining', 'hero_retrained', 'hero_skill'),
-           if(event_type = 'retraining', hero_id, ability_id), hero_id, level, seq
+           if(event_type = 'retraining', hero_id, ability_id), hero_id, level, seq, 0
     FROM w3g.hero_ability_events WHERE replay_id = {id:String} AND is_repeat = 0
     UNION ALL
-    SELECT player_id, trained_ms, 'hero_trained', hero_id, NULL, 0, 0
+    SELECT player_id, trained_ms, 'hero_trained', hero_id, NULL, 0, 0, 0
     FROM w3g.player_heroes WHERE replay_id = {id:String}
 )
 ORDER BY time_ms, player_id, seq""",
