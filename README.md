@@ -200,3 +200,4 @@ Grafana is at http://localhost:3001, anonymous admin by default (the `GF_AUTH_*`
 - Stat-events. A future parser output adds a section to the parsed document, and dbt gets a staging model for it.
 - `replays.source_key` (design S5).
 - Hosting. No box runs the stack yet. [docs/deploy.md](docs/deploy.md) is the runbook for one Hetzner box, driven by `just box::*`: the inspector over an ssh forward, the `tunnel` profile (cloudflared) off until a domain exists.
+- The inspector on Vercel. Its server would call the API over a public route with a shared secret; not built. A rate limit and token rotation come first ([docs/deploy.md](docs/deploy.md#later-the-inspector-on-vercel)).

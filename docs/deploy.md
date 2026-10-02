@@ -104,3 +104,15 @@ Order a new box, then `just box::bootstrap <ip>`, set `BOX_SSH`, `just box::env`
 `just box::ingest`, `just box::cron`. The ingest re-reads every replay from R2 (1 class B GET each, 390.9 MB today).
 The ingest design measured a re-parse of 1,743 replays at about 4 s, locally; the image builds and `dbt build` on the
 box are `-`.
+
+## Later: the inspector on Vercel
+
+Not built. On Vercel the inspector's server side would call the API over the internet instead of `http://api:8000`, so
+the API needs a public route (a hostname for `api:8000` under the `tunnel` profile, which needs the domain) and a
+shared secret that Vercel sends on every request. Build these two first:
+
+1. A rate limit on the public API, per client, before a query reaches ClickHouse. The per-query caps in `users.xml`
+   (10 s, 2 GB) bound one query, not how many arrive.
+2. Token rotation: the API accepts two secrets at once, so a new one goes into Vercel before the old one is dropped.
+
+The API's JSON then leaves the box: 9,296 B gzip per home search (51,834 B plain, `measure-1.tsv`).
