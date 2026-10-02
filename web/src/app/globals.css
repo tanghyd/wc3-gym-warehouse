@@ -313,6 +313,9 @@
   }
   .res { display: inline-flex; align-items: center; gap: 6px; }
   .sq { width: 10px; height: 10px; border-radius: 2px; }
+  /* The Show switches over the games list; a column the reader hid is not drawn. */
+  .show-cols { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 10px 16px 6px; font-size: 0.875rem; }
+  [data-hide~="heroes"] .games :is(.c-ph, .c-oh), [data-hide~="result"] .games .c-r, [data-hide~="length"] .games .c-l { display: none; }
   .pager { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 16px; font-size: 0.875rem; color: var(--color-muted); }
   .pager > span:first-child { margin-right: 8px; }
   .pager .btn { height: 32px; padding: 0 12px; color: rgb(var(--v-theme-on-surface)); }
@@ -453,6 +456,9 @@
     .games .c-o .vs { display: inline; font-size: 0.875rem; color: var(--color-muted); }
     .games .c-oh { grid-area: oh; }
     .games .c-m { grid-area: m; padding: 0; text-align: right; font-size: 0.875rem; }
+    /* with no heroes the names take their column; a hidden result or length leaves its place to the map */
+    [data-hide~="heroes"] .games tr { grid-template-columns: minmax(0, 1fr) 0 60px 42px; column-gap: 5px; }
+    .show-cols { padding: 10px 12px 6px; }
     .pager { padding: 12px; }
 
     .q-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }

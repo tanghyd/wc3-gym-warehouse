@@ -96,6 +96,7 @@ Decided (stories D2): a view never holds a filter or selection that is not also 
 | "Search" button on `/search` | `router.push`. Back returns to the previous search. |
 | Page, sort | `router.replace` |
 | Open, close or select an opener row | `router.replace` |
+| A Show switch over the games list (8.2) | `router.replace`, with the hidden columns drawn at once (`useOptimistic`) |
 
 - Each view has one `watch(() => route.query, load, { immediate: true })`. `load` decodes the query, calls the API and aborts the previous request (`AbortController`). A slow old answer never overwrites a new one.
 - Text fields (player, minutes) write to the query after 400 ms without typing, or on Enter.
@@ -150,6 +151,7 @@ without=eden                      no Ancient of Wonders ordered, up to 3 codes (
 | `open` | none | Opened prefixes, one key per row: `open=eate&open=eate.eaom`. Codes join with `.`. |
 | `sel` | none | The one selected prefix: `sel=eate.eaom.etoa`. On decode every parent of `sel` joins `open`. |
 | `kinds` | none | `/replays/:id` only: the kind chips that are on, joined with `,`: `kinds=building,unit`. Absent means every kind. |
+| `hide` | none | `/` only: the games list columns the reader hid, joined with `.` in switch order: `hide=heroes.result.length`. Search, Clear and the pager keep it; a game link drops it. |
 
 ### 4.4 Test
 
@@ -525,6 +527,7 @@ One player-game a row, 25 a page, in the order of the sort menu. Decided (Daniel
 - The hero icons are the row's bold mark (1, 6.4); every other cell is plain text.
 - A departure from `PlayerName` (7): the race icon comes before the name here, so the race marks line up in a column.
 - 390 px: no heads; two lines per row on fixed columns (name, 84 px heroes, 60 px, 42 px), so the heroes line up down the list. Line 1: Player, his heroes, result, length. Line 2: "v", Opponent, his heroes, the map at the right over the last two columns. Hero icons 20 px, 8 px apart. Names drop the battle tag number.
+- Show switches (Daniel 2026-10-02) sit in one row over the heads: "Show", then a checkbox each for Heroes (both hero columns), Result and Length, all on by default. Off hides those columns at every width and writes `hide` (4.3), so a link reproduces the view. On a phone hidden heroes give their column to the names; a hidden result or length leaves its place to the map.
 - The row has no date: the search answer carries none (`api/compile.py`, the `rows` query).
 
 ### 8.3 States (`StateBlock.vue`)

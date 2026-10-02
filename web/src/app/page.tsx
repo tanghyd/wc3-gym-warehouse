@@ -3,7 +3,8 @@ import { type Filters, getObjects, getPresets, type Objects, pickerValues, raceC
 import { parseRaces, raceLabel } from "@/lib/races";
 import { apiStep, decodeGroups, HALLS, type Groups, played, type Step, stepObject } from "@/lib/steps";
 import { presetSteps, urlStep } from "@/lib/strategies";
-import { fmt, mss, RaceIcon, record } from "@/lib/ui";
+import { fmt, mss, parseHidden, RaceIcon, record } from "@/lib/ui";
+import { GamesView } from "./GamesView";
 import { type DraftStep, type LoadPreset, Sides, type SideState } from "./Sides";
 import { SortSelect } from "./SortSelect";
 
@@ -151,9 +152,11 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   const narrowed = steps.length > 0 || outcome !== null || player.opened.length > 0 || opponent.opened.length > 0;
   const scopeWords = player.race.length || opponent.race.length ? `${raceLabel(player.race)} v ${raceLabel(opponent.race)} games` : "games";
   const first = (page - 1) * LIMIT;
-  const set = Object.values(sp).some((v) => v);
+  // the columns the reader hid: a view setting, so Search, Clear and the pager keep it and a game link drops it
+  const hidden = parseHidden(value("hide"));
+  const set = Object.entries(sp).some(([k, v]) => v && k !== "hide");
   // a game opened from a search with steps carries the search (q) and its Player (side), so its page marks the steps
-  const searchQs = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" && v && k !== "page" && k !== "sort" ? [[k, v]] : []))).toString();
+  const searchQs = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" && v && k !== "page" && k !== "sort" && k !== "hide" ? [[k, v]] : []))).toString();
   const gameHref = (r: (typeof replays)[number]) =>
     `/replays/${r.replay_id}` + (steps.length ? `?${new URLSearchParams({ q: searchQs, side: r.player.name })}` : "");
   const sortLink = (col: "map" | "duration") => {
@@ -167,7 +170,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
       <h1>Replays</h1>
 
       {/* keyed by the query, so a link or Back redraws the fields from the URL */}
-      <form key={JSON.stringify(sp)} className="flex flex-col gap-4">
+      <form key={JSON.stringify({ ...sp, hide: undefined })} className="flex flex-col gap-4">
         <div className="card filters">
           <label className="flex min-w-0 flex-col gap-1 text-sm">
             <span className="text-muted">Map</span>
@@ -202,8 +205,9 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
         </div>
         <Sides player={sides.player} opponent={sides.opponent} counts={counts} scope={filters} halls={halls} nextKey={key} presets={presets} />
         {sort !== "-added" && <input type="hidden" name="sort" value={sort} />}
+        {hidden.length > 0 && <input type="hidden" name="hide" value={hidden.join(".")} />}
         <div className="flex items-center justify-end gap-5">
-          {set && <Link href="/">Clear</Link>}
+          {set && <Link href={hidden.length ? `/?hide=${hidden.join(".")}` : "/"}>Clear</Link>}
           <button type="submit" className="btn btn-gold">
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <circle cx="11" cy="11" r="6.5" />
@@ -256,56 +260,58 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
             {replays.length === 0 ? (
               <p className="p-8 text-center text-muted">No game matches. {steps.length ? "Drop a step or widen the filters." : "Widen the filters."}</p>
             ) : (
-              <table className="games">
-                <thead>
-                  <tr>
-                    <th scope="col" className="c-p">Player</th>
-                    <th scope="col" className="c-ph">Heroes</th>
-                    <th scope="col" className="c-r">Result</th>
-                    <th scope="col" className="c-o">Opponent</th>
-                    <th scope="col" className="c-oh">Heroes</th>
-                    <th scope="col" className="c-m" aria-sort={ariaSort("map")}>
-                      <Link href={sortLink("map")}>
-                        Map
-                      </Link>
-                    </th>
-                    <th scope="col" className="c-l" aria-sort={ariaSort("duration")}>
-                      <Link href={sortLink("duration")}>
-                        Length
-                      </Link>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {replays.map((r) => (
-                    <tr key={`${r.replay_id}-${r.player.name}`}>
-                      <td className="c-p">
-                        <Who p={r.player} />
-                      </td>
-                      <td className="c-ph">
-                        <Heroes p={r.player} objects={heroes} />
-                      </td>
-                      <td className="c-r">
-                        <ResultMark won={r.player.won} />
-                      </td>
-                      <td className="c-o">
-                        <span className="vs">v</span>
-                        <Who p={r.opponent} />
-                      </td>
-                      <td className="c-oh">
-                        <Heroes p={r.opponent} objects={heroes} />
-                      </td>
-                      <td className="c-m">
-                        {/* no prefetch: it runs generateMetadata, a full replay read per row */}
-                        <Link href={gameHref(r)} prefetch={false} title={r.map || undefined}>
-                          {r.map || "Unknown map"}
+              <GamesView hidden={hidden}>
+                <table className="games">
+                  <thead>
+                    <tr>
+                      <th scope="col" className="c-p">Player</th>
+                      <th scope="col" className="c-ph">Heroes</th>
+                      <th scope="col" className="c-r">Result</th>
+                      <th scope="col" className="c-o">Opponent</th>
+                      <th scope="col" className="c-oh">Heroes</th>
+                      <th scope="col" className="c-m" aria-sort={ariaSort("map")}>
+                        <Link href={sortLink("map")}>
+                          Map
                         </Link>
-                      </td>
-                      <td className="c-l">{mss(r.duration_ms)}</td>
+                      </th>
+                      <th scope="col" className="c-l" aria-sort={ariaSort("duration")}>
+                        <Link href={sortLink("duration")}>
+                          Length
+                        </Link>
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {replays.map((r) => (
+                      <tr key={`${r.replay_id}-${r.player.name}`}>
+                        <td className="c-p">
+                          <Who p={r.player} />
+                        </td>
+                        <td className="c-ph">
+                          <Heroes p={r.player} objects={heroes} />
+                        </td>
+                        <td className="c-r">
+                          <ResultMark won={r.player.won} />
+                        </td>
+                        <td className="c-o">
+                          <span className="vs">v</span>
+                          <Who p={r.opponent} />
+                        </td>
+                        <td className="c-oh">
+                          <Heroes p={r.opponent} objects={heroes} />
+                        </td>
+                        <td className="c-m">
+                          {/* no prefetch: it runs generateMetadata, a full replay read per row */}
+                          <Link href={gameHref(r)} prefetch={false} title={r.map || undefined}>
+                            {r.map || "Unknown map"}
+                          </Link>
+                        </td>
+                        <td className="c-l">{mss(r.duration_ms)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </GamesView>
             )}
             {total > 0 && (
               <nav aria-label="Games pages" className="pager">

@@ -139,6 +139,52 @@ test.describe("replay list", () => {
     expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe("rgb(8, 5, 3)");
   });
 
+  test("the Show switches hide heroes, result and length, and the URL keeps the view", async ({ page, request }) => {
+    const want = await search(request, { player: { race: ["HU"] } });
+    await page.goto(q({ race: "HU" }));
+    const show = page.getByRole("group", { name: "Show columns" });
+    const box = (name: string) => show.getByRole("checkbox", { name });
+    const head = page.locator("table.games thead th");
+    // every column shows by default
+    for (const n of ["Heroes", "Result", "Length"]) await expect(box(n)).toBeChecked();
+    await expect(head).toHaveCount(7);
+    await box("Heroes").uncheck();
+    await expect(page).toHaveURL(/[?&]hide=heroes(&|$)/);
+    await expect(head).toHaveText(["Player", "Result", "Opponent", "Map", "Length"]);
+    await expect(page.locator("table.games .heroes").first()).toBeHidden();
+    await box("Result").uncheck();
+    await box("Length").uncheck();
+    await expect(page).toHaveURL(/[?&]hide=heroes\.result\.length(&|$)/);
+    await expect(head).toHaveText(["Player", "Opponent", "Map"]);
+    // the rows stay POST /search's
+    expect(await listed(page)).toEqual(rowsOf(want));
+    // a link reproduces the view; the pager, a search and Clear keep it
+    await page.reload();
+    await expect(head).toHaveText(["Player", "Opponent", "Map"]);
+    await expect(box("Result")).not.toBeChecked();
+    await page.getByRole("link", { name: "Next" }).click();
+    await expect(page).toHaveURL(/[?&]page=2(&|$)/);
+    await expect(page).toHaveURL(/[?&]hide=heroes\.result\.length(&|$)/);
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page).toHaveURL(/[?&]hide=heroes\.result\.length(&|$)/);
+    await page.getByRole("link", { name: "Clear" }).click();
+    await expect(page).toHaveURL(/\/\?hide=heroes\.result\.length$/);
+    await expect(head).toHaveText(["Player", "Opponent", "Map"]);
+    // on again, the key goes
+    for (const n of ["Heroes", "Result", "Length"]) await box(n).check();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(head).toHaveCount(7);
+  });
+
+  test("on a phone the Show switches fit and a hidden column frees its place", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(q({ race: "HU", hide: "heroes" }));
+    await expect(page.getByRole("group", { name: "Show columns" })).toBeVisible();
+    await expect(page.locator("table.games .heroes").first()).toBeHidden();
+    await expect(page.locator("table.games tbody .c-r").first()).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  });
+
   test("a row is one slim line of fixed columns, and two lines on a phone", async ({ page }) => {
     await page.goto(EXAMPLE);
     const rows = page.locator("table.games tbody tr");

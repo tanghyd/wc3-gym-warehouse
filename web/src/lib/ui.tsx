@@ -121,6 +121,16 @@ export function Tile({ icon, size, alt = "" }: { icon: string | null | undefined
 
 export const fmt = (n: number) => n.toLocaleString("en-US");
 
+/** The games list's columns a reader may hide, as the URL's `hide` key names them, with their switch labels. */
+export const HIDEABLE = [
+  ["heroes", "Heroes"],
+  ["result", "Result"],
+  ["length", "Length"],
+] as const;
+export type Hideable = (typeof HIDEABLE)[number][0];
+/** The hidden columns of a `hide` value such as "heroes.length", in switch order; unknown names drop. */
+export const parseHidden = (v: string): Hideable[] => HIDEABLE.map(([k]) => k).filter((k) => v.split(".").includes(k));
+
 /** A chevron; `open` rotates a right one by a quarter turn, and a chevron with no `open` sits at the line's end. */
 export function Chevron({ dir = "right", open }: { dir?: "down" | "right" | "left"; open?: boolean }) {
   const d = { down: "M6 9l6 6 6-6", right: "M9 6l6 6-6 6", left: "M15 6l-6 6 6 6" }[dir];
