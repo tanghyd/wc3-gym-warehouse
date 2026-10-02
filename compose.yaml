@@ -29,8 +29,9 @@ services:
       - ch_store:/var/lib/clickhouse
       - ./infrastructure/docker/clickhouse/tuning.xml:/etc/clickhouse-server/config.d/tuning.xml:ro
       - ./infrastructure/docker/clickhouse/metric-log.xml:/etc/clickhouse-server/config.d/metric-log.xml:ro
-      - ./infrastructure/docker/clickhouse/named-collections.xml:/etc/clickhouse-server/config.d/named-collections.xml:ro
       - ./infrastructure/docker/clickhouse/users.xml:/etc/clickhouse-server/users.d/warehouse.xml:ro
+      # The drain's ingest tables. The image runs it on an empty volume only.
+      - ./infrastructure/docker/clickhouse/ingest.sql:/docker-entrypoint-initdb.d/ingest.sql:ro
     ulimits:
       nofile:
         soft: 262144
