@@ -4,7 +4,10 @@
 #
 #   just up                   # every long-running service (COMPOSE_PROFILES in .env)
 #   just local::ingest        # one drain pass, then dbt build when it inserted documents
-#   docker compose --profile prod up -d   # ... plus the Cloudflare Tunnel
+#   docker compose --profile tunnel up -d # ... plus the Cloudflare Tunnel, once a domain exists
+#
+# The always-on mem_limits sum to 5.25 GiB (ClickHouse 3g, Grafana 768m, the rest 512m),
+# plus 1 GiB for the one-shot dbt, so the box is the 8 GB size (docs/deploy.md).
 name: wc3-gym-warehouse
 
 services:
@@ -224,14 +227,15 @@ services:
 
   # Outbound-only connections to Cloudflare, forwarded to the inspector at web:3000
   # (infrastructure/cloudflared/config.yml.example). The API and ClickHouse stay private.
+  # Off until a domain exists; until then the box is reached over ssh (docs/deploy.md).
   cloudflared:
     image: cloudflare/cloudflared
-    profiles: ["prod"]
+    profiles: ["tunnel"]
     command: tunnel --no-autoupdate run
     environment:
       # Compose interpolates every service before it applies profiles, so a `:?`
       # guard here would fail `up` on any machine with no tunnel. cloudflared
-      # rejects an empty token itself, and only under the prod profile.
+      # rejects an empty token itself, and only under the tunnel profile.
       TUNNEL_TOKEN: "${TUNNEL_TOKEN:-}"
     restart: unless-stopped
     mem_limit: 512m
