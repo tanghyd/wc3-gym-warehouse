@@ -46,13 +46,18 @@ docs:
 drain-once:
     docker compose run --rm --build drain drain --once
 
-# one drain pass, then `dbt build` when the drain inserted a document; the host cron runs this
+# one drain pass, then `dbt build` when the drain inserted a document or a past build failed; the host cron runs this
 ingest:
     #!/usr/bin/env bash
     set -uo pipefail
     out=$(mktemp); trap 'rm -f "$out"' EXIT
+    pending=data/dbt-build-pending  # git-ignored; set before a build, removed when it succeeds
     docker compose run --rm --build -T drain drain --once | tee "$out"; status=$?
-    if grep -q '^\[drain\] inserted [1-9]' "$out"; then {{ just_executable() }} local::dbt build || exit; fi
+    if grep -q '^\[drain\] inserted [1-9]' "$out" || [ -e "$pending" ]; then
+      mkdir -p data && touch "$pending"
+      {{ just_executable() }} local::dbt build || exit
+      rm -f "$pending"
+    fi
     exit $status
 
 # the parser's melee object tables as JSONEachRow on stdout
