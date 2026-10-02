@@ -149,7 +149,7 @@ Needed: the full load came through parse + `file()`, not the real path.
 | | |
 |---|---|
 | Scope | `OpenersView`, the selection panel, inline marks, the `open` and `sel` keys |
-| Gates | Shots: no-race picker, empty, deep link, phone order. Fixture rows through the UI. Children plus "Stopped here" equal the parent. The list header equals the node's player-games. A shared link rebuilds the tree and panel. |
+| Gates | Shots: no-race picker, empty, deep link, phone order. Fixture rows through the UI. Children plus "Stopped here" equal the parent. The list header equals the node's games. A shared link rebuilds the tree and panel. |
 
 ### PR 13: `feature/frontend-stats`
 

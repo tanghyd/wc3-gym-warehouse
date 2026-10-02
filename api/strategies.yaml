@@ -2,7 +2,7 @@
 # POST /strategies/stats counts them, compiled like a side of POST /search.
 #
 #   id, name    unique id and display name
-#   race        HU, OC, NE or UD: the race whose player-games the preset counts
+#   race        HU, OC, NE or UD: the preset counts the games in which a player of this race follows it
 #   parent_id   a variant's parent; the variant holds the parent's steps, then its own
 #   steps       one group of POST /search steps (api/compile.py SearchStep): kind, codes,
 #               count, exactly, from_s, to_s, link, within_s, nth, before, negate, forward
@@ -69,7 +69,7 @@
 - {id: or-sh, name: Shadow Hunter first, race: OC, source: w3warehouse, steps: [{kind: hero, codes: [Oshd], nth: 1}]}
 - {id: or-expand, name: Expanding Orc, race: OC, source: w3warehouse, steps: [{kind: building, codes: [ogre], to_s: 630}]}
 - {id: or-tavern, name: Tavern hero first, race: OC, source: gym-replays, steps: [{kind: hero, codes: [Nalc, Nbrn, Nbst, Nfir, Nngs, Npbm, Nplh, Ntin], nth: 1}]}
-# 2 or more forward Watch Towers by 5:00: 6 player-games, 4 picked Orc and 2 Random
+# 2 or more forward Watch Towers by 5:00: 6 games, 4 by a picked Orc and 2 by a Random Orc
 - {id: or-tower-rush, name: Tower rush, race: OC, source: gym-replays, steps: [{kind: building, codes: [owtw], count: 2, to_s: 300, forward: true}]}
 
 # Night Elf
@@ -79,7 +79,7 @@
 - {id: ne-warden, name: Warden first, race: NE, source: w3warehouse, steps: [{kind: hero, codes: [Ewar], nth: 1}]}
 - {id: ne-expand, name: Expanding Night Elf, race: NE, source: w3warehouse, steps: [{kind: building, codes: [etol], to_s: 540}]}
 - {id: ne-tavern, name: Tavern hero first, race: NE, source: gym-replays, steps: [{kind: hero, codes: [Nalc, Nbrn, Nbst, Nfir, Nngs, Npbm, Nplh, Ntin], nth: 1}]}
-# 2 or more forward Ancient Protectors by 5:00: 2 player-games
+# 2 or more forward Ancient Protectors by 5:00: 2 games
 - {id: ne-tower-rush, name: Tower rush, race: NE, source: gym-replays, steps: [{kind: building, codes: [etrp], count: 2, to_s: 300, forward: true}]}
 
 # The wc3-gnl-website build orders, from threads/warehouse-dbt-prototype/redesign/website-builds/presets.yaml

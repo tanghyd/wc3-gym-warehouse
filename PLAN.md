@@ -62,7 +62,7 @@ Latency from report to searchable is the two intervals, minutes. A webhook from 
 
 ## Limits against GNL scale
 
-A replay is about 250 bytes per game second. A season is 400 replays, 100 MB raw, 1 MB parsed. 800 player-game rows.
+A replay is about 250 bytes per game second. A season is 400 replays, 100 MB raw, 1 MB parsed. 800 player rows, two a game.
 
 | Limit | Free tier or box | GNL per season |
 |---|---|---|

@@ -510,11 +510,13 @@ Rejected:
 
 ### 8.2 Games list (`table.games` in `web/src/app/page.tsx`)
 
-One player-game a row, 25 a page, in the order of the sort menu. Decided (Daniel 2026-10-02): a row is one text line, so a screen stacks many games. A 24 px hero icon and 5 px of padding set its height (35 px with the hairline).
+One game a row, 25 a page, in the order of the sort menu. Decided (Daniel 2026-10-02): a game is one concept, not a copy for each side. A row is a game in which the Player side's conditions hold for one player and the Opponent side's for the other, and the row shows that player as the Player. A mirror game where both ways round fit is still one row, shown from the lower player slot, with a "both" tag. Decided (Daniel 2026-10-02): a row is one text line, so a screen stacks many games. A 24 px hero icon and 5 px of padding set its height (35 px with the hairline).
+
+The strip over the list (Daniel 2026-10-02): the Games figure, with its share of the scope when steps, the outcome or openers narrow it, then the Player record ("19 – 11 (63%)", wins before losses) only when something tells the Player side from the Opponent side: race values (Include Random on one side counts), a step, a battle tag or the outcome. With equal sides every game fits both ways round, so the strip shows the games alone: no record and no percentage. Why: a record over games counted from both sides is 50% by construction; Daniel: "the player record of 1706 - 1706 (50%) is completely useless".
 
 | Column | Cell |
 |---|---|
-| Player | Race icon (18 px), then the name in Cardo 700 with its battle tag number ("#2726") at 400 in medium emphasis, cut with an ellipsis, the full tag in its title |
+| Player | Race icon (18 px), then the name in Cardo 700 with its battle tag number ("#2726") at 400 in medium emphasis, cut with an ellipsis, the full tag in its title; then, on a game either player fits, "both" in a 12 px outlined pill in medium emphasis, the only tag of the row |
 | Heroes | The Player's heroes in pick order, 24 px command-card icons 10 px apart, the final level on each icon's corner |
 | Result | The Player's result: a 10 px `win` or `loss` square and "Won" or "Lost" in ink; "No result" in medium emphasis |
 | Opponent | As Player |
@@ -576,7 +578,7 @@ A command-card grid, like the in-game build card: a name search field, kind tabs
 
 - Items come from `/mappings`. A tab shows one `kind`.
 - Race filter: an item shows when `race` equals the slot race or `race` is null (api.md 3.2, the derived `race`). This keeps heroes, skills, upgrades and items for Night Elf, where a "code starts with the race letter" filter would empty them.
-- Slot race `RANDOM`, or no slot race: every item shows, grouped in each tab under a race icon heading in the order `HU`, `OC`, `NE`, `UD`, then no race. Why: a derived `race` is never `RANDOM`, and a Random player's events carry `race = 'RANDOM'` but the rolled race's codes (queries.md §8 question 5). Measured 2026-09-11 on the dev set: Random player-games rolled `UD` 259, `HU` 243, `NE` 235, `OC` 227, unknown 40; Random building events start with `h` 5,755, `u` 4,562, `o` 3,495, `e` 3,470.
+- Slot race `RANDOM`, or no slot race: every item shows, grouped in each tab under a race icon heading in the order `HU`, `OC`, `NE`, `UD`, then no race. Why: a derived `race` is never `RANDOM`, and a Random player's events carry `race = 'RANDOM'` but the rolled race's codes (queries.md §8 question 5). Measured 2026-09-11 on the dev set: Random players rolled `UD` 259, `HU` 243, `NE` 235, `OC` 227, unknown 40; Random building events start with `h` 5,755, `u` 4,562, `o` 3,495, `e` 3,470.
 - The search field filters by `name` across all tabs. Enter picks the first hit.
 - Skills group under a heading per hero, from the `hero` field.
 - Each icon is a `v-btn` with `aria-label` = name and a name tooltip. Arrow keys move focus in the grid. Enter picks.
@@ -617,7 +619,7 @@ PR 15 adds the API fields (api.md 3.4). PR 16 adds these controls. The codec is 
 
 md and up: the tree (7 of 12 columns) and the selection panel (5 of 12, `position: sticky`) side by side. The sort toggle ("Most played", "Best win rate") sits right of the filter row.
 
-- Tree: "{total} player-games", then columns Opener, Games (share bar), Win rate (win bar), Avg min, replay button. A "Stopped here" row closes each open level.
+- Tree: "{total} games won or lost", then columns Opener, Games (share bar), Win rate (win bar), Avg min, replay button. A "Stopped here" row closes each open level.
 - Panel: path tiles, figures, then the replay list (10.3).
 - Dev-set example, Night Elf: root 2,730; `eate` 2,503 (92%, 50%, 15.3 min); `eaom` 2,294 (92%, 50%, 15.4); `etoa` 872 (38%, 51%, 16.1, 21 stopped); `eden` 816 (36%, 48%, 15.8); 59 stopped at `eaom`.
 
@@ -648,10 +650,10 @@ md and up: the tree (7 of 12 columns) and the selection panel (5 of 12, `positio
 | Part | Fields | Source |
 |---|---|---|
 | Path tiles | Root tile: 40 px race icon, race name, `total`, "100%". One tile per code in `sel`: 40 px icon, name, `games`, share of its parent level's `total` via `fmtPct`. The last tile has the `primary` tint. A tile click sets `sel` to that prefix. | cached level answers |
-| Figures | `games` labelled "player-games"; win rate via `fmtPct` with the 10.4 mark (muted, no mark under the floor); `avg_minutes` labelled "avg minutes"; "stopped here". | the selected row. "Stopped here" is `stopped` of `GET /openers?prefix=<sel>` when `branches > 0`, else the row's `games`. |
-| Replay list | Header: prefix icons at 20 px and "{n} player-games", n from `X-Total-Count`. `ReplayTable` compact form, 25 rows, paged by `page`. Focus player: the opener's owner. | `GET /openers/replays?prefix=<sel>` (api.md 3.6) |
+| Figures | `games` labelled "games"; win rate via `fmtPct` with the 10.4 mark (muted, no mark under the floor); `avg_minutes` labelled "avg minutes"; "stopped here". | the selected row. "Stopped here" is `stopped` of `GET /openers?prefix=<sel>` when `branches > 0`, else the row's `games`. |
+| Replay list | Header: prefix icons at 20 px and "{n} games", n from `X-Total-Count`. `ReplayTable` compact form, 25 rows, paged by `page`. Focus player: the opener's owner. | `GET /openers/replays?prefix=<sel>` (api.md 3.6) |
 
-- One count, one label: node and list both count player-games, so the list header equals the node (872 for Tree of Ages; api.md A14). A mirror game where both players hold the prefix lists twice, once per owner. The screen never shows a bare number.
+- One count, one label: node and list both count games, so the list header equals the node (api.md A14). A game where both players hold the prefix counts once and lists once, from the lower player slot (Daniel 2026-10-02). The screen never shows a bare number.
 - The list's progress bar sits inside the panel only. The tree stays live.
 
 ### 10.4 Inline marks
@@ -699,9 +701,9 @@ One `GET /stats` feeds the page (api.md 3.7, A8). Every panel shows the same coh
 | Panel | Form | Axes and scales | Palette | Tooltip |
 |---|---|---|---|---|
 | Matchups | Horizontal bar from 0, one row per unordered race pair ("Night Elf v Orc"). Not a 5 x 5 heatmap: the API sends each pair twice, and a heatmap needs a diverging ramp (D10). | y: `scaleBand` over pairs, rows 28 px. x: `scaleLinear([0, 1])`, a reference line at 50 %. `axisBottom` ticks at 0, 25, 50, 75 and 100 % (0, 50 and 100 % below 480 px); labels via `fmtPct`. Race icons name the sides. Value label at the bar tip, `fmtPct(x, 1)`. | `win` only (D10). `decided` under 10: no bar, muted label. Mirror rows below a gap: games only (`wins` null), muted. | "Night Elf won 2 of 2 decided games v Orc. 2 games." Focusable rows. |
-| Hero picks | Horizontal bar list, one block per race (small multiples), Random included. Shares pass 100 % (1-3 heroes per player, api.md 3.7), so no pie or stack. | Per block: rows 24 px with a 20 px hero icon and name. x: `scaleLinear([0, 1])` in every block. No tick axis: value at the tip via `fmtPct`. Block title: race icon and "{player_games} player-games". | `magnitude` | "Demon Hunter: 3 of 3 Night Elf player-games (100%)". Top 8 per race, then "Show all". |
+| Hero picks | Horizontal bar list, one block per race (small multiples), Random included. Shares pass 100 % (1-3 heroes per player, api.md 3.7), so no pie or stack. | Per block: rows 24 px with a 20 px hero icon and name. x: `scaleLinear([0, 1])` in every block. No tick axis: value at the tip via `fmtPct`. Block title: race icon and "{player_games} players". | `magnitude` | "Demon Hunter: 3 of 3 Night Elf players (100%)". Top 8 per race, then "Show all". |
 | Game length | Column chart over ordered buckets | x: `scaleBand` over bucket index, labels "0-5" … "60+" (last bucket folds, api.md 3.7). y: `scaleLinear([0, max]).nice()`, integer ticks only. Every k-th bucket labelled, k from width. | `magnitude` | "5-10 min: 2 games". Hit area: full band height. |
-| APM | Same component. Up to 21 buckets (width 25, cap 500). | Labels "0", "25" … "500+" | `magnitude` | "75-100 APM: 1 player-game" |
+| APM | Same component. Up to 21 buckets (width 25, cap 500). | Labels "0", "25" … "500+" | `magnitude` | "75-100 APM: 1 player" |
 
 - Mark specs (dataviz `marks-and-anatomy.md`): bars at most 24 px thick, 4 px rounded at the data end, square at the baseline; 2 px surface gap; hairline grid in the border colour; axis text 13 px, medium emphasis, lining tabular digits.
 - Decided (D10): matchup bars start at 0 on `[0, 1]`. The dev-set matchups run 45.3 % to 53.2 %: 28 px apart on a 358 px plot, and the label at each tip carries the rest.
@@ -777,7 +779,7 @@ Chart (`TimelineChart.tsx`), a swimlane under the APM chart:
 List (the table view):
 
 - First the APM table (12.4), then "Build Orders".
-- md and up: one list per player, side by side, each under a sticky head with the key, `PlayerName` and the "Ordered" column head over the times. Below md: two tabs, one per player, the "Ordered" head above the list.
+- md and up: one list per player, side by side, each under a sticky head with the key, `PlayerName` and the "Ordered" column head over the times. Below md: two tabs, a tab for each player, the "Ordered" head above the list.
 - A row: time, 24 px icon, name with "×N"; a merged row lists every time under it; a hero row carries its skill trail and a "Trained by" chip (its time is the first skill point); a retrain carries a "Retrained" chip; the tier-up row carries a "T2" or "T3" chip.
 
 ### 12.4 APM chart

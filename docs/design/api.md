@@ -110,7 +110,7 @@ The search body has no top-level `race`, `opponent_race` or `player`; each slot 
 | `focus_player_id` | integer or null | The player the result column reports. `/search`: the player `groups[0]` bound to; null with no groups; the lower `player_id` when both fit. `/openers/replays`: the opener's owner (3.6). |
 | `players` | array | Sorted by `player_id`. Item: `player_id` int, `name` string, `race` GNL id, `team_id` int, `won` bool or null (null when `winning_team_id < 0`), `heroes` array of `{"code": string, "final_level": int}` in pick order (`player_heroes.hero_slot`, rows with `hero_id = ''` left out), `[]` when the player spent no skill point. |
 
-- Row key: `(replay_id, focus_player_id)`. On `/openers/replays` a mirror game can appear twice (3.6).
+- Row key: `replay_id`. A game is one row (Daniel 2026-10-02): when both players fit, it shows from the lower player slot (3.4).
 - One game, one row: `/search` reads `player_games`, which leaves out a replay whose `replays.duplicate_of` is set (a second file of the same game, such as a player-saved copy of a replay-service file). `/replays/{id}` still answers any replay.
 - `source_key` (queries.md §5 S3, PR 3): the drain writes the raw R2 object key into each doc; `replays.source_key String DEFAULT ''` stores it. PR 3 re-stages the staging bucket (drain re-run, breadcrumbs cleared). Rows not loaded by the drain (fixtures, dev load) keep `''`.
 - Names carry no flag and no MMR until the dims loader lands.
@@ -265,6 +265,8 @@ GET /filters
 
 ### 3.4 `POST /search`
 
+Decided (Daniel 2026-10-02): a search matches a game, not a player. The prototype's request has a `player` and an `opponent` side (README "The query API"); a game matches when the Player side's conditions hold for one of its players and the Opponent side's for the other. Every count is games: `total`, `summary`, `scope` and `POST /strategies/stats`. Daniel: "the games are one concept, we don't need a copy for each side".
+
 Query: `limit`, `offset` (2.4). Body:
 
 | Field | Type | Bounds | Default |
@@ -303,6 +305,8 @@ Match rules:
 | Rule | Detail |
 |---|---|
 | Slots are players | `groups[0]` and `groups[1]` bind to two different players of one replay (different `player_id` and `team_id`). w3warehouse: compiler.py:381-387 merged same-race groups (A11). |
+| One game | `api/compile.py` `compile_search` reads `player_games`, where a row seats one player on the Player side and the other on the Opponent side, and groups the matching rows by `replay_id`. When both seatings fit (a mirror game where each player fits the Player side), the game is one row, shown from the lower player slot with `both: true`; `summary.both` counts such games. Swap trades the sides: the same games, each shown from the other player. (F), 1,706 games: no filters 1,706 games, all both; Night Elf v any race 710 games, 70 both; Night Elf v Night Elf 70 games, all both. |
+| Record | `wins` and `losses` are the shown Player's, and null unless something tells the sides apart: race values (Include Random on one side counts), a name, openers, steps or the outcome; for `scope`, race values or a name (`records`). With equal sides every game fits both ways round, so a record says nothing. (F): Night Elf v any race 355 – 355. |
 | Empty slot | A group with no steps and no `without` binds on `race`, `player` and `result` only (the "opponent Orc" slot; w3warehouse: models.py:170-173). |
 | No groups | Lists every 1on1 game passing `map` and minutes. Paging bounds the cost. |
 | Orders only | Every step condition adds `is_repeat = 0` (2.1). |
@@ -313,8 +317,8 @@ Match rules:
 | Equal timestamps | Decided: a real-data golden pins the order. Why: 1,605 of 1,605 came in order (F; queries.md C5). |
 | Minimum count | A step's `count` is the number of its orders: `count()` over its `replay_events` rows, which hold no copies because dbt rebuilds the table whole (a MergeTree, not a ReplacingMergeTree). A skill step's count is the skill level. |
 | Without | The codes join the slot's `subject_code IN` list; one bound term `countIf(subject_code IN {gI_without:Array(String)}) = 0`. A slot with only `without` codes uses `replay_players FINAL` of that race as its base. |
-| First hero | A hero step with `nth`: the `hero_trained` row's `seq` is the hero's place in `player_games.heroes` (`api/compile.py:387-388`); a lone "1st hero X" step reads `heroes[nth]` and no orders (`api/compile.py:464-465`). A `hero_trained` row is the order that trained the hero: the last order of its code at or before its first skill point (`player_heroes.trained_ms`, commit 7a66260). (F), 1,706 games: `heroes[1] = 'Edem'`, the earliest `hero_trained` and `seq = 1` each give 502 Night Elf player-games; the earliest training order differs from `hero_slot = 0` for 0 of 3,346 player-games with a hero. |
-| Forward | A building step with `forward: true` keeps the placements under 3,000 map units from the opponent's start location: `sqrt(pow(x - opp_start_x, 2) + pow(y - opp_start_y, 2)) < {pN:Float64}`, the bound 3,000 a parameter (`api/compile.py` `FORWARD_UNITS`, `forward_condition`). `x`, `y` are on `replay_events` building rows; `opp_start_x`, `opp_start_y` on `player_games` (from `player_starts`), joined into the chain's scan on `(replay_id, player_id)` only when a step of the chain is forward. The step's `count` counts forward placements. With no opponent start (NULL) no placement is forward. Another kind with `forward` is refused (400). (F), 1,706 games: the Human tower rush (Scout Tower x3 by 4:00, 2 of them forward) gives 25 of 60 player-games. |
+| First hero | A hero step with `nth`: the `hero_trained` row's `seq` is the hero's place in `player_games.heroes` (`api/compile.py:387-388`); a lone "1st hero X" step reads `heroes[nth]` and no orders (`api/compile.py:464-465`). A `hero_trained` row is the order that trained the hero: the last order of its code at or before its first skill point (`player_heroes.trained_ms`, commit 7a66260). (F), 1,706 games: `heroes[1] = 'Edem'`, the earliest `hero_trained` and `seq = 1` each give 502 Night Elf players; the earliest training order differs from `hero_slot = 0` for 0 of 3,346 players with a hero. |
+| Forward | A building step with `forward: true` keeps the placements under 3,000 map units from the opponent's start location: `sqrt(pow(x - opp_start_x, 2) + pow(y - opp_start_y, 2)) < {pN:Float64}`, the bound 3,000 a parameter (`api/compile.py` `FORWARD_UNITS`, `forward_condition`). `x`, `y` are on `replay_events` building rows; `opp_start_x`, `opp_start_y` on `player_games` (from `player_starts`), joined into the chain's scan on `(replay_id, player_id)` only when a step of the chain is forward. The step's `count` counts forward placements. With no opponent start (NULL) no placement is forward. Another kind with `forward` is refused (400). (F), 1,706 games: the Human tower rush (Scout Tower x3 by 4:00, 2 of them forward) gives 25 of 60 games. |
 | Too complex | A pattern caps at 1,000,000 iterations, then 160 → 400 (2.6). (F), race N: 7 × `unit ewsp` at 600 s gaps then `building etol` within 1 s fails in ~0.06 s; 4 × fails too; 8 × with open gaps returns 2,668 pairs. No setting raises the cap on 26.9, and a step cap cannot prevent it. Measured with the old one-pattern form; the split form (rule above) runs 7 two-condition aggregates plus one 8-condition ordering pattern, so PR 6 re-checks whether 160 still fires. If not, the case becomes a plain golden and the 160 → 400 map keeps only its stub test. |
 | Dedup and header shape | queries.md §4.1 is the source. Rules 10-11: each slot binds through `replay_players FINAL` with `(replay_id, player_id) IN (<slot set>)`. Rule 14: page `GROUP BY r.replay_id, …`. `replays FINAL` relies on the runtime join filter (`RF1`, on by default from 26.2, measured on 26.9), not a second `IN` (queries.md §5). Header reads use `FINAL` (`insert-optimize-avoid-final`). |
 
@@ -430,10 +434,10 @@ Response:
 |---|---|---|
 | `race` | GNL id | Echo |
 | `prefix` | array of codes | Echo |
-| `total` | integer | Player-games whose opener starts with `prefix` |
+| `total` | integer | Games in which a player's opener starts with `prefix`, a game where both players' do once |
 | `stopped` | integer | Part of `total` whose opener ends exactly at `prefix`. `sum(rows[].games) + stopped = total`. |
 | `rows[].code` | string | Building at depth `len(prefix) + 1` |
-| `rows[].games` | integer | Player-games |
+| `rows[].games` | integer | Games, a game where both players opened this way once |
 | `rows[].wins` | integer | Games that player won |
 | `rows[].avg_minutes` | number | Mean `duration_ms / 60000`, one decimal |
 | `rows[].branches` | integer | Distinct buildings at the next depth. 0 at depth 6. |
@@ -521,10 +525,10 @@ Request: shared filters only.
 | `matchups[].wins` | integer or null | Decided games won by `race`. Null on a mirror row. |
 | `heroes[]` | array | One item per player race, sorted by `race` |
 | `heroes[].race` | GNL id | |
-| `heroes[].player_games` | integer | Player-games of that race: the share's denominator |
+| `heroes[].player_games` | integer | Players of that race, two in a mirror game: the share's denominator |
 | `heroes[].picks[]` | array | `{code, player_games}`, sorted by `player_games` desc, then `code`. Tavern heroes count under the player's race. |
 | `durations` | object | `{"width_minutes": 5, "cap_minutes": 60, "counts": [int]}` |
-| `apm` | object | `{"width": 25, "cap": 500, "counts": [int]}`, over player-games |
+| `apm` | object | `{"width": 25, "cap": 500, "counts": [int]}`, over the players of the games |
 
 - Histogram: `counts[i]` covers `[i*width, (i+1)*width)`; index `cap/width` holds all values ≥ `cap` (as w3warehouse: analytics.py:1260-1286). Dense to the last non-empty bucket; empty cohort `[]`. No `pct`.
 - 1-3 heroes per player, so shares sum past 100% (models.py:485-490).
@@ -641,7 +645,7 @@ Errors: 404 `No game with this id` (the story text); 503, 504, 500 per 2.6.
 | A11 | `groups[i]` is player i; two different players | Mirrors become searchable. |
 | A12 | 6-permit semaphore (1 s wait), 202 → 503, one per-IP edge rule (2.9) | With the 202 map alone, 3 loads at once fail. Only the edge rule stops one client taking every permit. |
 | A13 | Openers keep `arrayCompact`, not `arrayDistinct` | Top repeats are real extra buildings (F): `otrb` 3,368, `hwtw` 568, `eaom` 543, `eden` 239, `usep` 234. Story 2 says "first buildings". |
-| A14 | `/openers/replays`: one row per opener owner | The tree counts player-games. Row key `(replay_id, focus_player_id)`. |
+| A14 | `/openers/replays`: one row per game | Decided (Daniel 2026-10-02): the tree counts games, and a game where both players hold the prefix is one row, shown from the lower player slot. Row key `replay_id`. |
 | A15 | Count, `without`, first hero in PRs 15-16 (stories D4) | Each adds one bound `HAVING` term to the slot shape. PLAN.md:40 plans first hero. Cross-player order, ordered negation, OR in a step and second hero stay out. |
 
 ## 5. Dropped from the w3warehouse request model
