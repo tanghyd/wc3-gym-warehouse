@@ -140,7 +140,6 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
   // the steps, the outcome and the openers narrow the scope; races, names and replay filters set it
   const narrowed = steps.length > 0 || outcome !== null || player.opened.length > 0 || opponent.opened.length > 0;
   const scopeWords = player.race.length || opponent.race.length ? `${raceLabel(player.race)} v ${raceLabel(opponent.race)} games` : "games";
-  const avg = (t: { games: number; duration_ms_total: number }) => (t.games ? mss(t.duration_ms_total / t.games) : "—");
   const first = (page - 1) * LIMIT;
   const set = Object.values(sp).some((v) => v);
   // a game opened from a search with steps carries the search (q) and its Player (side), so its page marks the steps
@@ -240,15 +239,6 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                 {narrowed && (
                   <span className="s-n">
                     All {fmt(scope.games)}: {record(scope.wins, scope.losses)}
-                  </span>
-                )}
-              </div>
-              <div className="stat">
-                <span className="s-l">Avg length</span>
-                <span className="s-v">{avg(sum)}</span>
-                {narrowed && (
-                  <span className="s-n">
-                    All {fmt(scope.games)}: {avg(scope)}
                   </span>
                 )}
               </div>

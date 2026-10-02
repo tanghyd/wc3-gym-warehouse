@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { fmt, listed, mss, q, record, rowsOf, search, strip, stripOf } from "./helpers";
+import { fmt, listed, q, record, rowsOf, search, strip, stripOf } from "./helpers";
 
 // The Replays list: one row per player-game of the Player side, the summary strip, the pager, the
 // sort and the swap, each compared with POST /search.
@@ -34,7 +34,9 @@ test.describe("replay list", () => {
     const { scope, summary } = want;
     await expect(page.locator(".stat").nth(0)).toContainText(`${Math.round((100 * summary.games) / scope.games)}% of ${fmt(scope.games)} Night Elf v Orc games, one per player`);
     await expect(page.locator(".stat").nth(1)).toContainText(`All ${fmt(scope.games)}: ${record(scope.wins, scope.losses)}`);
-    await expect(page.locator(".stat").nth(2)).toContainText(`All ${fmt(scope.games)}: ${mss(scope.duration_ms_total / scope.games)}`);
+    // two figures: the average length is gone
+    await expect(page.locator(".stat")).toHaveCount(2);
+    await expect(page.locator(".s-l", { hasText: "Avg length" })).toHaveCount(0);
     expect(await listed(page)).toEqual(rowsOf(want));
     // a row's result is the Player's: a square and the word
     const first = want.replays[0];

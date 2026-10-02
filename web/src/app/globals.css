@@ -277,8 +277,8 @@
   .alt { border: 1px solid var(--color-border); border-radius: 0.35rem; padding: 6px 10px 10px; }
   .or { padding: 6px 0 6px 12px; font-size: 0.8125rem; font-weight: 700; color: var(--color-muted); }
 
-  /* The summary strip: three figures, each a label, a number and one muted line. */
-  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-border); }
+  /* The summary strip: two figures, each a label, a number and one muted line. */
+  .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-border); }
   .stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 14px 16px; }
   .stat + .stat { border-left: 1px solid var(--color-border); }
   .s-l, .s-n { font-size: 0.875rem; color: var(--color-muted); }
@@ -421,8 +421,6 @@
     .tools { grid-area: x; }
     .steps .link { padding-left: 8px; }
 
-    .stats { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-    .stat:nth-child(3) { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--color-border); }
     .stat { padding: 12px; }
     .s-v { font-size: 1.4rem; }
 
@@ -448,7 +446,6 @@
     .bars .mark { grid-template-columns: minmax(0, 40%) minmax(0, 1fr); gap: 8px; }
     .bar-label { font-size: 0.875rem; }
     .x-table th, .x-table td { padding-left: 8px; padding-right: 8px; }
-    .stats.tiles .stat:nth-child(3) { grid-column: auto; border-top: 0; }
 
     .named { --indent: 10px; }
     .named th, .named td { padding-left: 8px; padding-right: 8px; }
