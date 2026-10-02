@@ -11,6 +11,8 @@ bootstrap host:
 # copy .env.box (git-ignored) to the box's .env, readable by the warehouse user only
 env:
     @test -f .env.box || { echo '.env.box is missing: cp .env.example .env.box and fill it in (docs/deploy.md)' >&2; exit 1; }
+    @! grep -qE '^CLICKHOUSE(_API|_GRAFANA|_INGEST)?_PASSWORD=\s*$' .env.box || { echo '.env.box: every CLICKHOUSE_*_PASSWORD must be set on the box' >&2; exit 1; }
+    @grep -q '^GF_AUTH_ANONYMOUS_ENABLED=false' .env.box || { echo '.env.box: set GF_AUTH_ANONYMOUS_ENABLED=false, GF_AUTH_DISABLE_LOGIN_FORM=false and GF_SECURITY_ADMIN_PASSWORD on the box' >&2; exit 1; }
     @{{ssh}} 'cat > wc3-gym-warehouse/.env && chmod 600 wc3-gym-warehouse/.env' < .env.box
 
 # check out a pushed branch on the box, build and start the services of the box's COMPOSE_PROFILES, apply the ingest tables, rebuild the marts, prune old images; waits for a running ingest pass
