@@ -199,8 +199,10 @@ test.describe("step editor", () => {
       search(request, { player: { race: ["NE"], groups: [one("Ekee")] } }),
       search(request, { player: { race: ["NE"], groups: [one("Emoo")] } }),
     ]);
-    // no Night Elf has both as his 1st hero, so the or adds them up
-    expect(want.total).toBe(keeper.total + priestess.total);
+    // games, so a mirror with one of each hero first is in both searches and counts once in the or
+    const oneOfEach = want.summary.both - keeper.summary.both - priestess.summary.both;
+    expect(oneOfEach).toBeGreaterThan(0);
+    expect(want.total).toBe(keeper.total + priestess.total - oneOfEach);
     expect(await strip(page)).toEqual(stripOf(want));
     expect(await listed(page)).toEqual(rowsOf(want));
   });
@@ -218,11 +220,15 @@ test.describe("step editor", () => {
     await page.getByRole("button", { name: "Search" }).click();
     await expect(page).toHaveURL(/[?&]steps=%21expand%40-480(&|$)/);
     const step = { kind: "building", codes: ["ugol"], to_s: 480 };
-    const [want, expanded] = await Promise.all([
+    const [want, expanded, mirrors] = await Promise.all([
       search(request, { player: { race: ["UD"], groups: [{ steps: [{ ...step, negate: true }] }] } }),
       search(request, { player: { race: ["UD"], groups: [{ steps: [step] }] } }),
+      search(request, { player: { race: ["UD"] }, opponent: { race: ["UD"] } }),
     ]);
-    expect(want.total + expanded.total).toBe(want.scope.games);
+    // a mirror where one side expanded is in both searches, so it comes off once
+    const oneOfEach = mirrors.total - expanded.summary.both - want.summary.both;
+    expect(oneOfEach).toBeGreaterThan(0);
+    expect(want.total + expanded.total - oneOfEach).toBe(want.scope.games);
     expect(await strip(page)).toEqual(stripOf(want));
   });
 
