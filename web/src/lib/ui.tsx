@@ -118,3 +118,15 @@ export function Tile({ icon, size, alt = "" }: { icon: string | null | undefined
     </span>
   );
 }
+
+export const fmt = (n: number) => n.toLocaleString("en-US");
+
+/** A chevron; `open` rotates a right one by a quarter turn, and a chevron with no `open` sits at the line's end. */
+export function Chevron({ dir = "right", open }: { dir?: "down" | "right" | "left"; open?: boolean }) {
+  const d = { down: "M6 9l6 6 6-6", right: "M9 6l6 6-6 6", left: "M15 6l-6 6 6 6" }[dir];
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden className={`shrink-0 text-muted ${open === undefined && dir !== "left" ? "ml-auto" : ""} ${open ? "rotate-90" : ""}`}>
+      <path d={d} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

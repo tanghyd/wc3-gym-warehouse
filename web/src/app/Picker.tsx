@@ -1,7 +1,7 @@
 "use client";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import type { Filters, PickerGroup, PickerKind, PickerObject } from "@/lib/api";
-import { RaceIcon, Tile } from "@/lib/ui";
+import { Chevron, fmt, RaceIcon, Tile } from "@/lib/ui";
 import { loadPicker } from "./actions";
 
 /** What a pick sends back: one object, or every object of one group. */
@@ -21,15 +21,7 @@ const NTH = [
   [2, "2nd"],
   [3, "3rd"],
 ] as const;
-const fmt = (n: number) => n.toLocaleString("en-US");
 
-function Chevron({ back = false }: { back?: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden className={`shrink-0 text-muted ${back ? "" : "ml-auto"}`}>
-      <path d={back ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 /**
  * The objects of one picker kind for a side's race, read once when the picker opens: a group
@@ -191,7 +183,7 @@ export function Picker(props: {
                   refocus('.col-left [aria-current="true"]');
                 }}
               >
-                <Chevron back />
+                <Chevron dir="left" />
                 {t ? "Groups" : current?.source.name}
               </button>
               <span className="desk mr-auto">{heads[1]}</span>

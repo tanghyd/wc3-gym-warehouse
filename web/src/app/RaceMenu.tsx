@@ -1,18 +1,10 @@
 "use client";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { PICKED, RACES, RANDOM_OF } from "@/lib/races";
-import { RaceIcon } from "@/lib/ui";
+import { Chevron, fmt, RaceIcon } from "@/lib/ui";
 
 const RANDOMS = PICKED.map((r) => RANDOM_OF[r]);
-const fmt = (n: number) => n.toLocaleString("en-US");
 
-function Chevron({ dir = "down" }: { dir?: "down" | "right" }) {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden className="ml-auto shrink-0 text-muted">
-      <path d={dir === "down" ? "M6 9l6 6 6-6" : "M9 6l6 6-6 6"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 /**
  * One race control: a button with the race's icon and name, a menu of Any race, the four races
@@ -134,7 +126,7 @@ export function RaceMenu(props: { label: string; value: string[]; onChange: (v: 
         >
           {base && <RaceIcon race={base} size="20px" />}
           <span className="min-w-0 truncate">{base ? RACES[base][0] : "Any race"}</span>
-          <Chevron />
+          <Chevron dir="down" />
         </button>
         {open && (
           <ul role="menu" aria-label={props.label} className="pop race-menu">

@@ -3,7 +3,7 @@ import { type Filters, getObjects, getPresets, type Objects, pickerValues, raceC
 import { parseRaces, raceLabel } from "@/lib/races";
 import { apiStep, decodeGroups, HALLS, type Groups, played, type Step, stepObject } from "@/lib/steps";
 import { presetSteps, urlStep } from "@/lib/strategies";
-import { mss, PlayerName, record } from "@/lib/ui";
+import { fmt, mss, PlayerName, record } from "@/lib/ui";
 import { type DraftStep, type LoadPreset, Sides, type SideState } from "./Sides";
 import { SortSelect } from "./SortSelect";
 
@@ -16,7 +16,6 @@ const KEYS = {
   opponent: { race: "opponent_race", name: "opp_player", steps: "opp_steps", opened: "opp_opened" },
 } as const;
 
-const fmt = (n: number) => n.toLocaleString("en-US");
 
 /** A player of a row: name and race icon, under it his heroes in pick order with their final levels. */
 function Who({ p, objects }: { p: SidePlayer; objects: Objects }) {

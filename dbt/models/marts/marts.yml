@@ -511,29 +511,6 @@ models:
       - name: trained_ms
         description: Game time of the order that trained the hero, the player's last order of its code at or before its first skill point. The first skill point when no such order exists.
 
-  - name: player_group_hotkeys
-    description: One row per control group (0-9) a player touched, with how often it was assigned and recalled.
-    data_tests:
-      - unique:
-          name: player_group_hotkeys_one_row_per_group
-          description: A control group is one row per player and replay.
-          arguments:
-            column_name: "replay_id || ':' || toString(player_id) || ':' || toString(group_key)"
-    columns:
-      - name: replay_id
-        description: "{{ doc('replay_id') }}"
-        data_tests:
-          - not_null:
-              description: Every row names its replay.
-      - name: player_id
-        description: "{{ doc('player_id') }}"
-      - name: group_key
-        description: The control group's number key, 0-9.
-      - name: assigned
-        description: How many times the player assigned units to the group.
-      - name: used
-        description: How many times the player recalled the group.
-
   - name: chat
     description: In-game chat, one row per message. Two players can talk on the same millisecond, so seq keeps the order.
     data_tests:
@@ -560,33 +537,6 @@ models:
         description: "{{ doc('time_ms') }}"
       - name: seq
         description: "{{ doc('seq') }} Numbered within the replay's chat."
-
-  - name: resource_transfers
-    description: Gold and lumber sent between allies, one row per transfer.
-    data_tests:
-      - unique:
-          name: resource_transfers_one_row_per_transfer
-          description: A transfer is one row, keyed by replay, sender and seq.
-          arguments:
-            column_name: "replay_id || ':' || toString(from_player_id) || ':' || toString(seq)"
-    columns:
-      - name: replay_id
-        description: "{{ doc('replay_id') }}"
-        data_tests:
-          - not_null:
-              description: Every transfer names its replay.
-      - name: from_player_id
-        description: The sender's slot id.
-      - name: to_player_id
-        description: The receiver's slot id.
-      - name: gold
-        description: Gold sent.
-      - name: lumber
-        description: Lumber sent.
-      - name: time_ms
-        description: "{{ doc('time_ms') }}"
-      - name: seq
-        description: "{{ doc('seq') }} Numbered within the sender's transfers."
 
   - name: objects
     description: >-

@@ -61,7 +61,7 @@ replays/<folder>/<file>.w3g  ─drain─▶ parsed/v5/dt=<date>/<id>.json ─dbt
 | `mappings` | object codes and names: the melee seed plus the custom-map seed |
 | `patches` (seed) | the game patch of each build number, kept by hand: 6117 is 2.0, 7000 is 3.0 |
 | `object_sources` (seed), `objects` | the building, altar, camp or shop each melee object comes from, kept by hand and checked against the orders; `objects` adds each skill under its hero and each building under its race, for the step pickers |
-| `player_heroes`, `player_group_hotkeys`, `chat`, `resource_transfers` | as named |
+| `player_heroes`, `chat` | as named |
 
 The opener tree is a `GROUP BY` over `player_games.opener_N`, so the refreshable rollup and its 10-minute staleness are gone.
 

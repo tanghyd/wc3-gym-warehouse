@@ -13,9 +13,6 @@
 #               a player who follows the guide always does ("core"), measured in
 #               threads/warehouse-dbt-prototype/redesign/website-builds/measure.md
 #   vs_races    the opponent races a website guide is written for ([] for any)
-#   full, proposed_core
-#               notes, not read: a guide's orders in sequence up to tier 2, and a looser core
-#               for a guide whose core matched under 5 games
 
 # Undead
 - {id: ud-dk, name: Death Knight first, race: UD, source: gym-replays, steps: [{kind: hero, codes: [Udea], nth: 1}]}
@@ -93,15 +90,6 @@
     - {kind: building, codes: [hkee]}                # Keep
     - {kind: unit, codes: [hrif], count: 3, link: then}   # Rifleman x3
     - {kind: unit, codes: [hmpr], count: 2}          # Priest x2
-  full:
-    - {kind: hero, codes: [Hamg], nth: 1}
-    - {kind: building, codes: [halt]}                # Altar of Kings
-    - {kind: building, codes: [hbar], link: then}    # Barracks
-    - {kind: building, codes: [hhou], link: then}    # Farm
-    - {kind: unit, codes: [hfoo], link: then}        # Footman
-    - {kind: building, codes: [hwtw], link: then}    # Scout Tower
-    - {kind: building, codes: [hatw], link: then}    # Arcane Tower
-    - {kind: building, codes: [hkee], link: then}    # Keep
 
 - id: paladin-rifle-build
   name: Paladin Rifle Build
@@ -114,14 +102,6 @@
     - {kind: building, codes: [hbar], link: then}    # Barracks
     - {kind: unit, codes: [hrif], count: 2, link: then}   # Rifleman x2
     - {kind: building, codes: [hkee], link: then}    # Keep
-  full:
-    - {kind: hero, codes: [Hpal], nth: 1}
-    - {kind: building, codes: [halt]}                # Altar of Kings
-    - {kind: building, codes: [hhou], link: then}    # Farm (started, left at 100 hp)
-    - {kind: building, codes: [hbla], link: then}    # Blacksmith
-    - {kind: building, codes: [hbar], link: then}    # Barracks
-    - {kind: unit, codes: [hrif], count: 2, link: then}
-    - {kind: building, codes: [hkee], link: then}
 
 - id: mk-2-barracks-footmen-tower-rush
   name: MK 2 Barracks Footmen Tower Rush
@@ -134,15 +114,6 @@
     - {kind: unit, codes: [hfoo], link: then}        # Footman
     - {kind: building, codes: [hbar], link: then}    # 2nd Barracks
     - {kind: building, codes: [hwtw], count: 2, link: then}   # Scout Tower x2
-  full:
-    - {kind: hero, codes: [Hmkg], nth: 1}
-    - {kind: building, codes: [halt]}
-    - {kind: building, codes: [hbar], link: then}
-    - {kind: unit, codes: [hfoo], link: then}
-    - {kind: building, codes: [hbar], link: then}
-    - {kind: building, codes: [hlum], link: then}    # Lumber Mill
-    - {kind: building, codes: [hwtw], link: then}
-    - {kind: building, codes: [hatw], link: then}
 
 - id: archmage-one-camp-into-expansion
   name: Archmage One Camp into Expansion
@@ -153,15 +124,6 @@
     - {kind: hero, codes: [Hamg], nth: 1}
     - {kind: unit, codes: [hfoo], count: 4}          # Footman x4
     - {kind: building, codes: [htow], link: then, to_s: 360}   # Town Hall (expansion) by 6:00, the fast-expand time
-  full:
-    - {kind: hero, codes: [Hamg], nth: 1}
-    - {kind: building, codes: [halt]}
-    - {kind: building, codes: [hbar], link: then}
-    - {kind: building, codes: [hhou], link: then}
-    - {kind: unit, codes: [hfoo], count: 4, link: then}
-    - {kind: building, codes: [htow], link: then}
-    - {kind: building, codes: [hwtw], link: then}
-    - {kind: building, codes: [hatw], link: then}
 
 - id: solo-paladin-baptism-build
   name: Solo Paladin Baptism Build
@@ -174,19 +136,6 @@
     - {kind: building, codes: [hatw], link: then}    # Arcane Tower
     - {kind: building, codes: [hkee], link: then}    # Keep
     - {kind: building, codes: [hgtw], count: 2, link: then}   # Guard Tower x2
-  proposed_core:   # the Keep and Guard Towers drop out; expand behind an Arcane Tower stays
-    - {kind: hero, codes: [Hpal], nth: 1}
-    - {kind: building, codes: [htow]}
-    - {kind: building, codes: [hatw], link: then}
-  full:
-    - {kind: hero, codes: [Hpal], nth: 1}
-    - {kind: building, codes: [halt]}
-    - {kind: building, codes: [hbar], link: then}
-    - {kind: unit, codes: [hfoo], count: 3, link: then}
-    - {kind: building, codes: [htow], link: then}
-    - {kind: building, codes: [hwtw], link: then}
-    - {kind: building, codes: [hatw], link: then}
-    - {kind: building, codes: [hkee], link: then}
 
 - id: standard-human-mirror-build
   name: Standard Human Mirror Build
@@ -200,15 +149,6 @@
     - {kind: building, codes: [hars], count: 2, link: then}   # Arcane Sanctum x2
     - {kind: unit, codes: [hmpr], count: 2, link: then}       # Priest x2
     - {kind: unit, codes: [hspt], link: then}                 # Spell Breaker
-  full:   # same opening as beginner-rifle-caster
-    - {kind: hero, codes: [Hamg], nth: 1}
-    - {kind: building, codes: [halt]}
-    - {kind: building, codes: [hbar], link: then}
-    - {kind: building, codes: [hhou], link: then}
-    - {kind: unit, codes: [hfoo], link: then}
-    - {kind: building, codes: [hwtw], link: then}
-    - {kind: building, codes: [hatw], link: then}
-    - {kind: building, codes: [hkee], link: then}
 
 - id: farseer-headhunter-2-burrow-tech
   name: Farseer Headhunter 2 Burrow Tech
@@ -219,15 +159,6 @@
     - {kind: hero, codes: [Ofar], nth: 1}            # Far Seer 1st
     - {kind: unit, codes: [ohun], count: 2}          # Troll Headhunter x2
     - {kind: building, codes: [ostr], link: then}    # Stronghold
-  full:
-    - {kind: hero, codes: [Ofar], nth: 1}
-    - {kind: building, codes: [oalt]}                # Altar of Storms
-    - {kind: building, codes: [otrb], link: then}    # Orc Burrow
-    - {kind: building, codes: [ofor], link: then}    # War Mill
-    - {kind: building, codes: [obar], link: then}    # Barracks
-    - {kind: building, codes: [otrb], link: then}    # 2nd Burrow
-    - {kind: unit, codes: [ohun], count: 2, link: then}
-    - {kind: building, codes: [ostr], link: then}
 
 - id: farseer-1-grunt-into-headhunters
   name: Farseer 1 Grunt into Headhunters
@@ -237,15 +168,6 @@
   steps:
     - {kind: hero, codes: [Ofar], nth: 1}
     - {kind: unit, codes: [ogru]}                    # Grunt
-    - {kind: unit, codes: [ohun], count: 2, link: then}
-    - {kind: building, codes: [ostr], link: then}
-  full:
-    - {kind: hero, codes: [Ofar], nth: 1}
-    - {kind: building, codes: [oalt]}
-    - {kind: building, codes: [otrb], link: then}
-    - {kind: building, codes: [obar], link: then}
-    - {kind: building, codes: [ofor], link: then}
-    - {kind: unit, codes: [ogru], link: then}
     - {kind: unit, codes: [ohun], count: 2, link: then}
     - {kind: building, codes: [ostr], link: then}
 
@@ -260,15 +182,6 @@
     - {kind: building, codes: [obar], link: then}
     - {kind: unit, codes: [ogru], count: 2, link: then}   # Grunt x2
     - {kind: building, codes: [obar], negate: true, before: 2}   # no Barracks before the Stronghold
-  full:
-    - {kind: hero, codes: [Ofar], nth: 1}
-    - {kind: building, codes: [oalt]}
-    - {kind: building, codes: [otrb], link: then}
-    - {kind: building, codes: [ostr], link: then}
-    - {kind: building, codes: [obar], link: then}
-    - {kind: building, codes: [otrb], link: then}
-    - {kind: unit, codes: [ogru], link: then}
-    - {kind: building, codes: [ovln], link: then}    # Voodoo Lounge
 
 - id: 1-burrow-barracks-and-shop-before-tech
   name: 1 Burrow, Barracks and Shop before Tech
@@ -278,13 +191,6 @@
   # hero left open: the icon is Blademaster, the text says "your first hero"
   steps:
     - {kind: building, codes: [obar]}
-    - {kind: building, codes: [ovln], link: then}
-    - {kind: unit, codes: [ogru], link: then}
-    - {kind: building, codes: [ostr], link: then}
-  full:
-    - {kind: building, codes: [oalt]}
-    - {kind: building, codes: [otrb], link: then}
-    - {kind: building, codes: [obar], link: then}
     - {kind: building, codes: [ovln], link: then}
     - {kind: unit, codes: [ogru], link: then}
     - {kind: building, codes: [ostr], link: then}
@@ -300,15 +206,6 @@
     - {kind: building, codes: [otrb], link: then}    # 2nd Burrow (the 1st comes before the Barracks)
     - {kind: unit, codes: [ogru], count: 2, link: then}
     - {kind: building, codes: [ostr], link: then}
-  full:
-    - {kind: building, codes: [oalt]}
-    - {kind: building, codes: [otrb], link: then}
-    - {kind: building, codes: [obar], link: then}
-    - {kind: building, codes: [otrb], link: then}
-    - {kind: unit, codes: [ogru], link: then}
-    - {kind: building, codes: [ovln], link: then}
-    - {kind: unit, codes: [ogru], link: then}
-    - {kind: building, codes: [ostr], link: then}
 
 - id: no-barracks-shop-before-tech
   name: No Barracks Shop before Tech
@@ -321,14 +218,6 @@
     - {kind: building, codes: [ostr], link: then}
     - {kind: building, codes: [obar], link: then}
     - {kind: building, codes: [obar], negate: true, before: 2}   # no Barracks before the Stronghold
-  full:
-    - {kind: building, codes: [oalt]}
-    - {kind: building, codes: [otrb], link: then}
-    - {kind: building, codes: [ovln], link: then}
-    - {kind: building, codes: [ostr], link: then}
-    - {kind: building, codes: [otrb], link: then}
-    - {kind: building, codes: [obar], link: then}
-    - {kind: unit, codes: [ogru], count: 2, link: then}
 
 - id: tauren-chieftain-headhunters
   name: Tauren Chieftain Headhunters
@@ -339,18 +228,6 @@
     - {kind: hero, codes: [Otch], nth: 1}            # Tauren Chieftain 1st
     - {kind: building, codes: [obar]}
     - {kind: building, codes: [oalt], link: then}    # Barracks before Altar
-    - {kind: unit, codes: [ohun], count: 3, link: then}
-    - {kind: building, codes: [ostr], link: then}
-  proposed_core:   # Tauren Chieftain first is rare; the building order drops out
-    - {kind: hero, codes: [Otch], nth: 1}
-    - {kind: unit, codes: [ohun], count: 3}
-  full:
-    - {kind: hero, codes: [Otch], nth: 1}
-    - {kind: building, codes: [otrb]}
-    - {kind: building, codes: [ofor], link: then}
-    - {kind: building, codes: [obar], link: then}
-    - {kind: building, codes: [oalt], link: then}
-    - {kind: building, codes: [otrb], link: then}
     - {kind: unit, codes: [ohun], count: 3, link: then}
     - {kind: building, codes: [ostr], link: then}
 
@@ -365,15 +242,6 @@
     - {kind: unit, codes: [ogru]}
     - {kind: building, codes: [ostr], link: then}
     - {kind: unit, codes: [ogru], count: 3, link: then}
-  full:
-    - {kind: hero, codes: [Ofar], nth: 1}
-    - {kind: building, codes: [oalt]}
-    - {kind: building, codes: [otrb], link: then}
-    - {kind: building, codes: [obar], link: then}
-    - {kind: building, codes: [otrb], link: then}
-    - {kind: unit, codes: [ogru], link: then}
-    - {kind: building, codes: [ostr], link: then}
-    - {kind: building, codes: [ovln], link: then}
 
 - id: demon-hunter-fast-tech-bears
   name: Demon Hunter Fast Tech Bears
@@ -386,14 +254,6 @@
     - {kind: building, codes: [etoa], link: then}    # Tree of Ages
     - {kind: building, codes: [eaoe], count: 2, link: then}   # Ancient of Lore x2
     - {kind: unit, codes: [edoc], count: 2, link: then}       # Druid of the Claw x2
-  full:
-    - {kind: hero, codes: [Edem], nth: 1}
-    - {kind: building, codes: [eate]}                # Altar of Elders
-    - {kind: building, codes: [eaom], link: then}    # Ancient of War
-    - {kind: building, codes: [emow], link: then}    # Moon Well
-    - {kind: unit, codes: [earc], link: then}
-    - {kind: building, codes: [eden], link: then}    # Ancient of Wonders (started and cancelled)
-    - {kind: building, codes: [etoa], link: then}
 
 - id: firelord-fast-expo
   name: Firelord Fast Expo
@@ -404,19 +264,6 @@
     - {kind: hero, codes: [Nfir], nth: 1}            # Firelord 1st (Tavern)
     - {kind: building, codes: [etol]}                # Tree of Life (expansion at 7 food)
     - {kind: building, codes: [eate], link: then}    # before the Altar
-    - {kind: building, codes: [etoa], link: then}
-  proposed_core:   # the Tree of Ages drops out
-    - {kind: hero, codes: [Nfir], nth: 1}
-    - {kind: building, codes: [etol]}
-    - {kind: building, codes: [eate], link: then}
-  full:
-    - {kind: hero, codes: [Nfir], nth: 1}
-    - {kind: building, codes: [etol]}
-    - {kind: building, codes: [eate], link: then}
-    - {kind: building, codes: [eaom], link: then}
-    - {kind: building, codes: [eden], link: then}
-    - {kind: building, codes: [emow], link: then}
-    - {kind: unit, codes: [earc], count: 2, link: then}
     - {kind: building, codes: [etoa], link: then}
 
 - id: 1-aow-fast-hunts-tech
@@ -430,14 +277,6 @@
     - {kind: unit, codes: [esen], link: then}        # Huntress
     - {kind: building, codes: [etoa], link: then}
     - {kind: building, codes: [eaom], exactly: true, before: 4}   # one Ancient of War before the Tree of Ages
-  full:
-    - {kind: hero, codes: [Ekee], nth: 1}
-    - {kind: building, codes: [eate]}
-    - {kind: building, codes: [emow], link: then}
-    - {kind: building, codes: [edob], link: then}
-    - {kind: building, codes: [eaom], link: then}
-    - {kind: unit, codes: [esen], link: then}
-    - {kind: building, codes: [etoa], link: then}
 
 - id: naga-archer-talon-push
   name: 1st Hero and Naga Archer/DotT Push
@@ -451,18 +290,6 @@
     - {kind: building, codes: [eaow], link: then}    # Ancient of Wind
     - {kind: unit, codes: [edot], count: 2, link: then}   # Druid of the Talon x2
     - {kind: unit, codes: [earc], count: 8}          # Archer x8
-  proposed_core:   # Talons after Archer x8 fit 1 game; keep their building, Archer x6
-    - {kind: hero, codes: [Nngs], nth: 2}
-    - {kind: building, codes: [etoa]}
-    - {kind: building, codes: [eaow], link: then}
-    - {kind: unit, codes: [earc], count: 6}
-  full:
-    - {kind: building, codes: [eate]}
-    - {kind: building, codes: [eaom], link: then}
-    - {kind: unit, codes: [earc], link: then}
-    - {kind: building, codes: [emow], link: then}
-    - {kind: building, codes: [eden], link: then}
-    - {kind: building, codes: [etoa], link: then}
 
 - id: tavern-hero-first
   name: Tavern Hero First
@@ -473,13 +300,6 @@
     - {kind: hero, codes: [Nalc, Nbrn, Nbst, Nfir, Nngs, Npbm, Nplh, Ntin], nth: 1}   # any Tavern hero 1st
     - {kind: building, codes: [eaom]}
     - {kind: building, codes: [eate], link: then}    # Ancient of War before the Altar
-    - {kind: unit, codes: [earc], count: 3, link: then}
-    - {kind: building, codes: [etoa], link: then}
-  full:
-    - {kind: hero, codes: [Nalc, Nbrn, Nbst, Nfir, Nngs, Npbm, Nplh, Ntin], nth: 1}
-    - {kind: building, codes: [eaom]}
-    - {kind: building, codes: [emow], link: then}
-    - {kind: building, codes: [eate], link: then}
     - {kind: unit, codes: [earc], count: 3, link: then}
     - {kind: building, codes: [etoa], link: then}
 
@@ -494,14 +314,6 @@
     - {kind: building, codes: [etol], link: then}    # proxy Tree of Life after the tech
     - {kind: building, codes: [eaoe], count: 2, link: then}
     - {kind: unit, codes: [edry], count: 2, link: then}   # Dryad x2
-  full:
-    - {kind: building, codes: [eate]}
-    - {kind: building, codes: [eaom], link: then}
-    - {kind: unit, codes: [earc], link: then}
-    - {kind: building, codes: [emow], link: then}
-    - {kind: building, codes: [eden], link: then}
-    - {kind: building, codes: [etoa], link: then}
-    - {kind: building, codes: [etol], link: then}
 
 - id: mass-talons-vs-orc
   name: Mass Talons vs Orc
@@ -514,14 +326,6 @@
     - {kind: building, codes: [etoe], link: then}    # Tree of Eternity
     - {kind: building, codes: [eaow], count: 2, link: then}
     - {kind: unit, codes: [edot], count: 2, link: then}
-  full:   # same opening as demon-hunter-fast-tech-bears
-    - {kind: hero, codes: [Edem], nth: 1}
-    - {kind: building, codes: [eate]}
-    - {kind: building, codes: [eaom], link: then}
-    - {kind: building, codes: [emow], link: then}
-    - {kind: unit, codes: [earc], link: then}
-    - {kind: building, codes: [eden], link: then}
-    - {kind: building, codes: [etoa], link: then}
 
 - id: fast-death-knight-fiends
   name: Fast Death Knight Fiends
@@ -534,15 +338,6 @@
     - {kind: building, codes: [unp1], link: then}    # Halls of the Dead
     - {kind: building, codes: [unp2], link: then}    # Black Citadel
     - {kind: unit, codes: [uobs], count: 2}          # Obsidian Statue x2, before or after the tech (the guide allows both)
-  full:
-    - {kind: hero, codes: [Udea], nth: 1}
-    - {kind: building, codes: [uzig]}                # Ziggurat
-    - {kind: building, codes: [usep], link: then}    # Crypt
-    - {kind: building, codes: [utom], link: then}    # Tomb of Relics
-    - {kind: building, codes: [ugrv], link: then}    # Graveyard
-    - {kind: unit, codes: [ugho], count: 2, link: then}   # Ghoul x2
-    - {kind: unit, codes: [ucry], link: then}
-    - {kind: building, codes: [unp1], link: then}
 
 - id: fast-fiends-and-death-knight
   name: Fast Fiends and Death Knight
@@ -553,15 +348,6 @@
     - {kind: hero, codes: [Udea], nth: 1}
     - {kind: building, codes: [ugrv]}                # Graveyard before the 1st Ziggurat
     - {kind: building, codes: [uzig], link: then}
-    - {kind: unit, codes: [ucry], count: 3, link: then}
-    - {kind: building, codes: [unp1], link: then}
-  full:
-    - {kind: hero, codes: [Udea], nth: 1}
-    - {kind: building, codes: [ugrv]}
-    - {kind: building, codes: [usep], link: then}
-    - {kind: building, codes: [uaod], link: then}    # Altar of Darkness
-    - {kind: building, codes: [uzig], link: then}
-    - {kind: building, codes: [utom], link: then}
     - {kind: unit, codes: [ucry], count: 3, link: then}
     - {kind: building, codes: [unp1], link: then}
 
@@ -576,15 +362,6 @@
     - {kind: building, codes: [usep], link: then}    # 2nd Crypt after the tech
     - {kind: unit, codes: [ugar], count: 3, link: then}   # Gargoyle x3
     - {kind: building, codes: [uzig], exactly: true, before: 2}   # one Ziggurat before the Halls of the Dead
-  full:
-    - {kind: hero, codes: [Udea], nth: 1}
-    - {kind: building, codes: [uzig]}
-    - {kind: building, codes: [usep], link: then}
-    - {kind: building, codes: [utom], link: then}
-    - {kind: unit, codes: [ugho], count: 3, link: then}
-    - {kind: building, codes: [unp1], link: then}
-    - {kind: building, codes: [uzig], link: then}    # 2nd Ziggurat after the tech
-    - {kind: building, codes: [ugrv], link: then}
 
 - id: ghoul-pull-build-vs-night-elf
   name: Ghoul Pull Build vs Night Elf
@@ -597,15 +374,6 @@
     - {kind: building, codes: [unpl]}                # 2nd Necropolis
     - {kind: building, codes: [unp1], link: then}
     - {kind: unit, codes: [ugar], count: 2, link: then}
-  full:
-    - {kind: hero, codes: [Udea], nth: 1}
-    - {kind: building, codes: [usep]}
-    - {kind: building, codes: [uaod], link: then}
-    - {kind: building, codes: [uzig], link: then}
-    - {kind: unit, codes: [ugho], link: then}
-    - {kind: building, codes: [unpl], link: then}
-    - {kind: unit, codes: [ugho], count: 4, link: then}
-    - {kind: building, codes: [unp1], link: then}
 
 - id: dk-ghoul-tech-vs-dh-naga-panda-1-base
   name: DK Ghoul Tech vs DH Naga/Panda 1 Base
@@ -618,14 +386,6 @@
     - {kind: building, codes: [unp1], link: then}
     - {kind: building, codes: [unp2], link: then}
     - {kind: building, codes: [ugol], negate: true}  # one base: no Haunted Gold Mine, as the old one-base builds
-  full:
-    - {kind: hero, codes: [Udea], nth: 1}
-    - {kind: building, codes: [uaod]}
-    - {kind: building, codes: [usep], link: then}
-    - {kind: building, codes: [uzig], link: then}
-    - {kind: building, codes: [utom], link: then}
-    - {kind: unit, codes: [ugho], count: 4, link: then}
-    - {kind: building, codes: [unp1], link: then}
 
 - id: dk-ghoul-expo-vs-ne
   name: DK Ghoul Expo vs NE
@@ -636,15 +396,6 @@
     - {kind: hero, codes: [Udea], nth: 1}
     - {kind: unit, codes: [ugho], count: 3}
     - {kind: building, codes: [ugol], link: then}    # Haunted Gold Mine (expansion)
-    - {kind: building, codes: [unp1], link: then}
-  full:
-    - {kind: hero, codes: [Udea], nth: 1}
-    - {kind: building, codes: [uaod]}
-    - {kind: building, codes: [usep], link: then}
-    - {kind: building, codes: [uzig], link: then}
-    - {kind: building, codes: [utom], link: then}
-    - {kind: unit, codes: [ugho], count: 3, link: then}
-    - {kind: building, codes: [ugol], link: then}
     - {kind: building, codes: [unp1], link: then}
 
 - id: dk-ghoul-tech-push-vs-kotg-dh-expo
@@ -659,21 +410,6 @@
     - {kind: building, codes: [unp1]}
     - {kind: building, codes: [unp2], link: then}
     - {kind: unit, codes: [uobs], count: 2, link: then}
-  proposed_core:   # Tinker 3rd fits 3 games; any Tavern hero 3rd
-    - {kind: hero, codes: [Udea], nth: 1}
-    - {kind: hero, codes: [Ulic], nth: 2}
-    - {kind: hero, codes: [Nalc, Nbrn, Nbst, Nfir, Nngs, Npbm, Nplh, Ntin], nth: 3}
-    - {kind: building, codes: [unp2]}
-    - {kind: unit, codes: [uobs], count: 2, link: then}
-  full:
-    - {kind: hero, codes: [Udea], nth: 1}
-    - {kind: building, codes: [uaod]}
-    - {kind: building, codes: [uzig], link: then}
-    - {kind: building, codes: [usep], link: then}
-    - {kind: building, codes: [utom], link: then}
-    - {kind: unit, codes: [ugho], link: then}
-    - {kind: building, codes: [uzig], link: then}
-    - {kind: building, codes: [unp1], link: then}
 
 - id: dk-ghoul-tier-3-expo-vs-kotg-dh
   name: DK Ghoul Tier 3 Expo vs KotG DH
@@ -687,21 +423,6 @@
     - {kind: building, codes: [unp2], link: then}
     - {kind: building, codes: [ugol], link: then}    # expansion after tier 3 starts
     - {kind: unit, codes: [uban], count: 2, link: then}   # Banshee x2
-  proposed_core:   # a Temple of the Damned in place of Banshee x2 after the mine
-    - {kind: hero, codes: [Udea], nth: 1}
-    - {kind: hero, codes: [Ulic], nth: 2}
-    - {kind: building, codes: [unp2]}
-    - {kind: building, codes: [ugol], link: then}
-    - {kind: building, codes: [utod]}
-  full:   # same opening as dk-ghoul-tech-push-vs-kotg-dh-expo
-    - {kind: hero, codes: [Udea], nth: 1}
-    - {kind: building, codes: [uaod]}
-    - {kind: building, codes: [uzig], link: then}
-    - {kind: building, codes: [usep], link: then}
-    - {kind: building, codes: [utom], link: then}
-    - {kind: unit, codes: [ugho], link: then}
-    - {kind: building, codes: [uzig], link: then}
-    - {kind: building, codes: [unp1], link: then}
 
 - id: facing-paladin-rifle-as-undead
   name: Facing Paladin Rifle as Undead
@@ -711,15 +432,6 @@
   steps:
     - {kind: hero, codes: [Ucrl], nth: 1}            # Crypt Lord 1st
     - {kind: unit, codes: [ugho], count: 4}
-    - {kind: building, codes: [ugol], link: then}
-    - {kind: building, codes: [unp1], link: then}
-  full:
-    - {kind: hero, codes: [Ucrl], nth: 1}
-    - {kind: building, codes: [usep]}
-    - {kind: building, codes: [uzig], link: then}
-    - {kind: building, codes: [utom], link: then}
-    - {kind: building, codes: [uzig], link: then}
-    - {kind: unit, codes: [ugho], count: 4, link: then}
     - {kind: building, codes: [ugol], link: then}
     - {kind: building, codes: [unp1], link: then}
 
@@ -734,15 +446,6 @@
     - {kind: building, codes: [unp1], link: then}
     - {kind: unit, codes: [ucry], count: 3, link: then}
     - {kind: building, codes: [uslh], link: then}    # Slaughterhouse
-  full:
-    - {kind: hero, codes: [Ucrl], nth: 1}
-    - {kind: building, codes: [usep]}
-    - {kind: building, codes: [ugrv], link: then}
-    - {kind: building, codes: [uaod], link: then}
-    - {kind: building, codes: [uzig], link: then}
-    - {kind: building, codes: [utom], link: then}
-    - {kind: unit, codes: [ucry], link: then}
-    - {kind: building, codes: [unp1], link: then}
 
 - id: pit-lord-fast-t3-necro-wagon-push
   name: Pit Lord Fast T3 Necro Wagon Push
@@ -755,16 +458,3 @@
     - {kind: building, codes: [utod], count: 2, link: then}   # Temple of the Damned x2
     - {kind: unit, codes: [unec], count: 2, link: then}       # Necromancer x2
     - {kind: building, codes: [unp2], link: then}
-  proposed_core:   # one Temple, no Necromancer count
-    - {kind: hero, codes: [Nplh], nth: 1}
-    - {kind: building, codes: [unp1]}
-    - {kind: building, codes: [utod], link: then}
-    - {kind: building, codes: [unp2], link: then}
-  full:
-    - {kind: hero, codes: [Nplh], nth: 1}
-    - {kind: building, codes: [usep]}
-    - {kind: building, codes: [uaod], link: then}
-    - {kind: building, codes: [uzig], link: then}
-    - {kind: building, codes: [utom], link: then}
-    - {kind: unit, codes: [ugho], count: 4, link: then}
-    - {kind: building, codes: [unp1], link: then}

@@ -5,24 +5,16 @@ import { getObjects, getPresets, pickerValues, raceCounts, strategyStats } from 
 import { RACES } from "@/lib/races";
 import { encodeGroups, played } from "@/lib/steps";
 import { type Preset, presetSteps, ruleWords, type Stats, urlStep } from "@/lib/strategies";
-import { mss, ObjIcon, RaceIcon, record } from "@/lib/ui";
+import { Chevron, fmt, mss, ObjIcon, RaceIcon, record } from "@/lib/ui";
 import { StrategyFilters } from "./Filters";
 import { readScope } from "./scope";
 import { Tabs } from "./Tabs";
 
 export const metadata: Metadata = { title: "Strategies" };
 
-const fmt = (n: number) => n.toLocaleString("en-US");
 const FLOOR = 10; // games a record needs to read in full ink
 const MIN_GAMES = 5; // a preset with fewer games in scope is hidden
 
-function Chevron({ open }: { open: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden className={`shrink-0 text-muted ${open ? "rotate-90" : ""}`}>
-      <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 function SearchGlyph() {
   return (

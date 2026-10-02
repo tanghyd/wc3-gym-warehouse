@@ -4,7 +4,7 @@ import { createContext, type ReactNode, useContext, useEffect, useId, useOptimis
 import type { Filters } from "@/lib/api";
 import { BINS, type Catalog, RACE_DIMS, type ValueLabel, type View, viewHref } from "@/lib/explore";
 import { RACES } from "@/lib/races";
-import { RaceIcon, Tile } from "@/lib/ui";
+import { fmt, RaceIcon, Tile } from "@/lib/ui";
 import { loadValues } from "../actions";
 import { RaceMenu } from "../RaceMenu";
 
@@ -24,7 +24,6 @@ export function Shell({ children }: { children: ReactNode }) {
   return <Nav.Provider value={{ go, pending }}>{children}</Nav.Provider>;
 }
 
-const fmt = (n: number) => n.toLocaleString("en-US");
 const G = { close: "M6 6l12 12M18 6L6 18", plus: "M12 5v14M5 12h14" };
 function Glyph({ d, size = 14 }: { d: string; size?: number }) {
   return (

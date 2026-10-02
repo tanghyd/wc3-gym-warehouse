@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { type Filters, getObjects, pickerValues, query, raceCounts } from "@/lib/api";
 import { raceFilters, raceLabel } from "@/lib/races";
-import { Field, mss, ObjIcon, RaceIcon, record } from "@/lib/ui";
+import { Chevron, Field, mss, ObjIcon, RaceIcon, record } from "@/lib/ui";
 import { StrategyFilters } from "../Filters";
 import { readScope } from "../scope";
 import { Tabs } from "../Tabs";
@@ -47,13 +47,6 @@ async function level(base: Filters, prefix: string[], sort: string): Promise<Row
   return [...rows.values()].map(({ minutes, ...r }) => ({ ...r, avgMs: (minutes / r.games) * 60000 })).sort(order);
 }
 
-function Chevron({ open }: { open: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden className={`shrink-0 text-muted ${open ? "rotate-90" : ""}`}>
-      <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 export default async function OpenersPage({ searchParams }: PageProps<"/strategies/openers">) {
   const sp = await searchParams;
