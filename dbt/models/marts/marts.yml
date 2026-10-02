@@ -68,7 +68,7 @@ models:
       - name: replay_id
         description: "{{ doc('replay_id') }}"
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every row names its replay.
           - relationships:
               description: Every row belongs to a replay in replays.
@@ -78,7 +78,7 @@ models:
       - name: player_id
         description: "{{ doc('player_id') }}"
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every row names its player.
       - name: player
         description: "{{ doc('player_name') }}"
@@ -179,7 +179,7 @@ models:
       - name: code
         description: "{{ doc('object_code') }}"
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every row has a code.
       - name: name
         description: The object's display name, such as Barracks.
@@ -207,7 +207,7 @@ models:
         data_tests:
           - unique:
               description: One row per replay, however many copies of it raw_replays holds before a merge.
-          - not_null:
+          - not_empty:
               description: Every replay has an id.
       - name: map
         description: "{{ doc('map') }}"
@@ -313,7 +313,7 @@ models:
       - name: replay_id
         description: "{{ doc('replay_id') }}"
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every event names its replay.
           - relationships:
               description: Every event belongs to a replay in replays.
@@ -363,7 +363,7 @@ models:
       - name: replay_id
         description: "{{ doc('replay_id') }}"
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every player row names its replay.
           - relationships:
               description: Every player row belongs to a replay in replays.
@@ -373,7 +373,7 @@ models:
       - name: player_id
         description: "{{ doc('player_id') }}"
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every player row has a slot id.
       - name: name
         description: "{{ doc('player_name') }}"
@@ -433,7 +433,7 @@ models:
       - name: replay_id
         description: "{{ doc('replay_id') }}"
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every order names its replay.
       - name: player_id
         description: "{{ doc('player_id') }}"
@@ -469,7 +469,7 @@ models:
       - name: replay_id
         description: "{{ doc('replay_id') }}"
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every skill event names its replay.
       - name: player_id
         description: "{{ doc('player_id') }}"
@@ -507,7 +507,7 @@ models:
       - name: replay_id
         description: "{{ doc('replay_id') }}"
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every hero row names its replay.
       - name: player_id
         description: "{{ doc('player_id') }}"
@@ -532,7 +532,7 @@ models:
       - name: replay_id
         description: "{{ doc('replay_id') }}"
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every message names its replay.
       - name: player_id
         description: The sender's slot id. An observer can send chat, so it need not be in replay_players.
@@ -601,7 +601,7 @@ models:
       - name: replay_id
         description: "{{ doc('replay_id') }}"
         data_tests:
-          - not_null:
+          - not_empty:
               description: Every start row names its replay.
           - relationships:
               description: Every start row belongs to a replay in replays.

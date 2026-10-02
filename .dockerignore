@@ -1,6 +1,13 @@
 # The drain image needs only pipeline/parse-rs; keep the build context small.
+# A pattern without ** matches the context root only, so build outputs under a
+# subfolder (pipeline/parse-rs/target, api/.venv) need their own lines.
 .git/
 target/
+**/target/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/node_modules/
 db/
 infrastructure/
 .github/

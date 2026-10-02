@@ -11,19 +11,21 @@ bootstrap host:
 # copy .env.box (git-ignored) to the box's .env, readable by the warehouse user only
 env:
     @test -f .env.box || { echo '.env.box is missing: cp .env.example .env.box and fill it in (docs/deploy.md)' >&2; exit 1; }
+    @! grep -qE '^CLICKHOUSE(_API|_GRAFANA|_INGEST)?_PASSWORD=\s*$' .env.box || { echo '.env.box: every CLICKHOUSE_*_PASSWORD must be set on the box' >&2; exit 1; }
+    @grep -q '^GF_AUTH_ANONYMOUS_ENABLED=false' .env.box || { echo '.env.box: set GF_AUTH_ANONYMOUS_ENABLED=false, GF_AUTH_DISABLE_LOGIN_FORM=false and GF_SECURITY_ADMIN_PASSWORD on the box' >&2; exit 1; }
     @{{ssh}} 'cat > wc3-gym-warehouse/.env && chmod 600 wc3-gym-warehouse/.env' < .env.box
 
-# check out a pushed branch on the box, build and start the services of the box's COMPOSE_PROFILES, queue a marts rebuild, prune old images; waits for a running ingest pass
+# check out a pushed branch on the box, build and start the services of the box's COMPOSE_PROFILES, apply the ingest tables, rebuild the marts, prune old images; waits for a running ingest pass
 up branch='main':
-    @{{ssh}} 'cd wc3-gym-warehouse && flock /tmp/ingest.lock sh -c "git fetch -q origin {{branch}} && git checkout -q -B {{branch}} FETCH_HEAD && docker compose up -d --build --remove-orphans && mkdir -p data && touch data/dbt-build-pending && docker image prune -f && docker builder prune -f --filter until=168h"'
+    @{{ssh}} 'cd wc3-gym-warehouse && flock /tmp/ingest.lock sh -c "git fetch -q origin {{branch}} && git checkout -q -B {{branch}} FETCH_HEAD && just up && mkdir -p data && touch data/dbt-build-pending && just ingest && docker image prune -f && docker builder prune -f --filter until=168h"'
 
 # one drain pass on the box, then dbt build when it inserted documents or one is pending; waits for the cron's pass
 ingest:
     @{{ssh}} 'cd wc3-gym-warehouse && flock /tmp/ingest.lock just ingest'
 
-# run `just ingest` on the box every 10 minutes, one pass at a time, appending to ~/ingest.log
+# run `just ingest` on the box every 10 minutes, one pass at a time, appending to ~/ingest.log; a pass over 30 minutes is killed so it cannot hold the lock for ever
 cron:
-    @{{ssh}} 'line="*/10 * * * * cd ~/wc3-gym-warehouse && flock -n /tmp/ingest.lock /usr/local/bin/just ingest >> ~/ingest.log 2>&1"; { crontab -l 2>/dev/null | grep -vF "just ingest"; echo "$line"; } | crontab -'
+    @{{ssh}} 'line="*/10 * * * * cd ~/wc3-gym-warehouse && flock -n /tmp/ingest.lock timeout 30m /usr/local/bin/just ingest >> ~/ingest.log 2>&1"; { crontab -l 2>/dev/null | grep -vF "just ingest"; echo "$line"; } | crontab -'
 
 # the URLs of the box's services as they appear on this machine while `just deploy open` runs
 urls:

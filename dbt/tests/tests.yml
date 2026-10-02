@@ -23,3 +23,19 @@ data_tests:
     description: Every map in the start_locations seed has 2 or 4 start locations, as the 1v1 and 1v1-2v2 maps do.
   - name: player_starts_differ_in_a_game
     description: The two players of a 1on1 replay never get the same start location, since two players never share one.
+  - name: results_complement
+    description: >-
+      The two player_games rows of a game hold one win and one loss, or two unknowns, because
+      a result is one game fact seen from two seats.
+  - name: winner_names_match_winning_team
+    description: winner_names is set exactly when winning_team_id names a team.
+  - name: dropped_games_are_few
+    description: >-
+      At most 5% of loaded replays are dropped for a player with no order (40 of 1,746 on
+      2026-10-02). Severity warn, because a jump means the parser or the rule changed.
+  - name: one_v_one_maps_have_start_locations
+    description: >-
+      Every map of a 1on1 replay has rows in the start_locations seed, since player_starts
+      gives 'none' without an error on a map it lacks. Severity warn until someone adds the map.
+  - name: docs_have_required_keys
+    description: Every loaded document has each key the marts read, since a renamed key would empty a column in silence.

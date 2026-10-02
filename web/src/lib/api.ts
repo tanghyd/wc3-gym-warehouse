@@ -32,6 +32,8 @@ const detailText = (d: Detail) => (typeof d === "string" ? d : d.map((e) => `${e
 async function api<T>(path: string, body?: object): Promise<T | null> {
   const res = await fetch(API_URL + path, {
     cache: "no-store",
+    // the API ends a query at 10 s; a hung read must not hold the page render
+    signal: AbortSignal.timeout(15_000),
     ...(body && { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
   });
   if (res.status === 404) return null;

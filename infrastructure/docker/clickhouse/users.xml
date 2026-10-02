@@ -3,7 +3,7 @@
   default: dbt's user and the admin. From the server itself and the compose network only.
   api: the query API's user. Read only, the w3g database only, with a time and
   memory cap per query so one bad filter cannot starve the server.
-  grafana: Grafana's user. Read only, w3g and the system tables its dashboards
+  grafana: Grafana's user. Read only, w3g, ingest and the system tables its dashboards
   read, with the same caps.
   ingest: the drain's user. SELECT and INSERT on the ingest database only, from the
   compose network. The tables are in ingest.sql.
@@ -33,6 +33,8 @@
             <networks><ip>::/0</ip></networks>
             <grants>
                 <query>GRANT SELECT ON w3g.*</query>
+                <!-- ingest.runs and ingest.files: the last pass, parse failures -->
+                <query>GRANT SELECT ON ingest.*</query>
                 <query>GRANT SELECT ON system.query_log</query>
                 <query>GRANT SELECT ON system.metric_log</query>
                 <query>GRANT SELECT ON system.asynchronous_metric_log</query>
@@ -54,14 +56,30 @@
         <api>
             <readonly>1</readonly>
             <max_execution_time>10</max_execution_time>
-            <max_memory_usage>2000000000</max_memory_usage>
+            <!-- 800 MB a query: three heavy queries fit under the 2.5 GiB server cap (tuning.xml). -->
+            <max_memory_usage>800000000</max_memory_usage>
+            <max_concurrent_queries_for_user>8</max_concurrent_queries_for_user>
+            <max_threads>4</max_threads>
+            <!-- A query that would read or answer more than this fails with a code the API maps
+                 to 400, instead of taking the server with it. -->
+            <max_rows_to_read>100000000</max_rows_to_read>
+            <max_result_rows>100000</max_result_rows>
+            <result_overflow_mode>throw</result_overflow_mode>
+            <!-- A query that fails after its first rows answers an error status, never 200 with
+                 partial rows; a caller that hangs up cancels its query. -->
+            <http_wait_end_of_query>1</http_wait_end_of_query>
+            <cancel_http_readonly_queries_on_client_close>1</cancel_http_readonly_queries_on_client_close>
             <!-- count() is UInt64; answer it as a JSON number, not a string -->
             <output_format_json_quote_64bit_integers>0</output_format_json_quote_64bit_integers>
         </api>
         <grafana>
             <readonly>1</readonly>
             <max_execution_time>10</max_execution_time>
-            <max_memory_usage>2000000000</max_memory_usage>
+            <max_memory_usage>800000000</max_memory_usage>
+            <max_threads>2</max_threads>
+            <max_rows_to_read>100000000</max_rows_to_read>
+            <max_result_rows>100000</max_result_rows>
+            <result_overflow_mode>throw</result_overflow_mode>
             <!-- The plugin's driver sends max_execution_time with every query;
                  readonly=1 refuses any setting unless a constraint allows it. -->
             <constraints>

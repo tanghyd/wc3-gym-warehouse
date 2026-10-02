@@ -1,5 +1,7 @@
 # Warehouse design
 
+> This is the design of an earlier version: a Rust axum API at `services/api/`, a Vite and Vue app, and a hand-written ClickHouse schema. The code on `main` is dbt, a Python FastAPI API in `api/` and a Next.js app in `web/`; the README and `docs/okf/` describe it. These files are kept for the measurements and the reasoning behind the queries, the start rules and the repeat flag.
+
 Written 2026-09-11. Numbers: 26.9 host binary, 6,567-replay dev load. PR 2 re-measures in the 26.8 container.
 
 ## Documents

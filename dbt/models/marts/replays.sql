@@ -6,7 +6,8 @@ WITH
     replaceRegexpOne(JSONExtractString(r.doc, 'map', 'file'), '\\.(w3x|w3m|w3g)$', '') AS stem,
     JSONExtractArrayRaw(r.doc, 'players') AS players,
     arrayMap(p -> JSONExtractUInt(p, 'id'), players) AS player_ids,
-    arrayMap(p -> toInt8(JSONExtractInt(p, 'teamid')), players) AS team_ids,
+    -- -1 for a missing team, as replay_players.team_id has it; player_games compares the two
+    arrayMap(p -> coalesce(JSONExtract(p, 'teamid', 'Nullable(Int8)'), toInt8(-1)), players) AS team_ids,
     JSONExtractArrayRaw(r.doc, 'leaves') AS leaves,
     -- A player's leave the game marked victory (result 09). The winner can leave the
     -- victory screen before the loser's leave is logged, so this outranks quit order.

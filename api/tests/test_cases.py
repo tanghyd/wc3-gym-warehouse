@@ -20,7 +20,7 @@ def test_case(path: Path) -> None:
     case = json.loads(path.read_text())
     res = client.post(case["route"], json=case["request"]) if "request" in case else client.get(case["route"])
     body = res.json()
-    for key in ("sql", "params"):  # how it was asked, not what it answered
+    for key in ("sql", "params", "request_id"):  # how it was asked, not what it answered
         body.pop(key, None)
     if not isinstance(body.get("detail", ""), str):  # FastAPI's own 422 shape: the status is the contract
         body.pop("detail")

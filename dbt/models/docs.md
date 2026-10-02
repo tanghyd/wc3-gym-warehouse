@@ -54,7 +54,7 @@ An order is a command, not a finished object, so a repeat click is a second row 
 {% enddocs %}
 
 {% docs event_type %}
-The event kind: an order kind (building, unit, item, upgrade, unknown), hero_skill for a skill point spent, or hero_trained for a hero's first skill point, which lands within a second of its summon.
+The event kind: an order kind (building, unit, item, upgrade, unknown), hero_skill for a skill point spent, or hero_trained for a hero at the order that trained it.
 {% enddocs %}
 
 {% docs hero_slot %}

@@ -110,13 +110,20 @@ services:
       - dbt_target:/target:ro
     restart: unless-stopped
     mem_limit: 512m
+    # /health answers from the process alone; /ready also needs ClickHouse and the catalog.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     depends_on:
       clickhouse:
         condition: service_healthy
 
   # dbt's docs site (`just local::docs` writes it into the target volume). Loopback only.
   docs:
-    image: nginx:alpine
+    image: nginx:1.30-alpine
     ports:
       - "127.0.0.1:8080:80"
     volumes:
@@ -135,7 +142,16 @@ services:
       - "127.0.0.1:3000:3000"
     restart: unless-stopped
     mem_limit: 512m
-    depends_on: [api]
+    # A port check: a page render would call the API ten times every interval.
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('net').connect(3000, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      api:
+        condition: service_healthy
 
   # One-shot: `just local::e2e`. Playwright tests of web/, run as you because it
   # writes web/e2e/node_modules and web/e2e/shots/. The tag matches web/e2e/package.json.
@@ -159,7 +175,8 @@ services:
 
   # ClickHouse observability: Grafana with the ClickHouse plugin, reading as the
   # read-only `grafana` user. The datasource and the dashboards are provisioned
-  # from infrastructure/docker/grafana/. Anonymous admin unless .env turns it off.
+  # from infrastructure/docker/grafana/. Anonymous admin unless .env turns it off (the
+  # GF_* keys in .env.example; `just deploy env` refuses a box .env that leaves it on).
   # Loopback only, on 3001 because the inspector has 3000. grafana/grafana is the OSS image.
   grafana:
     image: grafana/grafana:13.2.3
@@ -180,6 +197,12 @@ services:
       - ./infrastructure/docker/grafana/dashboards:/etc/grafana/dashboards:ro
     restart: unless-stopped
     mem_limit: 768m                 # measured 450 MiB idle
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     depends_on:
       clickhouse:
         condition: service_healthy
@@ -229,7 +252,7 @@ services:
   # (infrastructure/cloudflared/config.yml.example). The API and ClickHouse stay private.
   # Off until a domain exists; until then the box is reached over ssh (docs/deploy.md).
   cloudflared:
-    image: cloudflare/cloudflared
+    image: cloudflare/cloudflared:2026.9.3
     profiles: ["tunnel"]
     command: tunnel --no-autoupdate run
     environment:

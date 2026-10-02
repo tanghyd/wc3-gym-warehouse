@@ -2,17 +2,24 @@
 `meta.semantic` block on dbt models (dbt/models/marts/marts.yml), read from dbt's
 manifest; compile.py turns a request into parameterised ClickHouse SQL."""
 
+import contextvars
 import json
+import logging
 import os
 import re
-import urllib.error
-import urllib.parse
-import urllib.request
+import threading
+import time
+import traceback
+import uuid
 from pathlib import Path
 from typing import Any
 
+import httpx
 import yaml
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from compile import (
     FORWARD_UNITS,
@@ -38,26 +45,118 @@ CH_URL = os.environ.get("CLICKHOUSE_URL", "http://clickhouse:8123")
 CH_USER = os.environ.get("CLICKHOUSE_USER", "api")
 CH_PASSWORD = os.environ.get("CLICKHOUSE_API_PASSWORD", "")
 MANIFEST = Path(os.environ.get("DBT_MANIFEST", "/target/manifest.json"))
+# Queries in flight at once; the api profile (users.xml) caps the same at 8 on the server side.
+MAX_QUERIES = int(os.environ.get("API_MAX_QUERIES", "6"))
 # The strategy presets, checked once at start: a bad file stops the API.
 PRESETS = check_presets([Preset(**p) for p in yaml.safe_load((Path(__file__).parent / "strategies.yaml").read_text())])
 
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+log = logging.getLogger("warehouse-api")
 app = FastAPI(title="wc3-gym-warehouse")
+
+# One pool of keep-alive connections; the profile ends a query at 10 s, so 15 s never cuts one short.
+_http = httpx.Client(
+    base_url=CH_URL,
+    headers={"X-ClickHouse-User": CH_USER, "X-ClickHouse-Key": CH_PASSWORD},
+    timeout=httpx.Timeout(15, connect=2),
+)
+_slots = threading.BoundedSemaphore(MAX_QUERIES)
+# The request in progress: its id, path and query tally, for query ids and the log line.
+_req: contextvars.ContextVar[dict[str, Any]] = contextvars.ContextVar("req")
+
+# ClickHouse error codes (the X-ClickHouse-Exception-Code header) and what they mean to a caller.
+TOO_BIG = {158, 396}  # TOO_MANY_ROWS, TOO_MANY_ROWS_OR_BYTES: the profile's read or result cap
+BAD_VALUE = {6, 43, 53, 70, 72}  # a parameter value that does not fit its column
+BUSY = {202, 241}  # TOO_MANY_SIMULTANEOUS_QUERIES, MEMORY_LIMIT_EXCEEDED
+SLOW = {159, 160}  # TIMEOUT_EXCEEDED, TOO_SLOW
+BUSY_ERROR = HTTPException(503, "the warehouse is busy, retry in a second", headers={"Retry-After": "1"})
+
+
+def _request() -> dict[str, Any]:
+    return _req.get(None) or {"rid": "-", "path": "-", "queries": 0, "read_rows": 0}
 
 
 def run(sql: str, params: dict[str, str] | None = None) -> list[dict[str, Any]]:
-    query = urllib.parse.urlencode({f"param_{k}": v for k, v in (params or {}).items()})
-    req = urllib.request.Request(
-        f"{CH_URL}/?{query}",
-        data=(sql + "\nFORMAT JSON").encode(),
-        headers={"X-ClickHouse-User": CH_USER, "X-ClickHouse-Key": CH_PASSWORD},
-    )
+    """One query as the `api` user; every value travels as a parameter. A failure answers a
+    fixed message with the status its ClickHouse code picks, and the server's text goes to
+    the log under the request id, never to the caller."""
+    req = _request()
+    req["queries"] += 1
+    query_id = f"{req['rid']}-{req['queries']}"
+    if not _slots.acquire(timeout=1):
+        raise BUSY_ERROR
     try:
-        with urllib.request.urlopen(req, timeout=15) as res:
-            return json.load(res)["data"]
-    except urllib.error.HTTPError as e:
-        raise HTTPException(502, e.read().decode().strip().splitlines()[0]) from e
-    except urllib.error.URLError as e:
-        raise HTTPException(503, f"ClickHouse unreachable: {e.reason}") from e
+        res = _http.post(
+            "/",
+            params={"query_id": query_id, **{f"param_{k}": v for k, v in (params or {}).items()}},
+            content=(sql + "\nFORMAT JSON").encode(),
+            headers={"User-Agent": f"warehouse-api {req['path']}"},
+        )
+    except httpx.TimeoutException as e:
+        log.warning(json.dumps({"rid": req["rid"], "query_id": query_id, "error": f"timeout: {e!r}"}))
+        raise HTTPException(504, "the query timed out") from e
+    except httpx.HTTPError as e:
+        log.warning(json.dumps({"rid": req["rid"], "query_id": query_id, "error": f"unreachable: {e!r}"}))
+        raise HTTPException(503, "ClickHouse unreachable") from e
+    finally:
+        _slots.release()
+    if summary := res.headers.get("X-ClickHouse-Summary"):
+        req["read_rows"] += int(json.loads(summary).get("read_rows", 0))
+    if res.status_code != 200:
+        code = int(res.headers.get("X-ClickHouse-Exception-Code", "0") or 0)
+        log.warning(json.dumps({"rid": req["rid"], "query_id": query_id, "ch_code": code, "ch": res.text.strip()[:500]}))
+        if code in TOO_BIG:
+            raise HTTPException(400, "the request reads or answers too many rows: narrow it")
+        if code in BAD_VALUE:
+            raise HTTPException(400, "a filter value does not fit its dimension")
+        if code in BUSY:
+            raise BUSY_ERROR
+        if code in SLOW:
+            raise HTTPException(504, "the query timed out")
+        raise HTTPException(502, "the query failed")
+    try:
+        body = res.json()
+    except ValueError as e:
+        log.warning(json.dumps({"rid": req["rid"], "query_id": query_id, "error": "no JSON", "ch": res.text[:200]}))
+        raise HTTPException(502, "the query failed") from e
+    if "exception" in body:  # a failure after the first rows went out; the profile buffers whole answers, so rare
+        log.warning(json.dumps({"rid": req["rid"], "query_id": query_id, "ch": str(body["exception"])[:500]}))
+        raise HTTPException(502, "the query failed")
+    return body["data"]
+
+
+@app.middleware("http")
+async def request_log(request: Request, call_next: Any) -> Any:
+    """A request id on every answer, and one JSON log line per request: status, time,
+    queries run and rows read. A caller may pass its own X-Request-Id."""
+    rid = re.sub(r"[^A-Za-z0-9_-]", "", request.headers.get("x-request-id", ""))[:32] or uuid.uuid4().hex[:12]
+    req = {"rid": rid, "path": request.url.path, "queries": 0, "read_rows": 0}
+    token = _req.set(req)
+    started = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        log.error(json.dumps({"rid": rid, "path": req["path"], "error": traceback.format_exc()[-2000:]}))
+        response = JSONResponse({"detail": "internal error", "request_id": rid}, status_code=500)
+    finally:
+        _req.reset(token)
+    response.headers["X-Request-Id"] = rid
+    log.info(json.dumps({
+        "rid": rid, "method": request.method, "path": req["path"], "status": response.status_code,
+        "ms": round((time.perf_counter() - started) * 1000, 1), "queries": req["queries"], "read_rows": req["read_rows"],
+    }))
+    return response
+
+
+@app.exception_handler(HTTPException)
+async def http_error(request: Request, exc: HTTPException) -> JSONResponse:
+    """The error shape: `detail` as before, plus the request id to quote when asking why."""
+    return JSONResponse({"detail": exc.detail, "request_id": _request()["rid"]}, status_code=exc.status_code, headers=exc.headers)
+
+
+@app.exception_handler(RequestValidationError)
+async def invalid_request(request: Request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse({"detail": jsonable_encoder(exc.errors()), "request_id": _request()["rid"]}, status_code=422)
 
 
 _catalog: tuple[float, dict[str, Model]] = (0.0, {})
@@ -106,7 +205,14 @@ def model(name: str) -> Model:
 
 @app.get("/health")
 def health() -> dict[str, Any]:
-    return {"ok": run("SELECT 1 AS ok")[0]["ok"] == 1}
+    """The process answers; the compose healthcheck restarts the container when it does not."""
+    return {"ok": True}
+
+
+@app.get("/ready")
+def ready() -> dict[str, Any]:
+    """ClickHouse answers and the catalog loads: the API can serve."""
+    return {"ok": run("SELECT 1 AS ok")[0]["ok"] == 1, "models": len(catalog())}
 
 
 @app.get("/catalog")
@@ -176,7 +282,8 @@ def search(req: SearchRequest) -> dict[str, Any]:
     except BadRequest as e:
         raise HTTPException(400, str(e)) from e
     s = run(stats_sql, params)[0]
-    rows = run(rows_sql, params)
+    # no page past the last game: the list and the opponent reads are skipped
+    rows = run(rows_sql, params) if s["games"] > req.offset else []
     pairs = tuples((r["replay_id"], r["opponent_id"]) for r in rows)
     opponents = {(o["replay_id"], o["player_id"]): o for o in run(OPPONENTS_SQL, {"pairs": pairs})} if rows else {}
     return {
@@ -187,7 +294,9 @@ def search(req: SearchRequest) -> dict[str, Any]:
         "replays": [
             {
                 "replay_id": r["replay_id"], "map": r["map"], "duration_ms": r["duration_ms"], "both": bool(r["both_sides"]),
-                "player": _side(r), "opponent": _side(opponents[(r["replay_id"], r["opponent_id"])]),
+                "player": _side(r),
+                # None when the opponent row is missing, which a half-built mart could give
+                "opponent": _side(o) if (o := opponents.get((r["replay_id"], r["opponent_id"]))) else None,
             }
             for r in rows
         ],

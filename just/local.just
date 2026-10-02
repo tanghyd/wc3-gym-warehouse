@@ -2,9 +2,20 @@
 # the API on http://localhost:8000, the replay inspector on http://localhost:3000 and Grafana on http://localhost:3001.
 set working-directory := '..'
 
-# build and start every long-running service
+# build and start every long-running service, then apply the ingest tables an existing volume may lack
 up:
     docker compose up -d --build --remove-orphans
+    @{{ just_executable() }} local::schema
+
+# apply infrastructure/docker/clickhouse/ingest.sql (every statement is IF NOT EXISTS) once ClickHouse answers
+schema:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    for i in $(seq 1 60); do
+      docker compose exec -T clickhouse clickhouse-client ${CLICKHOUSE_PASSWORD:+--password="$CLICKHOUSE_PASSWORD"} -q 'SELECT 1' >/dev/null 2>&1 && break
+      sleep 1
+    done
+    docker compose exec -T clickhouse clickhouse-client ${CLICKHOUSE_PASSWORD:+--password="$CLICKHOUSE_PASSWORD"} --multiquery < infrastructure/docker/clickhouse/ingest.sql
 
 # stop the project; its volumes and the data they hold stay
 down:
@@ -46,14 +57,17 @@ docs:
 drain-once:
     docker compose run --rm --build drain drain --once
 
-# one drain pass, then `dbt build` when the drain inserted a document or a past build failed; the host cron runs this
+# one drain pass, then `dbt build` when ingest.docs holds a document the marts have not seen or a past build failed; the host cron runs this
 ingest:
     #!/usr/bin/env bash
     set -uo pipefail
-    out=$(mktemp); trap 'rm -f "$out"' EXIT
     pending=data/dbt-build-pending  # git-ignored; set before a build, removed when it succeeds
-    docker compose run --rm --build -T drain drain --once | tee "$out"; status=$?
-    if grep -q '^\[drain\] inserted [1-9]' "$out" || [ -e "$pending" ]; then
+    docker compose run --rm --build -T drain drain --once; status=$?
+    # Decided from the tables, not the drain's output, so a pass that inserted and then died still builds.
+    # A missing w3g.raw_replays (no build yet) errors, which the fallback reads as "build".
+    behind=$(docker compose exec -T clickhouse clickhouse-client ${CLICKHOUSE_PASSWORD:+--password="$CLICKHOUSE_PASSWORD"} \
+      -q 'SELECT (SELECT max(ingested_at) FROM ingest.docs) > (SELECT max(ingested_at) FROM w3g.raw_replays)' 2>/dev/null || echo 1)
+    if [ "$behind" = 1 ] || [ -e "$pending" ]; then
       mkdir -p data && touch "$pending"
       {{ just_executable() }} local::dbt build || exit
       rm -f "$pending"

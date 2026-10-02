@@ -1,9 +1,9 @@
 -- The drain's tables (pipeline/parse-rs/src/bin/drain.rs), written by the `ingest` user
 -- (users.xml) and read by dbt's source ingest.docs. The image runs this file on an empty
 -- volume only; on a running server apply it with `just local::sql --multiquery < infrastructure/docker/clickhouse/ingest.sql`.
--- Both tables are ReplacingMergeTrees on (source, key): a re-read object adds a row, a
+-- files and docs are ReplacingMergeTrees on (source, key): a re-read object adds a row, a
 -- merge keeps the one with the highest version (parse_version, then source_last_modified),
--- so a reader reads them FINAL.
+-- so a reader reads them FINAL. runs is a plain log of passes, one row per source per pass.
 CREATE DATABASE IF NOT EXISTS ingest
 COMMENT 'What the drain read from the source buckets: one row per object, one parsed document per object.';
 
@@ -40,3 +40,21 @@ CREATE TABLE IF NOT EXISTS ingest.docs
 ENGINE = ReplacingMergeTree(version)
 ORDER BY (source, key)
 COMMENT 'One parsed replay document per object that parsed. dbt reads it as the source ingest.docs.';
+
+CREATE TABLE IF NOT EXISTS ingest.runs
+(
+    source String COMMENT 'The bucket the pass listed.',
+    started_at DateTime64(3, 'UTC') COMMENT 'When the pass started on this source.',
+    finished_at DateTime64(3, 'UTC') COMMENT 'When the pass finished this source, with or without an error.',
+    parse_version UInt32 COMMENT 'The PARSE_VERSION of the drain.',
+    listed UInt32 COMMENT 'Objects the listing returned.',
+    todo UInt32 COMMENT 'Objects that were new or changed.',
+    inserted UInt32 COMMENT 'Documents inserted.',
+    failed UInt32 COMMENT 'Objects whose parse failed.',
+    retry UInt32 COMMENT 'Objects whose GET or INSERT failed; the next pass retries them.',
+    error String COMMENT 'Why the pass stopped early, empty when it finished.'
+)
+ENGINE = MergeTree
+ORDER BY (source, started_at)
+TTL toDateTime(started_at) + INTERVAL 90 DAY
+COMMENT 'One row per source per drain pass. Grafana reads the age of the last pass and the failure counts from it.';
