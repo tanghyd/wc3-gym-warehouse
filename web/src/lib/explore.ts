@@ -1,6 +1,6 @@
 // The Explore page's state in the URL, the chart it picks, and how a measure reads from a row.
 import { PICKED, RACES, RANDOM_OF, raceFilters } from "./races";
-import { mss, record } from "./ui";
+import { mirrorsLine, mss, record } from "./ui";
 
 /** What GET /catalog says of player_games: column types, labels, and each measure's type and parts. */
 export type Catalog = {
@@ -122,7 +122,7 @@ export function measureText(cat: Catalog, m: string, row: Row) {
 /** Under a record: the row's mirrors (games with both players in the row), which add no win or loss. */
 export function mirrorsText(cat: Catalog, m: string, row: Row) {
   const k = Number(row.mirrors ?? 0);
-  return cat.types[m] === "record" && k > 0 ? `${k.toLocaleString("en-US")} ${k === 1 ? "mirror" : "mirrors"}, no result` : null;
+  return cat.types[m] === "record" && k > 0 ? mirrorsLine(k) : null;
 }
 
 /** A measure's value for sorting and the CSV: a record's win share, an average's value. */

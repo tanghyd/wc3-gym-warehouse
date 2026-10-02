@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { type Filters, getObjects, pickerValues, query, raceCounts } from "@/lib/api";
 import { raceFilters, raceLabel } from "@/lib/races";
-import { Chevron, Field, mss, ObjIcon, RaceIcon, record } from "@/lib/ui";
+import { Chevron, Field, mirrorsLine, mss, ObjIcon, RaceIcon, record } from "@/lib/ui";
 import { StrategyFilters } from "../Filters";
 import { readScope } from "../scope";
 import { Tabs } from "../Tabs";
@@ -15,7 +15,7 @@ const FLOOR = 10; // games a win share needs to sort first and read in full ink
 const SORTS = { popular: "Most played", winrate: "Best win rate" };
 
 /** A row of the tree: one next building after its path. */
-type Row = { code: string; games: number; wins: number | null; losses: number | null; avgMs: number; branches: number };
+type Row = { code: string; games: number; wins: number | null; losses: number | null; mirrors: number; avgMs: number; branches: number };
 
 /**
  * What players built next after `prefix`. Every figure counts games won or lost in which a player
@@ -26,9 +26,9 @@ async function level(base: Filters, prefix: string[], sort: string): Promise<Row
   const d = prefix.length;
   const [next, after] = [`opener_${d + 1}`, `opener_${d + 2}`];
   const filters: Filters = { ...base, ...Object.fromEntries(prefix.map((c, i) => [`opener_${i + 1}`, [c]])) };
-  type Figures = Record<string, string> & { games: number; wins: number | null; losses: number | null; minutes_total: number };
+  type Figures = Record<string, string> & { games: number; wins: number | null; losses: number | null; mirrors: number; minutes_total: number };
   const [figures, splits] = await Promise.all([
-    query<Figures>({ dimensions: [next], measures: ["games", "wins", "losses", "minutes_total"], filters, limit: 10000 }),
+    query<Figures>({ dimensions: [next], measures: ["games", "mirrors", "wins", "losses", "minutes_total"], filters, limit: 10000 }),
     d + 1 < DEPTH ? query<Record<string, string>>({ dimensions: [next, after], filters, limit: 10000 }) : [],
   ]);
   const branches = new Map<string, number>();
@@ -36,7 +36,7 @@ async function level(base: Filters, prefix: string[], sort: string): Promise<Row
   // a row with no code: the opener ended before this depth
   const rows: Row[] = figures
     .filter((r) => r[next])
-    .map((r) => ({ code: r[next], games: r.games, wins: r.wins, losses: r.losses, avgMs: (r.minutes_total / r.games) * 60000, branches: branches.get(r[next]) ?? 0 }));
+    .map((r) => ({ code: r[next], games: r.games, wins: r.wins, losses: r.losses, mirrors: r.mirrors, avgMs: (r.minutes_total / r.games) * 60000, branches: branches.get(r[next]) ?? 0 }));
   // a mirror (a game where both players opened this way) adds no win or loss, so the share reads the other games
   const share = (r: Row) => (r.wins ?? 0) / Math.max(1, (r.wins ?? 0) + (r.losses ?? 0));
   // best win rate: rows from FLOOR games up first, so a 1 – 0 row never leads
@@ -189,6 +189,7 @@ export default async function OpenersPage({ searchParams }: PageProps<"/strategi
                     <td className={`text-right ${r.games < FLOOR ? "text-muted" : ""}`}>
                       <span className="whitespace-nowrap">{score}</span>
                       {percent && <span className="whitespace-nowrap max-sm:block"> ({percent}</span>}
+                      {r.mirrors > 0 && <span className="block text-xs text-muted">{mirrorsLine(r.mirrors)}</span>}
                     </td>
                     <td className="hidden text-right sm:table-cell">{mss(r.avgMs)}</td>
                   </tr>

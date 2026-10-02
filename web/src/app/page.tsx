@@ -3,7 +3,7 @@ import { type Filters, getObjects, getPresets, type Objects, pickerValues, raceC
 import { parseRaces, raceLabel } from "@/lib/races";
 import { apiStep, decodeGroups, HALLS, type Groups, played, type Step, stepObject } from "@/lib/steps";
 import { presetSteps, urlStep } from "@/lib/strategies";
-import { fmt, mss, parseHidden, RaceIcon, record } from "@/lib/ui";
+import { fmt, mirrorsLine, mss, parseHidden, RaceIcon, record } from "@/lib/ui";
 import { GamesView } from "./GamesView";
 import { type DraftStep, type LoadPreset, Sides, type SideState } from "./Sides";
 import { SortSelect } from "./SortSelect";
@@ -251,7 +251,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
                 <span className="s-v">{fmt(sum.games)}</span>
                 <span className="s-n">{narrowed && scope.games ? `${Math.round((100 * sum.games) / scope.games)}% of ${fmt(scope.games)} ${scopeWords}` : scopeWords === "games" ? "All games" : scopeWords.replace(/ games$/, "")}</span>
                 {/* mirrors add no result; said only when some games are not mirrors */}
-                {sum.both > 0 && sum.both < sum.games && <span className="s-n">{fmt(sum.both)} {sum.both === 1 ? "mirror" : "mirrors"}, no result</span>}
+                {sum.both > 0 && sum.both < sum.games && <span className="s-n">{mirrorsLine(sum.both)}</span>}
               </div>
               {/* a record of the games that are not mirrors: the API answers null when every game is a mirror */}
               {sum.wins !== null && sum.losses !== null && (

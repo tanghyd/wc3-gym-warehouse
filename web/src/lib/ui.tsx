@@ -121,6 +121,9 @@ export function Tile({ icon, size, alt = "" }: { icon: string | null | undefined
 
 export const fmt = (n: number) => n.toLocaleString("en-US");
 
+/** The line under a figure for its mirrors, games both players fit, which add no result. */
+export const mirrorsLine = (n: number) => `${fmt(n)} ${n === 1 ? "mirror" : "mirrors"}, no result`;
+
 /** The games list's columns a reader may hide, as the URL's `hide` key names them, with their switch labels. */
 export const HIDEABLE = [
   ["heroes", "Heroes"],

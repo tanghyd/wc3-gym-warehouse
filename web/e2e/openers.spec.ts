@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
-import { search, strip, stripOf } from "./helpers";
+import { fmt, search, strip, stripOf } from "./helpers";
 
 // The openers tree, the Openers tab of Strategies: each level equals POST /query's answer for that
 // prefix, over games of 2 minutes or more. The old /openers route redirects to it.
@@ -40,10 +40,11 @@ async function names(request: APIRequestContext, codes: string[]): Promise<Recor
   return Object.fromEntries((await res.json()).rows.map((r: { code: string; name: string }) => [r.code, r.name]));
 }
 
-/** The cells as the page reads them: opener name, games, record, average length. */
+/** The cells as the page reads them: opener name, games, record with a line for its mirrors, average length. */
 const cells = (page: Page) => rows(page).evaluateAll((trs) => trs.map((tr) => [...(tr as HTMLTableRowElement).cells].map((c) => c.innerText.trim())));
+const mirrorsLine = (n: number) => `${fmt(n)} ${n === 1 ? "mirror" : "mirrors"}, no result`;
 const expected = (lvl: Level, name: Record<string, string>) =>
-  lvl.map((r) => [name[r.code], String(r.games), record(r.wins ?? 0, r.losses ?? 0), mss((r.minutes_total / r.games) * 60000)]);
+  lvl.map((r) => [name[r.code], String(r.games), record(r.wins ?? 0, r.losses ?? 0) + (r.mirrors ? `\n${mirrorsLine(r.mirrors)}` : ""), mss((r.minutes_total / r.games) * 60000)]);
 
 test.describe("openers tree", () => {
   test("/openers lands on the tab, Human by default: the first level's games, record and length equal POST /query's", async ({ page, request }) => {
@@ -59,6 +60,10 @@ test.describe("openers tree", () => {
     expect(await cells(page)).toEqual(expected(root, name));
     // one unit per row: its games are its wins, its losses and its mirrors (both players opened this way)
     for (const r of root) expect(r.games).toBe((r.wins ?? 0) + (r.losses ?? 0) + r.mirrors);
+    // a row with mirrors says so under its record; they add no result
+    const mirrored = root.find((r) => r.mirrors > 0)!;
+    expect(mirrored).toBeDefined();
+    await expect(rows(page).filter({ hasText: name[mirrored.code] }).first().getByText(mirrorsLine(mirrored.mirrors))).toBeVisible();
     const total = (await (await request.post(`${API}/query`, { data: { measures: ["games"], filters: { ...HU, ...DECIDED } } })).json()).rows[0].games;
     await expect(page.locator(".bar .chip")).toHaveText(`${total} games won or lost`);
   });
