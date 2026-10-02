@@ -113,11 +113,11 @@ mappings:
 # the API tests in the API image: the compiler goldens, then the live cases
 [positional-arguments]
 api-test *args:
-    docker compose run --rm --build -v "$PWD/api:/api" api uv run --frozen pytest "$@"
+    docker compose run --rm --no-deps --build -v "$PWD/api:/api" api uv run --frozen pytest "$@"
 
 # rewrite the answers in api/tests/cases/ from the live stack; review the git diff
 api-cases-update:
-    docker compose run --rm --build -v "$PWD/api:/api" -e UPDATE_CASES=1 api uv run --frozen pytest tests/test_cases.py
+    docker compose run --rm --no-deps --build -v "$PWD/api:/api" -e UPDATE_CASES=1 api uv run --frozen pytest tests/test_cases.py
 
 # rewrite api/uv.lock from api/pyproject.toml, in the API image as you
 api-lock:
@@ -148,4 +148,4 @@ web-lint:
 # the Playwright tests in web/e2e against the running stack, such as `just local::e2e --grep chat`; screenshots go to web/e2e/shots/
 [positional-arguments]
 e2e *args:
-    docker compose run --rm --user "$(id -u):$(id -g)" e2e "$@"
+    docker compose run --rm --no-deps --user "$(id -u):$(id -g)" e2e "$@"
