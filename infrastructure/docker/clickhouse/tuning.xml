@@ -12,6 +12,12 @@
          Per-query caps live in the api and grafana profiles (users.xml). -->
     <max_server_memory_usage>2684354560</max_server_memory_usage>
 
+    <!-- The image defaults size the mark cache (5 GiB) and the merge pool (16 threads) for
+         a machine ClickHouse owns. The marts are small, and merges share 4 cores with the
+         drain and the API. -->
+    <mark_cache_size>536870912</mark_cache_size>
+    <background_pool_size>4</background_pool_size>
+
     <!-- Server-side query cache, off unless a query sets use_query_cache. Bound
          it so cached results cannot crowd query memory on a shared machine. -->
     <query_cache>
