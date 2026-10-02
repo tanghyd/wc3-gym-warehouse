@@ -232,7 +232,7 @@ export default async function ReplaysPage({ searchParams }: PageProps<"/">) {
               <div className="stat">
                 <span className="s-l">Games</span>
                 <span className="s-v">{fmt(sum.games)}</span>
-                <span className="s-n">{narrowed && scope.games ? `${Math.round((100 * sum.games) / scope.games)}% of ${fmt(scope.games)} ${scopeWords}` : scopeWords === "games" ? "All games" : scopeWords.replace(/ games$/, "")}</span>
+                <span className="s-n">{narrowed && scope.games ? `${Math.round((100 * sum.games) / scope.games)}% of ${fmt(scope.games)} ${scopeWords}` : scopeWords === "games" ? "All games" : scopeWords.replace(/ games$/, "")}, one per player</span>
                 {sum.both_players > 0 && <span className="s-n">{fmt(sum.both_players)} {sum.both_players === 1 ? "game counts" : "games count"} for both players</span>}
               </div>
               <div className="stat">

@@ -43,7 +43,7 @@ Not routes:
 | Unknown query key or body field | 400 (as w3warehouse: models.py:9-14) |
 | SQL values | Every value is a bound `{name:Type}` parameter. Measured on 26.9: `sequenceMatch({pat:String})`, `IN {ids:Array(String)}`, `seq[{d:UInt8}]` and `LIMIT {limit:UInt32} OFFSET {offset:UInt32}` accept bound values (queries.md §0, §7). |
 | Orders, not outcomes | Replays record commands, so every count and timeline row is an **order**. Finished-object counts wait for stat-events. Field names stay; the UI labels them "ordered". |
-| Repeat flag | `is_repeat UInt8`, computed at load on `player_order_events` and `replay_events` (PR 2). 1 on a same-code order by one player less than 1000 ms after that player's previous same-code order, only for single-instance codes: the tier halls `hkee hcas ostr ofrt unp1 unp2 etoa etoe`, research (codes starting `R`), and hero training (hero codes, in the `unknown` bucket via `mv__order_unknown`). Buildings and units stay raw. The first order keeps its time. Flag, never delete. Search, openers, counts and stats read `is_repeat = 0`; the timeline hides flagged rows. |
+| Repeat flag | `is_repeat UInt8`, computed at load on `player_order_events`, `hero_ability_events` and `replay_events`. An order: 1 on a tier hall (`hkee hcas ostr ofrt unp1 unp2 etoa etoe`), research (codes starting `R`) or hero order less than 1000 ms after the player's previous order of the same code. A skill point: 1 less than 1000 ms after the hero's previous point in that skill, or past level 3. Buildings and units stay raw. The first order keeps its time. Flag, never delete. `POST /search`, `POST /query` steps and the strategy stats read `is_repeat = 0`, and the replay page leaves flagged rows out; openers drop back-to-back repeats with `arrayCompact`. |
 
 Why (F): tier and research repeat almost only under 1 s (Stronghold 1,052 of 1,071); farms, towers and unit queues repeat at every gap. On 3 LAN stat-events games the rule fixed heroes exactly (14 orders → 8 = 8 real starts) and no time rule beat raw for buildings or units (`/home/daniel/.claude/jobs/ac2bfdc7/tmp/design-ground/order-calibration.md`). Tier halls sit in the buildings bucket, so the rule uses the code list, not the kind.
 
@@ -307,13 +307,13 @@ Match rules:
 | No groups | Lists every 1on1 game passing `map` and minutes. Paging bounds the cost. |
 | Orders only | Every step condition adds `is_repeat = 0` (2.1). |
 | One step | No `sequenceMatch`. The step's WHERE condition is the whole test (index.html:720-721). |
-| 2+ steps | Two jobs, two patterns (queries.md §4.2, rule 7). Order: `sequenceMatch({gI_pat:String})(time_ms, cond1, ...)`, pattern `(?1)` then `.*(?k)` per later step. It never carries a `(?t…)`. Gap: each step with `within_previous_seconds` ANDs its own `sequenceMatch({gI_sK_pat:String})(time_ms, <cond k-1>, <cond k>)`, pattern `(?1)(?t<={ms})(?2)`. Why: `sequenceMatch` skips only events that match no condition, so in one pattern a third step's order between the pair breaks the gap and a real game is lost. Never `.*(?t<=N)` or `(?t<=N).*` (compiler.py:909 bug). |
+| 2+ steps | `POST /query`: one `sequenceMatch` over `replay_events`, pattern `(?1)` then `.*(?k)` per later step, or `(?t<={ms})(?k)` for a step with a gap (`api/compile.py` `sequence_pattern`). An order of a third step between a bounded pair does not break the gap: `sequenceMatch` passes over it (measured on ClickHouse 26.8: A at 0, an order of a third condition C at 10 and B at 20 give 1 for `(?1)(?t<=30)(?2)`). Never `(?t<=N).*`: the `.*` lets the matcher pick another pair. `POST /search` builds no pattern: per player it collects each step's sorted order times (`groupArrayIf`) and tests the chain with array functions (`_chain_sql`); a `then` step with `within_s` needs all its `count` orders inside the window. |
 | Step window | `time_from_seconds`, `time_to_seconds` go into that step's condition as bound `UInt32` values. |
 | Repeated step | "A then A" needs two A events (measured: one gives 0, two give 1 for `(?1).*(?2)`). |
 | Equal timestamps | Decided: a real-data golden pins the order. Why: 1,605 of 1,605 came in order (F; queries.md C5). |
-| Minimum count | One bound `HAVING` term per counted step: `uniqExactIf(seq, <step cond>) >= {gI_sK_min:UInt32}`. Not `count()`: `replay_events` dedupes only at merge (`insert-optimize-avoid-final`). The step sits in the sequence at its first matching order. |
+| Minimum count | A step's `count` is the number of its orders: `count()` over its `replay_events` rows, which hold no copies because dbt rebuilds the table whole (a MergeTree, not a ReplacingMergeTree). A skill step's count is the skill level. |
 | Without | The codes join the slot's `subject_code IN` list; one bound term `countIf(subject_code IN {gI_without:Array(String)}) = 0`. A slot with only `without` codes uses `replay_players FINAL` of that race as its base. |
-| First hero | The player's earliest `hero_trained` row has this code (as w3warehouse: compiler.py:806-844). Decided: `hero_trained` = first ability cast, not training order; accepted. (F): that and `player_heroes.hero_slot = 0` both give 1,514 Night Elf player-games for `Edem`. |
+| First hero | A hero step with `nth`: the `hero_trained` row's `seq` is the hero's place in `player_games.heroes` (`api/compile.py:387-388`); a lone "1st hero X" step reads `heroes[nth]` and no orders (`api/compile.py:464-465`). A `hero_trained` row is the order that trained the hero: the last order of its code at or before its first skill point (`player_heroes.trained_ms`, commit 7a66260). (F), 1,706 games: `heroes[1] = 'Edem'`, the earliest `hero_trained` and `seq = 1` each give 502 Night Elf player-games; the earliest training order differs from `hero_slot = 0` for 0 of 3,346 player-games with a hero. |
 | Too complex | A pattern caps at 1,000,000 iterations, then 160 → 400 (2.6). (F), race N: 7 × `unit ewsp` at 600 s gaps then `building etol` within 1 s fails in ~0.06 s; 4 × fails too; 8 × with open gaps returns 2,668 pairs. No setting raises the cap on 26.9, and a step cap cannot prevent it. Measured with the old one-pattern form; the split form (rule above) runs 7 two-condition aggregates plus one 8-condition ordering pattern, so PR 6 re-checks whether 160 still fires. If not, the case becomes a plain golden and the 160 → 400 map keeps only its stub test. |
 | Dedup and header shape | queries.md §4.1 is the source. Rules 10-11: each slot binds through `replay_players FINAL` with `(replay_id, player_id) IN (<slot set>)`. Rule 14: page `GROUP BY r.replay_id, …`. `replays FINAL` relies on the runtime join filter (`RF1`, on by default from 26.2, measured on 26.9), not a second `IN` (queries.md §5). Header reads use `FINAL` (`insert-optimize-avoid-final`). |
 
@@ -578,7 +578,6 @@ Hero rows come from `player_heroes`. APM rows come from `replay_players.apm`: 89
 | `events[].event_type` | enum | The six step kinds, plus `hero_retrained` (timeline only, never a search step; queries.md 3.8, C9). `unknown` rows are left out. |
 | `events[].code` | string | Object code; the name comes from `/mappings`. On `hero_retrained`, the hero's code. |
 | `events[].hero_code` | string or null | On `hero_skill` and `hero_retrained`: the hero (`hero_ability_events.hero_id`). The UI nests skills under it. Null otherwise. |
-| `repeats[]` | array | The `is_repeat = 1` orders, in the `events[]` shape. A search counts them, so the page's step marks match on `events[]` and `repeats[]` together. |
 | `chat[]` | array | `{time_ms, player_id, mode, message}`, sorted by `time_ms`. Only `mode = 'All'`. |
 
 - Decided: hide private chat (`AND mode = 'All'`, queries.md 3.8). Why: the route is public and cached 1 hour. (F): 5 lines, 3 `All`, 2 `Private`.
@@ -619,7 +618,7 @@ GET /replays/dcd39e47097a4a010bc4006e0bf521e3726a0b8e9284cc0b8e2fb74411fbfef8
 
 - Cut: `apm_per_minute` has 16 values per player. `events` has 152 rows (158 `replay_events` minus 6 `unknown`) before the repeat flag, 150 after PR 2 (2 flagged; queries.md D1-D4). `chat` holds 3 lines, all `All`.
 - Later in the timeline: `{"player_id": 1, "time_ms": 142254, "event_type": "hero_trained", "code": "Edem", "hero_code": null}` and `{"player_id": 1, "time_ms": 142254, "event_type": "hero_skill", "code": "AEim", "hero_code": "Edem"}`.
-- `hero_trained` is synthetic, at the hero's first ability event (views.sql:405-431).
+- `hero_trained` is synthetic, at the order that trained the hero (`player_heroes.trained_ms`), or at its first skill point when no order of its code comes before it.
 
 Errors: 404 `No game with this id` (the story text); 503, 504, 500 per 2.6.
 
@@ -666,7 +665,7 @@ Numbers stay stable for references from other documents.
 2. List order: decided, fixed order now; PR 3 adds a play date if the drain can read the upload time (2.4).
 3. Readonly profile over HTTP: a check, not a question. `?readonly=1` in a URL fails with Code 164; a native `--readonly=1` session accepts `--param_x` (measured). PR 4 (users.d, empty-password test) and the live CI job on 26.8 (rust.md 17.3) run `curl -u <api user>: 'http://127.0.0.1:8123/?param_x=7' --data-binary 'SELECT {x:UInt8} FORMAT JSON'`.
 4. `stopped`: decided (A7).
-5. `hero_trained` timing: decided, first cast accepted (3.4 "First hero").
+5. `hero_trained` timing: decided, the training order (3.4 "First hero").
 6. Private chat: decided, hidden (3.8).
 7. `download_url`: decided, `source_key` (2.5, PR 3).
 8. Profile limits: decided, measured after PR 2 (2.8).

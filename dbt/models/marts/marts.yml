@@ -241,7 +241,9 @@ models:
           because a FLO player-saved w3c- file drops the saver's own leave. In a team game the
           other team won when every player of one team left before any player of the other.
           -1 (no winner) otherwise, and unless the game has exactly two teams. The parser's
-          own winningTeamId is not read.
+          own winningTeamId is not read. The result matches the parser's leave-based pick,
+          which reads the same leaves. The saver fallback is untested until the w3grs saver
+          id is fixed: saverPlayerId is 1 in every loaded file.
       - name: winner_names
         description: The names of the players on the winning team, sorted and joined by commas, or '' when winning_team_id is -1.
       - name: random_seed

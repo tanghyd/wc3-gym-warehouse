@@ -23,6 +23,8 @@ test.describe("replay list", () => {
     await expect(page.getByRole("navigation", { name: "Games pages" })).toContainText(`1–25 of ${fmt(want.total)}`);
     // nothing narrows the scope, so no "All" line
     await expect(page.locator(".s-n", { hasText: /^All \d/ })).toHaveCount(0);
+    // the figure counts each game once per player, so the scope line says so
+    await expect(page.locator(".stat").nth(0).locator(".s-n").first()).toHaveText("All games, one per player");
   });
 
   test("the summary strip reads the summary and the scope of the spec's example", async ({ page, request }) => {
@@ -30,7 +32,7 @@ test.describe("replay list", () => {
     await page.goto(EXAMPLE);
     expect(await strip(page)).toEqual(stripOf(want));
     const { scope, summary } = want;
-    await expect(page.locator(".stat").nth(0)).toContainText(`${Math.round((100 * summary.games) / scope.games)}% of ${fmt(scope.games)} Night Elf v Orc games`);
+    await expect(page.locator(".stat").nth(0)).toContainText(`${Math.round((100 * summary.games) / scope.games)}% of ${fmt(scope.games)} Night Elf v Orc games, one per player`);
     await expect(page.locator(".stat").nth(1)).toContainText(`All ${fmt(scope.games)}: ${record(scope.wins, scope.losses)}`);
     await expect(page.locator(".stat").nth(2)).toContainText(`All ${fmt(scope.games)}: ${mss(scope.duration_ms_total / scope.games)}`);
     expect(await listed(page)).toEqual(rowsOf(want));
